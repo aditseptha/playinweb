@@ -300,6 +300,7 @@ export function gameToProjectRecord(game: Game): ProjectRecord {
       handle,
       display_name: game.developer,
       follower_count: 0,
+      avatar_path: null,
     },
     project_tags: game.tags.map((tag) => ({ tag })),
     project_screenshots: game.screenshots.map((storage_path, sort_order) => ({

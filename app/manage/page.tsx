@@ -26,9 +26,10 @@ export default function ManageGamesPage() {
       setDays([]);
       return;
     }
+    const uid = user.id;
     let cancelled = false;
     async function load() {
-      const [rows, stats] = await Promise.all([fetchProjectsForOwner(user.id), fetchOwnerStatDays(sinceDay(56))]);
+      const [rows, stats] = await Promise.all([fetchProjectsForOwner(uid), fetchOwnerStatDays(sinceDay(56))]);
       if (!cancelled) {
         setProjects(rows);
         setDays(stats);

@@ -61,7 +61,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   const [disliked, setDisliked] = useState(false);
   const [copied, setCopied] = useState(false);
   const autoPlayed = useRef(false);
-  const viewBump = useRef(Promise.resolve());
+  const viewBump = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     if (!persisted) return;
@@ -89,11 +89,10 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   useEffect(() => {
     if (!persisted) return;
     if (!claimSessionStat("viewed", projectId)) return;
-    viewBump.current = createClient()
-      .rpc("bump_view_count", { pid: projectId })
-      .then(({ error }) => {
-        if (error) releaseSessionStat("viewed", projectId);
-      });
+    viewBump.current = (async () => {
+      const { error } = await createClient().rpc("bump_view_count", { pid: projectId });
+      if (error) releaseSessionStat("viewed", projectId);
+    })();
   }, [persisted, projectId]);
 
   useEffect(() => {
@@ -204,7 +203,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
 
   async function onShare() {
     const url =
-      persisted && creator.handle && project.slug
+      persisted && creator?.handle && project.slug
         ? projectPublicUrl(creator.handle, project.slug)
         : `${window.location.origin}/game/${projectId}`;
     try {

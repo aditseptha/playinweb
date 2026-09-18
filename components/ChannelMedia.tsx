@@ -45,12 +45,11 @@ export function useChannelImageUpload() {
       setError(upError.message);
       return false;
     }
-    const column = kind === "avatar" ? "avatar_path" : "banner_path";
     const previous = kind === "avatar" ? profile.avatar_path : profile.banner_path;
     const patch =
       kind === "banner"
-        ? { [column]: path, banner_position: bannerPosition ?? "50 50" }
-        : { [column]: path };
+        ? { banner_path: path, banner_position: bannerPosition ?? "50 50" }
+        : { avatar_path: path };
     const { error: rowError } = await supabase.from("profiles").update(patch).eq("id", user.id);
     if (rowError) {
       setPending(null);
@@ -89,13 +88,15 @@ export function useChannelImageUpload() {
 
   async function remove(kind: "avatar" | "banner") {
     if (!user || !profile) return;
-    const column = kind === "avatar" ? "avatar_path" : "banner_path";
     const previous = kind === "avatar" ? profile.avatar_path : profile.banner_path;
     if (!previous) return;
     setPending(kind);
     setError("");
     const supabase = createClient();
-    const { error: rowError } = await supabase.from("profiles").update({ [column]: null }).eq("id", user.id);
+    const { error: rowError } = await supabase
+      .from("profiles")
+      .update(kind === "avatar" ? { avatar_path: null } : { banner_path: null })
+      .eq("id", user.id);
     if (rowError) {
       setPending(null);
       setError(rowError.message);
