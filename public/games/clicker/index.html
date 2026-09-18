@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Ember Clicker</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; height: 100%; background: #140c09; color: #f3e6dc; font-family: ui-sans-serif, system-ui, sans-serif; }
+    body { display: grid; place-items: center; }
+    .wrap { width: min(420px, 92%); text-align: center; }
+    h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.03em; }
+    .sub { color: #c4a090; font-size: 13px; margin-bottom: 20px; }
+    .embers { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+    .rate { color: #c4a090; font-size: 13px; margin: 6px 0 22px; }
+    button {
+      appearance: none; border: 0; cursor: pointer; font: inherit; color: inherit;
+      min-height: 48px;
+    }
+    #stoke {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, oklch(0.75 0.18 45), oklch(0.5 0.2 28) 55%, oklch(0.32 0.12 22));
+      box-shadow: 0 10px 40px rgb(180 40 10 / 0.35);
+      font-weight: 650; font-size: 15px;
+    }
+    #stoke:active { transform: scale(0.96); }
+    .shop { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
+    .shop button {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 16px; border-radius: 12px; background: #221510; text-align: left;
+    }
+    .shop button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .shop b { font-weight: 600; }
+    .cost { color: #e8b089; font-variant-numeric: tabular-nums; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Ember Clicker</h1>
+    <div class="sub">Keep the furnace alive</div>
+    <div class="embers" id="count">0</div>
+    <div class="rate" id="rate">0 embers / sec</div>
+    <button id="stoke" type="button">Stoke</button>
+    <div class="shop">
+      <button type="button" data-id="bellows"><span><b>Bellows</b> · +0.2/s</span><span class="cost" id="c-bellows"></span></button>
+      <button type="button" data-id="coal"><span><b>Coal chute</b> · +1.2/s</span><span class="cost" id="c-coal"></span></button>
+      <button type="button" data-id="forge"><span><b>Forge</b> · +6/s</span><span class="cost" id="c-forge"></span></button>
+    </div>
+  </div>
+  <script>
+    const items = {
+      bellows: { n: 0, base: 15, rate: 0.2 },
+      coal: { n: 0, base: 80, rate: 1.2 },
+      forge: { n: 0, base: 420, rate: 6 },
+    };
+    let embers = 0, click = 1;
+    const countEl = document.getElementById("count");
+    const rateEl = document.getElementById("rate");
+    function cost(id) { return Math.floor(items[id].base * Math.pow(1.18, items[id].n)); }
+    function production() {
+      return Object.values(items).reduce((s, it) => s + it.n * it.rate, 0);
+    }
+    function render() {
+      countEl.textContent = embers < 10 ? embers.toFixed(1) : Math.floor(embers).toLocaleString();
+      rateEl.textContent = `${production().toFixed(1)} embers / sec`;
+      for (const id of Object.keys(items)) {
+        document.getElementById("c-" + id).textContent = cost(id) + " embers";
+        document.querySelector(`[data-id="${id}"]`).disabled = embers < cost(id);
+      }
+    }
+    document.getElementById("stoke").onclick = () => { embers += click; render(); };
+    document.querySelector(".shop").onclick = (e) => {
+      const btn = e.target.closest("button"); if (!btn) return;
+      const id = btn.dataset.id; const c = cost(id);
+      if (embers < c) return;
+      embers -= c; items[id].n++; render();
+    };
+    let last = performance.now();
+    function loop(t) {
+      embers += production() * (t - last) / 1000;
+      last = t; render();
+      requestAnimationFrame(loop);
+    }
+    render(); requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Brick Shift</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; height: 100%; background: #0c1018; font-family: ui-sans-serif, system-ui, sans-serif; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    #hud { position: absolute; top: 12px; left: 16px; color: #e8eef8; font-weight: 650; font-variant-numeric: tabular-nums; pointer-events: none; }
+    #overlay {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      background: rgb(6 10 16 / 0.55); color: #e8eef8; text-align: center; cursor: pointer;
+    }
+    #overlay h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.03em; }
+    #overlay p { margin: 0; color: #9aa8bd; }
+    #overlay.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="hud">0</div>
+  <div id="overlay"><div><h1>Brick Shift</h1><p>Move with mouse or touch · click to start</p></div></div>
+  <script>
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const hud = document.getElementById("hud");
+    let W, H, running = false, score = 0;
+    let paddle, ball, bricks, lives;
+
+    function resize() {
+      W = canvas.clientWidth; H = canvas.clientHeight;
+      canvas.width = W * devicePixelRatio; canvas.height = H * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
+    function makeBricks() {
+      bricks = [];
+      const cols = 10, rows = 5, gap = 6;
+      const bw = (W - 40 - gap * (cols - 1)) / cols, bh = 16;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          bricks.push({ x: 20 + c * (bw + gap), y: 48 + r * (bh + gap), w: bw, h: bh, alive: true, hue: 18 + r * 18 });
+        }
+      }
+    }
+    function reset() {
+      score = 0; lives = 3; hud.textContent = "0";
+      paddle = { w: 96, h: 10, x: W / 2 - 48, y: H - 28 };
+      ball = { x: W / 2, y: H - 48, vx: 4.2, vy: -5.2, r: 6 };
+      makeBricks();
+    }
+    function collide() {
+      if (ball.x < ball.r || ball.x > W - ball.r) ball.vx *= -1;
+      if (ball.y < ball.r) ball.vy *= -1;
+      if (ball.y > H + 20) {
+        lives--; ball.x = W / 2; ball.y = H - 48; ball.vx = 4.2 * (Math.random() > 0.5 ? 1 : -1); ball.vy = -5.2;
+        if (lives <= 0) { running = false; overlay.classList.remove("hidden"); overlay.querySelector("p").textContent = "Out of lives — tap to retry"; }
+      }
+      if (ball.y + ball.r > paddle.y && ball.x > paddle.x && ball.x < paddle.x + paddle.w && ball.vy > 0) {
+        const t = (ball.x - paddle.x) / paddle.w;
+        ball.vx = (t - 0.5) * 9;
+        ball.vy = -Math.abs(ball.vy);
+      }
+      for (const b of bricks) {
+        if (!b.alive) continue;
+        if (ball.x > b.x && ball.x < b.x + b.w && ball.y > b.y && ball.y < b.y + b.h) {
+          b.alive = false; ball.vy *= -1; score += 25; hud.textContent = String(score);
+        }
+      }
+      if (bricks.every(b => !b.alive)) makeBricks();
+    }
+    function loop() {
+      requestAnimationFrame(loop);
+      ctx.fillStyle = "#0c1018"; ctx.fillRect(0, 0, W, H);
+      if (running) { ball.x += ball.vx; ball.y += ball.vy; collide(); }
+      for (const b of bricks) {
+        if (!b.alive) continue;
+        ctx.fillStyle = `oklch(0.68 0.16 ${b.hue})`;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+      }
+      ctx.fillStyle = "oklch(0.86 0.04 80)";
+      ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+      ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fillStyle = "oklch(0.78 0.18 18)"; ctx.fill();
+    }
+    function move(x) { paddle.x = Math.max(0, Math.min(W - paddle.w, x - paddle.w / 2)); }
+    canvas.addEventListener("pointermove", (e) => { const r = canvas.getBoundingClientRect(); move(e.clientX - r.left); });
+    overlay.addEventListener("click", () => { overlay.classList.add("hidden"); reset(); running = true; });
+    window.addEventListener("resize", () => { resize(); reset(); });
+    resize(); reset(); requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Box Tag</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="hud">
+    <span>Score <b id="score">0</b></span>
+    <span>Time <b id="time">30</b></span>
+  </div>
+  <p class="hint">Click the box. It runs.</p>
+  <div id="field">
+    <button type="button" id="box" aria-label="Target"></button>
+  </div>
+  <p id="end" hidden>Done. Click the box to play again.</p>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { GameGrid } from "@/components/GameGrid";
+import { LinkButton } from "@/components/ui/button";
+import { gamesByIds, useGames } from "@/lib/store";
+import { maxPopularity } from "@/lib/popularity";
+
+export default function CollectionPage() {
+  const { id } = useParams<{ id: string }>();
+  const { games, collections } = useGames();
+  const collection = collections.find((c) => c.id === id);
+  const max = maxPopularity(games);
+
+  if (!collection) {
+    return (
+      <div className="mx-auto max-w-lg py-16 text-center">
+        <h1 className="text-xl font-semibold">Collection not found</h1>
+        <p className="mt-2 text-sm text-muted">It may have been removed from this browser.</p>
+        <LinkButton href="/library" variant="primary" className="mt-6">
+          Back to library
+        </LinkButton>
+      </div>
+    );
+  }
+
+  const listed = gamesByIds(games, collection.gameIds);
+
+  return (
+    <div className="mx-auto min-w-0 max-w-[1400px]">
+      <p className="text-sm text-muted">
+        <Link href="/library" className="hover:text-text">
+          Library
+        </Link>
+        <span aria-hidden> · </span>
+        Collection
+      </p>
+      <h1 className="mt-1 text-display font-semibold tracking-tight">{collection.name}</h1>
+      <p className="mt-1 text-sm text-muted">
+        {listed.length} {listed.length === 1 ? "game" : "games"}
+      </p>
+      {listed.length === 0 ? (
+        <div className="mt-10 rounded-panel bg-surface px-5 py-12 text-center">
+          <p className="font-medium">No games yet</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+            Add games from a listing with Add to collection.
+          </p>
+          <Link
+            href="/"
+            className="mt-4 inline-flex h-9 items-center rounded-lg bg-surface-2 px-3.5 text-body font-medium hover:bg-surface-3"
+          >
+            Browse games
+          </Link>
+        </div>
+      ) : (
+        <div className="mt-8">
+          <GameGrid games={listed} maxScore={max} />
+        </div>
+      )}
+    </div>
+  );
+}

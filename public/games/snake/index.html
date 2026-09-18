@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Neon Snake</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; height: 100%; background: #12080c; font-family: ui-sans-serif, system-ui, sans-serif; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+    #hud {
+      position: absolute; inset: 0; pointer-events: none;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 12px 16px; color: #f4e8eb;
+    }
+    #score { font-variant-numeric: tabular-nums; font-weight: 650; letter-spacing: 0.04em; }
+    #hint { font-size: 13px; color: #c9a8b0; }
+    #overlay {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      background: rgb(10 6 8 / 0.55); color: #f4e8eb; text-align: center; cursor: pointer;
+    }
+    #overlay h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.03em; }
+    #overlay p { margin: 0; color: #c9a8b0; }
+    #overlay.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <div id="score">0</div>
+    <div id="hint">Arrows / WASD / swipe</div>
+  </div>
+  <div id="overlay">
+    <div>
+      <h1>Neon Snake</h1>
+      <p>Click or tap to start</p>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const scoreEl = document.getElementById("score");
+    const COLS = 28, ROWS = 16;
+    let cell = 20, running = false, dir = { x: 1, y: 0 }, pending = dir;
+    let snake, food, score, acc = 0, step = 110, last = 0;
+
+    function resize() {
+      canvas.width = canvas.clientWidth * devicePixelRatio;
+      canvas.height = canvas.clientHeight * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      cell = Math.floor(Math.min(canvas.clientWidth / COLS, canvas.clientHeight / ROWS));
+    }
+    function reset() {
+      snake = [{ x: 6, y: 8 }, { x: 5, y: 8 }, { x: 4, y: 8 }];
+      dir = { x: 1, y: 0 }; pending = dir; score = 0; scoreEl.textContent = "0";
+      placeFood();
+    }
+    function placeFood() {
+      do {
+        food = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+      } while (snake.some(s => s.x === food.x && s.y === food.y));
+    }
+    function tick() {
+      dir = pending;
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+      if (head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS || snake.some(s => s.x === head.x && s.y === head.y)) {
+        running = false; overlay.classList.remove("hidden"); overlay.querySelector("p").textContent = "Game over — tap to retry";
+        return;
+      }
+      snake.unshift(head);
+      if (head.x === food.x && head.y === food.y) { score += 10; scoreEl.textContent = String(score); placeFood(); }
+      else snake.pop();
+    }
+    function draw() {
+      const w = canvas.clientWidth, h = canvas.clientHeight;
+      const ox = (w - COLS * cell) / 2, oy = (h - ROWS * cell) / 2;
+      ctx.fillStyle = "#14090d"; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "#1c1014"; ctx.fillRect(ox, oy, COLS * cell, ROWS * cell);
+      for (let i = 0; i < snake.length; i++) {
+        const t = i / Math.max(1, snake.length - 1);
+        ctx.fillStyle = `oklch(${0.72 - t * 0.25} 0.22 ${18 + t * 20})`;
+        ctx.fillRect(ox + snake[i].x * cell + 1, oy + snake[i].y * cell + 1, cell - 2, cell - 2);
+      }
+      ctx.fillStyle = "oklch(0.82 0.18 85)";
+      ctx.beginPath();
+      ctx.arc(ox + food.x * cell + cell / 2, oy + food.y * cell + cell / 2, cell * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    function loop(t) {
+      requestAnimationFrame(loop);
+      if (!running) { draw(); return; }
+      acc += t - last; last = t;
+      while (acc >= step) { acc -= step; tick(); }
+      draw();
+    }
+    function setDir(x, y) {
+      if (dir.x + x === 0 && dir.y + y === 0) return;
+      pending = { x, y };
+    }
+    window.addEventListener("keydown", (e) => {
+      const k = e.key.toLowerCase();
+      if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d"].includes(k)) e.preventDefault();
+      if (k === "arrowup" || k === "w") setDir(0, -1);
+      if (k === "arrowdown" || k === "s") setDir(0, 1);
+      if (k === "arrowleft" || k === "a") setDir(-1, 0);
+      if (k === "arrowright" || k === "d") setDir(1, 0);
+    });
+    let sx, sy;
+    canvas.addEventListener("pointerdown", (e) => { sx = e.clientX; sy = e.clientY; });
+    canvas.addEventListener("pointerup", (e) => {
+      if (sx == null) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.hypot(dx, dy) < 24) return;
+      if (Math.abs(dx) > Math.abs(dy)) setDir(dx > 0 ? 1 : -1, 0);
+      else setDir(0, dy > 0 ? 1 : -1);
+      sx = sy = null;
+    });
+    overlay.addEventListener("click", () => {
+      overlay.classList.add("hidden"); reset(); running = true; last = performance.now(); acc = 0;
+    });
+    window.addEventListener("resize", resize);
+    resize(); reset(); requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
