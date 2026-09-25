@@ -72,6 +72,8 @@ const LEGAL_NAV = [
   { href: "/terms", label: "Terms", icon: IconDoc },
 ] as const;
 
+const AUTH_GATED_HREFS = new Set(["/profile", "/manage", "/library", "/donations"]);
+
 const SIDEBAR_KEY = "playinweb.sidebar.collapsed";
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -444,7 +446,8 @@ function Sidebar({
   onToggleCollapse?: () => void;
 }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const { openLogin } = useLoginDialog();
   const { profile } = useGames();
   const { features } = useFeatures();
   const admin = isAdminEmail(user?.email);
@@ -500,6 +503,7 @@ function Sidebar({
                 const feature = features.find((row) => row.href === item.href);
                 const flags = publicNavFlags(feature, admin);
                 if (!flags.show) return null;
+                const authGated = !loading && !user && AUTH_GATED_HREFS.has(item.href);
                 return (
                   <NavLink
                     key={item.href}
@@ -510,6 +514,8 @@ function Sidebar({
                     soon={flags.soon}
                     hidden={flags.hidden}
                     locked={flags.soon && !admin}
+                    authGated={authGated}
+                    onAuthGate={() => openLogin({ next: apexHref(item.href) })}
                   />
                 );
               })}
@@ -600,6 +606,8 @@ function NavLink({
   hidden,
   locked,
   collapsed,
+  authGated,
+  onAuthGate,
 }: {
   item: { href: string; label: string; icon: typeof IconHome };
   active: boolean;
@@ -610,6 +618,8 @@ function NavLink({
   hidden?: boolean;
   locked?: boolean;
   collapsed?: boolean;
+  authGated?: boolean;
+  onAuthGate?: () => void;
 }) {
   const Icon = item.icon;
   const iconOnly = Boolean(collapsed);
@@ -680,6 +690,22 @@ function NavLink({
       <span className={className} aria-disabled="true" title={item.label}>
         {inner}
       </span>
+    );
+  }
+  if (authGated) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          onAuthGate?.();
+          onNavigate?.();
+        }}
+        className={className}
+        aria-label={iconOnly ? item.label : undefined}
+        title={iconOnly ? item.label : undefined}
+      >
+        {inner}
+      </button>
     );
   }
   return (

@@ -1,10 +1,10 @@
 import { LEGAL_DOCS, type LegalKind } from "@/lib/legal";
 
-export function LegalBody({ kind }: { kind: LegalKind }) {
+export function LegalBody({ kind, showIntro = true }: { kind: LegalKind; showIntro?: boolean }) {
   const doc = LEGAL_DOCS[kind];
   return (
-    <div className="space-y-5 text-body leading-relaxed text-text-muted">
-      <p>{doc.intro}</p>
+    <div className="space-y-8 text-body leading-relaxed text-text-muted">
+      {showIntro ? <p>{doc.intro}</p> : null}
       {doc.sections.map((section) => (
         <section key={section.heading} className="space-y-2">
           <h3 className="text-heading font-semibold text-text">{section.heading}</h3>
