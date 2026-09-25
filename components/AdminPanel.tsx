@@ -186,7 +186,7 @@ export function AdminPanel() {
   }
 
   return (
-    <div className="mx-auto min-w-0 max-w-[1100px]">
+    <div className="min-w-0 pt-4">
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-display font-semibold tracking-tight">Admin</h1>
         <Segmented
@@ -218,7 +218,7 @@ export function AdminPanel() {
 
       <section className="mt-10">
         <h2 className="text-title font-semibold tracking-tight">New users</h2>
-        <div className="mt-4 overflow-x-auto rounded-panel bg-surface">
+        <div className="mt-4 overflow-x-auto rounded-panel bg-surface-2">
           <table className="w-full min-w-[40rem] text-left text-ui">
             <thead className="text-caption text-text-subtle">
               <tr className="border-b border-border">
@@ -268,7 +268,7 @@ export function AdminPanel() {
 
       <section className="mt-10">
         <h2 className="text-title font-semibold tracking-tight">New games registered</h2>
-        <div className="mt-4 overflow-x-auto rounded-panel bg-surface">
+        <div className="mt-4 overflow-x-auto rounded-panel bg-surface-2">
           <table className="w-full min-w-[40rem] text-left text-ui">
             <thead className="text-caption text-text-subtle">
               <tr className="border-b border-border">
@@ -379,7 +379,7 @@ function DonationRecords({
         </form>
       </div>
       {saved ? <p className="mt-2 text-caption text-text-muted">{saved}</p> : null}
-      <div className="mt-4 overflow-x-auto rounded-panel bg-surface">
+      <div className="mt-4 overflow-x-auto rounded-panel bg-surface-2">
         <table className="w-full min-w-[52rem] text-left text-ui">
           <thead className="text-caption text-text-subtle">
             <tr className="border-b border-border">
@@ -464,7 +464,7 @@ function TipRecords({ rows }: { rows: AdminTip[] | null }) {
   return (
     <section className="mt-10">
       <h2 className="text-title font-semibold tracking-tight">Tip history</h2>
-      <div className="mt-4 overflow-x-auto rounded-panel bg-surface">
+      <div className="mt-4 overflow-x-auto rounded-panel bg-surface-2">
         <table className="w-full min-w-[36rem] text-left text-ui">
           <thead className="text-caption text-text-subtle">
             <tr className="border-b border-border">
@@ -516,7 +516,7 @@ function PayoutRecords({ rows }: { rows: AdminPayout[] | null }) {
   return (
     <section className="mt-10">
       <h2 className="text-title font-semibold tracking-tight">Payout history</h2>
-      <div className="mt-4 overflow-x-auto rounded-panel bg-surface">
+      <div className="mt-4 overflow-x-auto rounded-panel bg-surface-2">
         <table className="w-full min-w-[36rem] text-left text-ui">
           <thead className="text-caption text-text-subtle">
             <tr className="border-b border-border">
@@ -576,7 +576,7 @@ function FeatureList({
   return (
     <section className="mt-8">
       <h2 className="text-title font-semibold tracking-tight">Feature list</h2>
-      <ul className="mt-4 divide-y divide-border overflow-hidden rounded-panel bg-surface">
+      <ul className="mt-4 divide-y divide-border overflow-hidden rounded-panel bg-surface-2">
         {features.map((feature) => (
           <li key={feature.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
@@ -606,7 +606,7 @@ function ReportsTable({ reports }: { reports: AdminReport[] | null }) {
   return (
     <section className="mt-8">
       <h2 className="text-title font-semibold tracking-tight">Reported issue</h2>
-      <div className="mt-4 overflow-x-auto rounded-panel bg-surface">
+      <div className="mt-4 overflow-x-auto rounded-panel bg-surface-2">
         <table className="w-full min-w-[40rem] text-left text-ui">
           <thead className="text-caption text-text-subtle">
             <tr className="border-b border-border">
@@ -658,7 +658,7 @@ function Tile({
   tone?: string;
 }) {
   return (
-    <div className="min-w-0 rounded-xl bg-surface px-3 py-3">
+    <div className="min-w-0 rounded-xl bg-surface-2 px-3 py-3">
       <p className={`text-title font-semibold tabular leading-none ${tone ?? "text-text"}`}>{value}</p>
       <p className="mt-1 truncate text-caption font-medium">{label}</p>
       <p className="truncate text-meta text-text-subtle">{hint}</p>

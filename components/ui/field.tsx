@@ -7,9 +7,9 @@ export function TextInput({ className, ...props }: React.InputHTMLAttributes<HTM
   return (
     <input
       className={cn(
-        "h-10 w-full rounded-lg bg-surface-2 px-3 text-body sm:h-9",
+        "h-10 w-full rounded-lg border border-border bg-surface-3 px-3 text-body sm:h-9",
         "outline-none transition-colors placeholder:text-text-subtle",
-        "focus:bg-surface-3",
+        "focus:border-border-strong focus:bg-surface-3",
         "disabled:pointer-events-none disabled:opacity-45",
         className,
       )}
@@ -22,9 +22,9 @@ export function TextArea({ className, ...props }: React.TextareaHTMLAttributes<H
   return (
     <textarea
       className={cn(
-        "min-h-[7rem] w-full resize-y rounded-lg bg-surface-2 px-3 py-2.5 text-body",
+        "min-h-[7rem] w-full resize-y rounded-lg border border-border bg-surface-3 px-3 py-2.5 text-body",
         "outline-none transition-colors placeholder:text-text-subtle",
-        "focus:bg-surface-3",
+        "focus:border-border-strong focus:bg-surface-3",
         className,
       )}
       {...props}
@@ -37,8 +37,8 @@ export function SelectInput({ className, children, ...props }: React.SelectHTMLA
     <span className="relative block has-[:disabled]:opacity-45">
       <select
         className={cn(
-          "h-10 w-full appearance-none rounded-lg bg-surface-2 px-3 pr-9 text-body sm:h-9",
-          "outline-none transition-colors focus:bg-surface-3",
+          "h-10 w-full appearance-none rounded-lg border border-border bg-surface-3 px-3 pr-9 text-body sm:h-9",
+          "outline-none transition-colors focus:border-border-strong focus:bg-surface-3",
           "disabled:pointer-events-none",
           className,
         )}

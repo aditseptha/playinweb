@@ -1,48 +1,48 @@
 import Link from "next/link";
 import { GameThumb } from "@/components/GameThumb";
-import { formatPlays, formatScore, gamePath } from "@/lib/format";
-import { popularityScore } from "@/lib/popularity";
+import { IconPlay } from "@/components/icons";
+import { LinkButton } from "@/components/ui/button";
+import { formatPlays, gamePath } from "@/lib/format";
 import type { Game } from "@/lib/types";
 
 export function RankRow({
   game,
   rank,
-  maxScore,
 }: {
   game: Game;
   rank: number;
-  maxScore: number;
+  maxScore?: number;
 }) {
-  const score = popularityScore(game);
-  const pct = Math.min(100, (score / maxScore) * 100);
-  const podium = rank <= 3;
+  const href = gamePath(game);
+  const play = game.embeddable && game.playUrl ? `${href}?play=1` : href;
 
   return (
-    <Link
-      href={gamePath(game)}
-      className="group grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-none px-4 py-3 hover:bg-surface-2 sm:grid-cols-[3rem_160px_minmax(0,1fr)_auto]"
-    >
-      <span
-        className={`text-center text-lg font-bold tabular-nums ${podium ? "text-accent" : "text-muted"}`}
-      >
-        {rank}
-      </span>
-      <div className="relative hidden aspect-video overflow-hidden rounded-lg bg-surface sm:block">
-        <GameThumb game={game} sizes="160px" />
-      </div>
+    <article className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-panel bg-surface-2 px-4 py-3.5 hover:bg-surface-3 sm:grid-cols-[3rem_140px_minmax(0,1fr)_auto]">
+      <Link href={href} className="text-center text-body font-semibold tabular text-text-muted">
+        #{rank}
+      </Link>
+      <Link href={href} className="relative hidden aspect-video overflow-hidden rounded-lg bg-surface-2 sm:block">
+        <GameThumb game={game} sizes="140px" />
+      </Link>
       <div className="min-w-0">
-        <h3 className="truncate text-[15px] font-medium text-text">{game.title}</h3>
-        <p className="truncate text-sm text-muted">{game.developer}</p>
+        <h3 className="truncate text-ui font-medium">
+          <Link href={href} className="text-text hover:text-text-muted">
+            {game.title}
+          </Link>
+        </h3>
+        <p className="truncate text-caption text-text-subtle">{game.developer}</p>
+        <p className="mt-1.5 text-caption text-text-subtle">
+          <span className="tabular">{formatPlays(game.viewCount ?? 0)} views</span>
+          <span aria-hidden> · </span>
+          <span className="tabular">{formatPlays(game.playCount)} plays</span>
+          <span aria-hidden> · </span>
+          <span className="tabular">{formatPlays(game.likeCount)} likes</span>
+        </p>
       </div>
-      <div className="flex flex-col items-end gap-1 text-right">
-        <span className="text-sm tabular-nums text-text">{formatPlays(game.playCount)} plays</span>
-        <span className="flex items-center gap-1.5 text-xs text-muted">
-          <span className="tabular-nums">{formatScore(score)}</span>
-          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-3">
-            <span className="block h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-          </span>
-        </span>
-      </div>
-    </Link>
+      <LinkButton href={play} variant="primary" size="sm" className="gap-1.5">
+        <IconPlay className="h-3.5 w-3.5" />
+        Play
+      </LinkButton>
+    </article>
   );
 }

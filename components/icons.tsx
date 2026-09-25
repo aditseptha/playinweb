@@ -72,6 +72,15 @@ export function IconSearch(props: IconProps) {
   );
 }
 
+export function IconMail(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="4" y="6" width="16" height="12" rx="2" />
+      <path d="m4 8 8 6 8-6" />
+    </svg>
+  );
+}
+
 export function IconBell(props: IconProps) {
   return (
     <svg {...base(props)}>

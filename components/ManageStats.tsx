@@ -41,7 +41,7 @@ export function ManageStats({
           const game = projectToGame(project);
           const series = bucketSeries(project.id, days, buckets, range === "weekly");
           return (
-            <li key={project.id} className="min-w-0 rounded-panel bg-surface px-4 py-4 sm:px-5">
+            <li key={project.id} className="min-w-0 rounded-panel bg-surface-2 px-4 py-4 sm:px-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
                 <div className="relative aspect-video w-full max-w-[226px] overflow-hidden rounded-lg bg-surface-2 lg:h-[127px] lg:w-[226px] lg:shrink-0">
                   <GameThumb game={game} sizes="(min-width: 1024px) 226px, 226px" />
@@ -107,7 +107,7 @@ function StatTile({
   tone?: string;
 }) {
   return (
-    <div className="min-w-0 rounded-xl bg-surface-2 px-2 py-2 sm:px-3">
+    <div className="min-w-0 rounded-xl bg-surface-3 px-2 py-2 sm:px-3">
       <p className={`text-title font-semibold tabular leading-none ${tone ?? "text-text"}`}>{formatPlays(value)}</p>
       <p className="mt-1 truncate text-caption font-medium">{label}</p>
       <p className="truncate text-meta text-text-subtle">{hint}</p>

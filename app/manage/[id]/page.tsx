@@ -31,7 +31,7 @@ export default function EditGamePage() {
 
   if (!user) {
     return (
-      <div className="mx-auto max-w-xl">
+      <div className="min-w-0 pt-4">
         <h1 className="text-display font-semibold tracking-tight">Edit game</h1>
         <p className="mt-1.5 text-body text-text-muted">Sign in to edit your listing.</p>
         <div className="mt-6">
@@ -45,7 +45,7 @@ export default function EditGamePage() {
 
   if (!project || project.owner_id !== user.id) {
     return (
-      <div className="mx-auto max-w-xl">
+      <div className="min-w-0 pt-4">
         <h1 className="text-display font-semibold tracking-tight">Game not found</h1>
         <p className="mt-1.5 text-body text-text-muted">This listing is missing, or it isn’t yours.</p>
         <div className="mt-6">
@@ -58,8 +58,8 @@ export default function EditGamePage() {
   }
 
   return (
-    <div>
-      <div className="mx-auto max-w-6xl">
+    <div className="pt-4">
+      <div className="min-w-0">
         <p className="text-caption text-text-muted">
           <Link href={apexHref("/manage")} className="hover:text-text">
             Manage games

@@ -7,8 +7,8 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <div>
-      <div className="mx-auto max-w-6xl">
+    <div className="pt-4">
+      <div className="min-w-0">
         <h1 className="text-display font-semibold tracking-tight">Create a new game</h1>
         <p className="mt-1.5 max-w-2xl text-body leading-relaxed text-text-muted">
           Fill in the listing — title, game URL, classification, and an HTML zip to play in the page.

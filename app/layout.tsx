@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import Script from "next/script";
 import { Suspense } from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/lib/auth";
 import { AppShell } from "@/components/AppShell";
 import { FeaturesProvider } from "@/lib/features";
 import { GamesProvider } from "@/lib/store";
 import { THEME_BOOT } from "@/lib/theme";
+import { umamiEnabled, umamiScriptUrl, umamiWebsiteId } from "@/lib/umami";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,10 +18,10 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  applicationName: "playinweb",
+  applicationName: "PlayInWeb",
   title: {
-    default: "playinweb — indie web games",
-    template: "%s · playinweb",
+    default: "PlayInWeb — indie web games",
+    template: "%s · PlayInWeb",
   },
   description:
     "A YouTube-style catalogue of indie web games. Browse by plays, check popularity, and register your own.",
@@ -47,6 +50,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <link rel="dns-prefetch" href={mediaOrigin} />
           </>
         ) : null}
+        {umamiEnabled() ? (
+          <Script
+            defer
+            src={umamiScriptUrl()}
+            data-website-id={umamiWebsiteId()}
+            strategy="afterInteractive"
+          />
+        ) : null}
       </head>
       <body className="min-h-full bg-bg font-sans text-text">
         <GamesProvider>
@@ -58,6 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             </FeaturesProvider>
           </AuthProvider>
         </GamesProvider>
+        <Analytics />
       </body>
     </html>
   );

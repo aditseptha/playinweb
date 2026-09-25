@@ -1,20 +1,24 @@
 import Link from "next/link";
 import { GameThumb } from "@/components/GameThumb";
+import { IconPlay } from "@/components/icons";
+import { LinkButton } from "@/components/ui/button";
 import { channelPath, formatPlays, gamePath } from "@/lib/format";
 import type { Game } from "@/lib/types";
 
-type Variant = "grid" | "rail" | "featured" | "related" | "promo" | "mini";
+type Variant = "grid" | "rail" | "featured" | "related" | "promo" | "mini" | "thumb";
 
 export function GameCard({
   game,
   maxScore: _maxScore,
   variant = "grid",
   priority = false,
+  rank,
 }: {
   game: Game;
   maxScore: number;
   variant?: Variant;
   priority?: boolean;
+  rank?: number;
 }) {
   const channel = channelPath(game.developer, game.channelHandle);
 
@@ -89,10 +93,52 @@ export function GameCard({
     );
   }
 
+  if (variant === "thumb") {
+    return (
+      <article className="block w-full">
+        <Link href={gamePath(game)} className="group relative block">
+          <span className="relative block aspect-video overflow-hidden rounded-panel bg-surface-2 transition-shadow duration-300 ease-out-quint group-hover:shadow-panel">
+            <GameThumb game={game} priority={priority} sizes="(min-width: 768px) 280px, 100vw" />
+            <Badges game={game} />
+          </span>
+          {rank ? (
+            <span
+              className={
+                rank === 1
+                  ? "absolute left-0 top-0 z-10 inline-flex h-9 min-w-9 -translate-x-1/3 -translate-y-1/2 items-center justify-center rounded-lg bg-warning px-2.5 text-ui font-semibold tabular text-white"
+                  : "absolute left-0 top-0 z-10 inline-flex h-9 min-w-9 -translate-x-1/3 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-surface px-2.5 text-ui font-semibold tabular text-text shadow-sm"
+              }
+            >
+              #{rank}
+            </span>
+          ) : null}
+        </Link>
+        <div className="mt-2 flex min-w-0 items-center gap-2">
+          <h3 className="min-w-0 flex-1 truncate text-[15px] font-semibold tracking-tight">
+            <Link href={gamePath(game)} className="text-text hover:text-text-muted">
+              {game.title}
+            </Link>
+          </h3>
+          <LinkButton href={playHref(game)} variant="primary" size="sm" className="gap-1.5">
+            <IconPlay className="h-3.5 w-3.5" />
+            Play
+          </LinkButton>
+        </div>
+        <p className="mt-0.5 truncate text-caption text-text-subtle tabular">
+          {formatPlays(game.playCount)} plays
+        </p>
+      </article>
+    );
+  }
+
   if (variant === "featured") {
     return (
-      <article className="grid overflow-hidden rounded-panel bg-surface md:grid-cols-[160px_minmax(0,1fr)] lg:grid-cols-[200px_minmax(0,1fr)]">
-        <Link href={gamePath(game)} className="group relative aspect-[16/9] bg-surface-2 md:aspect-auto md:min-h-[112px]">
+      <article className="relative grid gap-3 rounded-panel bg-surface-2 p-3 sm:gap-4 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
+        <Link
+          href={playHref(game)}
+          aria-label={`Play ${game.title}`}
+          className="group relative aspect-[16/9] w-full overflow-hidden rounded-lg bg-surface md:aspect-auto md:h-[100px] md:w-[160px] lg:h-[112px] lg:w-[200px]"
+        >
           <GameThumb
             game={game}
             priority={priority}
@@ -100,7 +146,7 @@ export function GameCard({
           />
           <Badges game={game} />
         </Link>
-        <div className="flex min-w-0 flex-col justify-center gap-1 px-4 py-3 md:px-5">
+        <div className="flex min-w-0 flex-col justify-center gap-1 pr-16 md:pr-[4.75rem]">
           <h2 className="truncate text-title font-semibold tracking-tight">
             <Link
               href={gamePath(game)}
@@ -112,9 +158,12 @@ export function GameCard({
           <Link href={channel} className="truncate text-caption text-muted hover:text-text">
             {game.developer}
           </Link>
-          <p className="mt-0.5 line-clamp-1 text-caption text-text-subtle">{game.description}</p>
           <Meta game={game} />
         </div>
+        <LinkButton href={playHref(game)} variant="primary" size="sm" className="absolute right-3 top-3 z-10 gap-1.5">
+          <IconPlay className="h-3.5 w-3.5" />
+          Play
+        </LinkButton>
       </article>
     );
   }
@@ -158,22 +207,21 @@ export function GameCard({
   );
 }
 
+function playHref(game: Game) {
+  const base = gamePath(game);
+  if (game.embeddable && game.playUrl) return `${base}?play=1`;
+  return base;
+}
+
 function Badges({ game }: { game: Game }) {
-  return (
-    <>
-      <span className="absolute left-2.5 top-2.5 rounded-md bg-accent px-1.5 py-0.5 text-badge font-semibold uppercase text-accent-fg">
-        Free
-      </span>
-      {game.embeddable ? (
-        <span className="absolute bottom-2.5 left-2.5 rounded-md bg-bg/75 px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide text-text backdrop-blur-sm">
-          Play in browser
-        </span>
-      ) : (
-        <span className="absolute bottom-2.5 left-2.5 rounded-md bg-bg/75 px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide text-text backdrop-blur-sm">
-          Web
-        </span>
-      )}
-    </>
+  return game.embeddable ? (
+    <span className="absolute bottom-2.5 left-2.5 rounded-md bg-bg/75 px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide text-text backdrop-blur-sm">
+      Play in browser
+    </span>
+  ) : (
+    <span className="absolute bottom-2.5 left-2.5 rounded-md bg-bg/75 px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide text-text backdrop-blur-sm">
+      Web
+    </span>
   );
 }
 

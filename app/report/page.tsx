@@ -53,23 +53,25 @@ export default function ReportPage() {
   }
 
   return (
-    <div className="mx-auto min-w-0 max-w-xl">
-      <h1 className="text-display font-semibold tracking-tight">Report an issue</h1>
-      <p className="mt-1.5 text-body text-text-muted">
-        Broken play links, missing files, or something that should not be here.
-      </p>
-      <form onSubmit={(e) => void onSubmit(e)} className="mt-8 flex flex-col gap-4">
-        <Field label="Subject">
-          <TextInput name="subject" required placeholder="What went wrong?" />
-        </Field>
-        <Field label="Details">
-          <TextArea name="details" required placeholder="Page, game, and what you expected." />
-        </Field>
-        <Button type="submit" variant="primary" className="self-start" disabled={loading || pending}>
-          {pending ? "Sending…" : "Submit report"}
-        </Button>
-        {error ? <p className="text-ui text-danger">{error}</p> : null}
-      </form>
+    <div className="flex min-h-[calc(100dvh-9.75rem)] min-w-0 items-center justify-center">
+      <div className="w-full rounded-2xl border border-border bg-surface-2 p-6 sm:w-1/2 sm:p-8">
+        <h1 className="text-display font-semibold tracking-tight">Report an issue</h1>
+        <p className="mt-1.5 text-body text-text-muted">
+          Broken play links, missing files, or something that should not be here.
+        </p>
+        <form onSubmit={(e) => void onSubmit(e)} className="mt-8 flex flex-col gap-4">
+          <Field label="Subject">
+            <TextInput name="subject" required placeholder="What went wrong?" />
+          </Field>
+          <Field label="Details">
+            <TextArea name="details" required placeholder="Page, game, and what you expected." />
+          </Field>
+          <Button type="submit" variant="primary" className="self-start" disabled={loading || pending}>
+            {pending ? "Sending…" : "Submit report"}
+          </Button>
+          {error ? <p className="text-ui text-danger">{error}</p> : null}
+        </form>
+      </div>
       {sent ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-bg/70 p-4" onClick={() => setSent(false)}>
           <div

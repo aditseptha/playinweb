@@ -11,11 +11,11 @@ export default function LibraryPage() {
   const max = maxPopularity(games);
 
   return (
-    <div className="mx-auto min-w-0 max-w-[1400px]">
+    <div className="min-w-0 pt-4">
       <h1 className="text-display font-semibold tracking-tight">Library</h1>
       <p className="mt-1.5 text-body text-text-muted">Games you saved from a listing.</p>
       {listed.length === 0 ? (
-        <div className="mt-10 rounded-panel bg-surface px-5 py-12 text-center">
+        <div className="mt-10 rounded-panel bg-surface-2 px-5 py-12 text-center">
           <p className="font-medium">Save a game from its page</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
             Open any listing and tap Save to library. It will show up here.

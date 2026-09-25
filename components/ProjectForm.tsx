@@ -134,7 +134,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
 
   if (!user || !profile) {
     return (
-      <div className="rounded-panel bg-surface px-5 py-10 text-center">
+      <div className="rounded-panel bg-surface-2 px-5 py-10 text-center">
         <p className="text-title font-medium">Create an account first</p>
         <p className="mx-auto mt-1 max-w-md text-ui text-text-muted">
           Games are published on your page, like yourname/game.
@@ -350,7 +350,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
+    <form onSubmit={onSubmit} className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="flex min-w-0 flex-col gap-6">
         <div className="rounded-lg bg-warning/12 px-4 py-3 text-ui text-warning">
           Payments are not live. If you set a paid price, people still cannot check out here.

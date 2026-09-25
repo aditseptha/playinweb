@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 
 interface Thumb {
@@ -48,25 +48,29 @@ export function Segmented<T extends string>({
     if (!list) return;
     const measure = () => {
       const active = list.querySelector<HTMLElement>('[aria-checked="true"]');
-      setThumb(
-        active
-          ? {
-              left: active.offsetLeft,
-              top: active.offsetTop,
-              width: active.offsetWidth,
-              height: active.offsetHeight,
-            }
-          : null,
-      );
+      if (!active) {
+        setThumb(null);
+        return;
+      }
+      setThumb({
+        left: active.offsetLeft,
+        top: active.offsetTop,
+        width: active.offsetWidth,
+        height: active.offsetHeight,
+      });
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(list);
-    for (const child of Array.from(list.children)) observer.observe(child);
+    for (const child of Array.from(list.children)) {
+      if (child instanceof HTMLElement && child.getAttribute("role") === "radio") {
+        observer.observe(child);
+      }
+    }
     return () => observer.disconnect();
   }, [value, options]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!thumb || sliding) return;
     const frame = requestAnimationFrame(() => setSliding(true));
     return () => cancelAnimationFrame(frame);
@@ -77,27 +81,26 @@ export function Segmented<T extends string>({
       ref={listRef}
       role="radiogroup"
       aria-label={ariaLabel}
-      className={cn("relative inline-flex items-center bg-surface-2", SIZES[size].root, className)}
+      className={cn("relative inline-flex items-center overflow-hidden bg-surface-2", SIZES[size].root, className)}
     >
       {thumb ? (
         <span
           aria-hidden
-          className={cn(
-            "pointer-events-none absolute top-0 left-0 bg-surface shadow-sm",
-            SIZES[size].pill,
-            sliding && "transition-[transform,width] duration-200 ease-out-quint motion-reduce:transition-none",
-          )}
+          className={cn("pointer-events-none absolute top-0 left-0 z-0 self-start bg-surface shadow-sm", SIZES[size].pill)}
           style={{
-            transform: `translate(${thumb.left}px, ${thumb.top}px)`,
+            transform: `translate3d(${thumb.left}px, ${thumb.top}px, 0)`,
             width: thumb.width,
             height: thumb.height,
+            transition: sliding
+              ? "transform 320ms cubic-bezier(0.22, 1, 0.36, 1), width 320ms cubic-bezier(0.22, 1, 0.36, 1), height 320ms cubic-bezier(0.22, 1, 0.36, 1)"
+              : "none",
           }}
         />
       ) : null}
       {options.map((opt) => {
         const active = opt.value === value;
         const cls = cn(
-          "relative inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-colors",
+          "relative z-10 inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-colors duration-200",
           SIZES[size].item,
           active ? "text-text" : "text-text-subtle hover:text-text-muted",
         );

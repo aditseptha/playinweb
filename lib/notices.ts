@@ -153,7 +153,7 @@ export async function loadNotices(userId: string, admin: boolean): Promise<Notic
       at: row.created_at,
       href: apexHref("/admin"),
       title: `${who} tipped ${formatMoney(Number(row.amount))}`,
-      detail: "playinweb",
+      detail: "PlayInWeb",
     });
   }
 

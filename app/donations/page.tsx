@@ -121,7 +121,7 @@ function DonationsView() {
 
   if (!user) {
     return (
-      <div className="mx-auto max-w-xl">
+      <div className="min-w-0 pt-4">
         <h1 className="text-display font-semibold tracking-tight">Donations</h1>
         <p className="mt-1.5 text-body text-text-muted">Sign in to see games you gave to and earned from.</p>
         <div className="mt-6 flex gap-3">
@@ -137,7 +137,7 @@ function DonationsView() {
   }
 
   return (
-    <div className="mx-auto min-w-0 max-w-[1100px]">
+    <div className="min-w-0 pt-4">
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-display font-semibold tracking-tight">Donations</h1>
         <Segmented
@@ -145,14 +145,14 @@ function DonationsView() {
           value={tab}
           options={[
             { value: "donations", label: "Donations", href: "/donations" },
-            { value: "cashout", label: "Cash out", href: "/donations?tab=cashout" },
+            { value: "cashout", label: "Payout", href: "/donations?tab=cashout" },
           ]}
         />
       </div>
       {error ? <p className="mt-6 text-ui text-danger">{error}</p> : null}
       {tab === "cashout" ? (
         <section className="mt-10">
-          <h2 className="text-title font-semibold tracking-tight">Cash out</h2>
+          <h2 className="text-title font-semibold tracking-tight">Payout</h2>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <MoneyTile
               label="Outstanding"
@@ -174,7 +174,7 @@ function DonationsView() {
             <p className="text-ui font-medium">How cash out works</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5 text-caption text-text-muted">
               <li>
-                playinweb keeps a {commission}% platform fee from each donation. That cut stays with the site. You receive
+                PlayInWeb keeps a {commission}% platform fee from each donation. That cut stays with the site. You receive
                 the rest.
               </li>
               <li>
@@ -244,7 +244,7 @@ function DonationSection({
         {rows === null ? loading : rows.length === 0 ? empty : summary(rows, total)}
       </p>
       {rows === null ? null : rows.length === 0 ? (
-        <div className="mt-4 rounded-panel bg-surface px-5 py-8 text-center">
+        <div className="mt-4 rounded-panel bg-surface-2 px-5 py-8 text-center">
           <p className="font-medium">{emptyTitle}</p>
           <Link
             href={emptyHref}
@@ -259,7 +259,7 @@ function DonationSection({
             const href =
               row.handle && row.slug ? projectPublicUrl(row.handle, row.slug) : gamePath(asGame(row));
             return (
-              <li key={row.projectId} className="overflow-hidden rounded-panel bg-surface">
+              <li key={row.projectId} className="overflow-hidden rounded-panel bg-surface-2">
                 <div className="flex items-center gap-4 px-4 py-3">
                   <Link href={href} className="relative h-16 w-28 shrink-0 overflow-hidden rounded-lg bg-surface-2">
                     <GameThumb game={asGame(row)} sizes="112px" />
@@ -305,7 +305,7 @@ function DonationSection({
           })}
         </ul>
       ) : (
-        <ul className="mt-4 divide-y divide-border overflow-hidden rounded-panel bg-surface">
+        <ul className="mt-4 divide-y divide-border overflow-hidden rounded-panel bg-surface-2">
           {rows.map((row) => {
             const href =
               row.handle && row.slug ? projectPublicUrl(row.handle, row.slug) : gamePath(asGame(row));
@@ -336,8 +336,8 @@ function CashoutHistory({ payouts }: { payouts: Payout[] }) {
   if (payouts.length === 0) return null;
   return (
     <div className="mt-8">
-      <p className="text-ui font-medium">Cash out history</p>
-      <ul className="mt-3 divide-y divide-border overflow-hidden rounded-panel bg-surface px-4">
+      <p className="text-ui font-medium">Payout history</p>
+      <ul className="mt-3 divide-y divide-border overflow-hidden rounded-panel bg-surface-2 px-4">
         {payouts.map((row) => (
           <li key={row.id} className="flex items-baseline justify-between gap-3 py-2.5 text-caption text-text-muted">
             <span>
@@ -581,7 +581,7 @@ function PaypalConnect({
       {step === "otp" && intent ? (
         <PaypalOtpDialog
           title="Enter the code"
-          body={`We sent a 6-digit code to ${maskEmail(accountEmail)}. Use the email titled with your verification code, not the sign-in link.`}
+          body={`We sent a code to ${maskEmail(accountEmail)}. Enter the numbers from “Your verification code.”`}
           otp={otp}
           onOtp={setOtp}
           confirmLabel={pending ? "Checking…" : "Confirm"}
@@ -757,7 +757,7 @@ function PaypalOtpDialog({
                 if (ready && !pending) onConfirm();
               }
             }}
-            placeholder="6-digit code"
+            placeholder="Code from email"
           />
         </Field>
         {error ? <p className="mt-2 text-caption text-danger">{error}</p> : null}
@@ -800,7 +800,7 @@ function MoneyTile({
   note?: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-col rounded-panel bg-surface px-6 py-7">
+    <div className="flex min-w-0 flex-col rounded-panel bg-surface-2 px-6 py-7">
       <p className="text-caption text-text-subtle">
         {label}
         {hint ? <span> · {hint}</span> : null}

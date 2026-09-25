@@ -69,7 +69,7 @@ export default function CreatorSitePage() {
   const plays = games.reduce((n, game) => n + game.playCount, 0);
 
   return (
-    <div className="mx-auto flex min-w-0 max-w-[1400px] flex-col">
+    <div className="flex min-w-0 flex-col">
       <ChannelHero
         name={profile.display_name}
         handle={profile.handle}
@@ -83,7 +83,7 @@ export default function CreatorSitePage() {
         bannerPosition={profile.banner_position}
       />
       {games.length === 0 ? (
-        <p className="mt-10 rounded-panel bg-surface px-5 py-10 text-center text-sm text-muted">No published games yet.</p>
+        <p className="mt-10 rounded-panel bg-surface-2 px-5 py-10 text-center text-sm text-muted">No published games yet.</p>
       ) : (
         <div className="mt-10 grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
           {games.map((game) => (

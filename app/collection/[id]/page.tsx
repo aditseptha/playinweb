@@ -28,7 +28,7 @@ export default function CollectionPage() {
   const listed = gamesByIds(games, collection.gameIds);
 
   return (
-    <div className="mx-auto min-w-0 max-w-[1400px]">
+    <div className="min-w-0 pt-4">
       <p className="text-sm text-muted">
         <Link href="/library" className="hover:text-text">
           Library
@@ -41,7 +41,7 @@ export default function CollectionPage() {
         {listed.length} {listed.length === 1 ? "game" : "games"}
       </p>
       {listed.length === 0 ? (
-        <div className="mt-10 rounded-panel bg-surface px-5 py-12 text-center">
+        <div className="mt-10 rounded-panel bg-surface-2 px-5 py-12 text-center">
           <p className="font-medium">No games yet</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
             Add games from a listing with Add to collection.

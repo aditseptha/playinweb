@@ -221,6 +221,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
       trailerUrl={project.trailer_url}
       tags={tags}
       playLabel={game.embeddable ? "Play" : game.playUrl ? "Play in new tab" : undefined}
+      playCount={plays}
       liked={liked}
       autoPlay={Boolean(user) && autoPlay && game.embeddable}
       allowPlay={Boolean(user)}
@@ -239,7 +240,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
     >
       <div
         className={cn(
-          "mx-auto grid min-w-0 max-w-[1360px] items-start lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-x-8",
+          "grid min-w-0 items-start lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-x-8",
           "duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-safe:transition-[row-gap]",
           playerOpen ? "gap-y-8" : "gap-y-2",
         )}

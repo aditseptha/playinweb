@@ -182,6 +182,16 @@ export async function searchProfiles(query: string): Promise<SearchProfile[]> {
   return (data ?? []) as SearchProfile[];
 }
 
+export async function countProfiles(): Promise<number> {
+  const supabase = createClient();
+  const { count, error } = await supabase.from("profiles").select("id", { count: "exact", head: true });
+  if (error) {
+    console.error(error);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 export function clearCatalogueCache() {
   if (typeof window === "undefined") return;
   try {

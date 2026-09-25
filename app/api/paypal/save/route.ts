@@ -20,20 +20,9 @@ export async function POST(request: Request) {
     if (!/^\d{6,8}$/.test(otp)) {
       return Response.json({ error: "Enter the code from your email." }, { status: 400 });
     }
-    const { error: otpError } = await supabase.auth.verifyOtp({
-      email: auth.user.email,
-      token: otp,
-      type: "email",
-    });
-    if (otpError) {
-      const retry = await supabase.auth.verifyOtp({
-        email: auth.user.email,
-        token: otp,
-        type: "magiclink",
-      });
-      if (retry.error) {
-        return Response.json({ error: "That code is wrong or expired." }, { status: 403 });
-      }
+    const ok = await proveEmailCode(supabase, auth.user.email, otp);
+    if (!ok) {
+      return Response.json({ error: "That code is wrong or expired." }, { status: 403 });
     }
   } else if (!(await recentEmailProof(supabase))) {
     return Response.json({ error: "Open the email we sent, then try again." }, { status: 403 });
@@ -66,6 +55,23 @@ export async function POST(request: Request) {
   }
   jar.set(PAYPAL_PENDING_COOKIE, "", { ...paypalChallengeCookie, maxAge: 0 });
   return Response.json({ ok: true });
+}
+
+async function proveEmailCode(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  email: string,
+  token: string,
+) {
+  const { error: nonceError } = await supabase.auth.updateUser({
+    nonce: token,
+    data: { paypal_reauth_at: new Date().toISOString() },
+  });
+  if (!nonceError) return true;
+  for (const type of ["email", "magiclink"] as const) {
+    const { error } = await supabase.auth.verifyOtp({ email, token, type });
+    if (!error) return true;
+  }
+  return false;
 }
 
 async function recentEmailProof(supabase: Awaited<ReturnType<typeof createClient>>) {

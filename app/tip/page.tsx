@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import Image from "next/image";
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
 import { useSearchParams } from "next/navigation";
-import { LogoMark } from "@/components/icons";
+import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { apexHref } from "@/lib/host";
+import { publicMediaUrl } from "@/lib/media";
 
 const PRESETS = [1, 3, 5, 10, 25, 100];
 
@@ -97,11 +99,12 @@ export default function TipPage() {
   }
 
   return (
-    <div className="mx-auto min-w-0 max-w-[760px] pb-16 text-center">
+    <div className="flex min-h-[calc(100dvh-9.75rem)] min-w-0 items-center justify-center">
+    <div className="mx-auto w-full max-w-3xl text-center">
       <h1 className="text-[40px] font-semibold tracking-tight sm:text-[48px]">Support the project</h1>
       <p className="mx-auto mt-4 max-w-[52ch] text-body leading-relaxed text-text-muted">
         This is a place to go beyond a thank you. A tip is optional. Anything you send goes to the team building
-        playinweb, not to a game listing.
+        PlayInWeb, not to a game listing.
       </p>
       <p className="mt-10 text-caption text-text-subtle">Choose an amount</p>
       <form onSubmit={onSubmit} className="mt-4">
@@ -167,32 +170,13 @@ export default function TipPage() {
         </div>
         <div className="relative mt-10">
           <HeartPeek amount={selected} />
-          <div className="relative z-10 overflow-hidden rounded-[28px] bg-surface text-left shadow-panel">
-          <div className="flex items-baseline justify-between gap-4 px-6 py-5 sm:px-8">
-            <p className="text-[22px] font-semibold tracking-tight">playinweb certificate</p>
-            <p className="shrink-0 text-caption text-text-subtle">
-              {supporter}
-              <span className="text-text-subtle/70"> · Sponsor</span>
-            </p>
-          </div>
-          <div className="relative">
-            <div className="border-t border-dashed border-border-strong" />
-            <span className="absolute left-0 top-1/2 size-6 -translate-x-1/2 -translate-y-1/2 rounded-full bg-bg" />
-            <span className="absolute right-0 top-1/2 size-6 translate-x-1/2 -translate-y-1/2 rounded-full bg-bg" />
-          </div>
-          <div className="flex flex-col gap-6 px-6 py-8 sm:flex-row sm:items-center sm:px-8">
-            <LogoMark className="size-[72px] shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[22px] font-semibold tracking-tight">
-                {Number.isFinite(selected) ? formatMoney(selected) : "$0.00"} donation
-              </p>
-              <p className="mt-1.5 max-w-[36ch] text-caption leading-relaxed text-text-muted">
-                Playing stays free, with or without a tip. What you give helps the developer improve community features.
-              </p>
-            </div>
-            <Stamp label={stamp} />
-          </div>
-        </div>
+          <Certificate
+            amount={Number.isFinite(selected) ? formatMoney(selected) : "$0.00"}
+            supporter={supporter}
+            stamp={stamp}
+            name={profile?.display_name || supporter}
+            avatarUrl={publicMediaUrl(profile?.avatar_path) || undefined}
+          />
         </div>
         <Button type="submit" variant="primary" className="mt-6" disabled={pending}>
           {pending ? "Redirecting…" : "Send tip"}
@@ -200,6 +184,98 @@ export default function TipPage() {
         <p className="mt-3 text-meta text-text-subtle">Minimum $1.00. Paid with Polar.</p>
         {notice ? <p className="mt-2 text-ui text-warning">{notice}</p> : null}
       </form>
+    </div>
+    </div>
+  );
+}
+
+function Certificate({
+  amount,
+  supporter,
+  stamp,
+  name,
+  avatarUrl,
+}: {
+  amount: string;
+  supporter: string;
+  stamp: string;
+  name: string;
+  avatarUrl?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useRef(false);
+  const [tilt, setTilt] = useState({ rx: 0, ry: 0, gx: 50, gy: 50, live: false });
+
+  useEffect(() => {
+    reduce.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+
+  function onMove(e: PointerEvent<HTMLDivElement>) {
+    if (reduce.current) return;
+    const box = ref.current?.getBoundingClientRect();
+    if (!box) return;
+    const px = (e.clientX - box.left) / box.width;
+    const py = (e.clientY - box.top) / box.height;
+    setTilt({
+      rx: (0.5 - py) * 14,
+      ry: (px - 0.5) * 18,
+      gx: px * 100,
+      gy: py * 100,
+      live: true,
+    });
+  }
+
+  function onLeave() {
+    setTilt({ rx: 0, ry: 0, gx: 50, gy: 50, live: false });
+  }
+
+  return (
+    <div
+      ref={ref}
+      onPointerMove={onMove}
+      onPointerLeave={onLeave}
+      className="relative z-10 overflow-hidden rounded-[28px] bg-surface text-left shadow-panel will-change-transform"
+      style={{
+        transform: `perspective(1100px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg) translateZ(0)`,
+        transition: tilt.live ? "transform 40ms linear" : "transform 500ms cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
+    >
+      <div className="flex items-baseline justify-between gap-4 px-6 py-5 sm:px-8">
+        <p className="text-[22px] font-semibold tracking-tight">PlayInWeb certificate</p>
+        <p className="shrink-0 text-caption text-text-subtle">
+          {supporter}
+          <span className="text-text-subtle/70"> · Sponsor</span>
+        </p>
+      </div>
+      <div className="relative">
+        <div className="border-t border-dashed border-border-strong" />
+        <span className="absolute left-0 top-1/2 size-6 -translate-x-1/2 -translate-y-1/2 rounded-full bg-bg" />
+        <span className="absolute right-0 top-1/2 size-6 translate-x-1/2 -translate-y-1/2 rounded-full bg-bg" />
+      </div>
+      <div className="flex flex-col gap-6 px-6 py-8 sm:flex-row sm:items-center sm:px-8">
+        <Image
+          src="/playinweb-mark.webp"
+          alt="PlayInWeb"
+          width={128}
+          height={128}
+          unoptimized
+          className="size-28 shrink-0 rounded-[22px] sm:size-32"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[22px] font-semibold tracking-tight">{amount} donation</p>
+          <p className="mt-1.5 max-w-[36ch] text-caption leading-relaxed text-text-muted">
+            Playing stays free, with or without a tip. What you give helps the developer improve community features.
+          </p>
+        </div>
+        <Stamp label={stamp} name={name} avatarUrl={avatarUrl} />
+      </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 mix-blend-soft-light"
+        style={{
+          background: `radial-gradient(28rem circle at ${tilt.gx}% ${tilt.gy}%, oklch(1 0 0 / 0.28), transparent 58%)`,
+        }}
+      />
     </div>
   );
 }
@@ -236,8 +312,16 @@ function heartTuck(amount: number) {
   return 12 + heartScale(amount) * 16;
 }
 
-function Stamp({ label }: { label: string }) {
-  const rim = `playinweb supporter · ${label} · playinweb supporter · ${label} · `;
+function Stamp({
+  label,
+  name,
+  avatarUrl,
+}: {
+  label: string;
+  name: string;
+  avatarUrl?: string;
+}) {
+  const rim = `PlayInWeb supporter · ${label} · PlayInWeb supporter · ${label} · `;
   return (
     <div className="relative mx-auto grid size-[140px] shrink-0 place-items-center text-text-muted sm:mx-0">
       <svg viewBox="0 0 140 140" className="absolute inset-0" aria-hidden>
@@ -250,7 +334,7 @@ function Stamp({ label }: { label: string }) {
           <textPath href="#tip-stamp-rim">{rim}</textPath>
         </text>
       </svg>
-      <LogoMark className="size-9" />
+      <Avatar name={name} src={avatarUrl} size={56} />
     </div>
   );
 }

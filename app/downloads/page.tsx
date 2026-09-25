@@ -17,16 +17,16 @@ export default function DownloadsPage() {
 
   return (
     <FeatureGate id="downloads">
-    <div className="mx-auto min-w-0 max-w-[800px]">
+    <div className="min-w-0 pt-4">
       <h1 className="text-display font-semibold tracking-tight">Downloads</h1>
       <p className="mt-1.5 text-body text-text-muted">Files published with a game. Open a listing to play in the browser.</p>
 
       {projects == null ? (
         <p className="mt-8 text-ui text-text-muted">Loading…</p>
       ) : listed.length === 0 ? (
-        <p className="mt-10 rounded-panel bg-surface px-5 py-10 text-center text-ui text-text-muted">No downloadable files yet.</p>
+        <p className="mt-10 rounded-panel bg-surface-2 px-5 py-10 text-center text-ui text-text-muted">No downloadable files yet.</p>
       ) : (
-        <ul className="mt-8 divide-y divide-border rounded-panel bg-surface">
+        <ul className="mt-8 divide-y divide-border rounded-panel bg-surface-2">
           {listed.flatMap((project) =>
             (project.project_files ?? []).map((file) => {
               const href = file.external_url || publicMediaUrl(file.storage_path);

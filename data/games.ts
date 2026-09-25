@@ -52,7 +52,7 @@ export const SEED_GAMES: Game[] = [
   {
     id: "neon-snake",
     title: "Neon Snake",
-    developer: "playinweb Labs",
+    developer: "PlayInWeb Labs",
     description:
       "Classic snake, rebuilt for the catalogue. Eat, grow, don’t hit yourself. Arrow keys or swipe. A tiny original you can play right here.",
     playUrl: "/games/snake/index.html",
@@ -100,7 +100,7 @@ export const SEED_GAMES: Game[] = [
   {
     id: "brick-shift",
     title: "Brick Shift",
-    developer: "playinweb Labs",
+    developer: "PlayInWeb Labs",
     description:
       "Breakout with a heavier ball and a shorter fuse. Keep the paddle under the bounce. Mouse or touch to move.",
     playUrl: "/games/breakout/index.html",
@@ -132,7 +132,7 @@ export const SEED_GAMES: Game[] = [
   {
     id: "ember-clicker",
     title: "Ember Clicker",
-    developer: "playinweb Labs",
+    developer: "PlayInWeb Labs",
     description:
       "Stoke a dying furnace. Click for embers, spend them on bellows and fuel. A tiny idle loop made for this catalogue.",
     playUrl: "/games/clicker/index.html",
@@ -148,7 +148,7 @@ export const SEED_GAMES: Game[] = [
   {
     id: "orbit-drift",
     title: "Orbit Drift",
-    developer: "playinweb Labs",
+    developer: "PlayInWeb Labs",
     description:
       "Hold a fragile orbit while debris rains in. Left and right to strafe, survive the swarm. Short sessions, high tension.",
     playUrl: "/games/orbit/index.html",
@@ -212,7 +212,7 @@ export const SEED_GAMES: Game[] = [
   {
     id: "hex-mines",
     title: "Hex Mines",
-    developer: "playinweb Labs",
+    developer: "PlayInWeb Labs",
     description:
       "Minesweeper on a honeycomb. Flag the bombs, clear the field, don’t rush the first click.",
     playUrl: "/games/mines/index.html",
@@ -228,7 +228,7 @@ export const SEED_GAMES: Game[] = [
   {
     id: "tempo-tap",
     title: "Tempo Tap",
-    developer: "playinweb Labs",
+    developer: "PlayInWeb Labs",
     description:
       "Hit the beat as notes fall. Miss too many and the track folds. A short rhythm loop for this catalogue.",
     playUrl: "/games/tempo/index.html",
@@ -244,7 +244,7 @@ export const SEED_GAMES: Game[] = [
   {
     id: "paper-pilot",
     title: "Paper Pilot",
-    developer: "playinweb Labs",
+    developer: "PlayInWeb Labs",
     description:
       "Steer a folded plane through rings. Stall and you’re scrap. One-button lift, hold to climb.",
     playUrl: "/games/pilot/index.html",
@@ -260,7 +260,7 @@ export const SEED_GAMES: Game[] = [
   {
     id: "void-match",
     title: "Void Match",
-    developer: "playinweb Labs",
+    developer: "PlayInWeb Labs",
     description:
       "Swap gems on a dark board. Make four, drop a bomb, chase a higher cascade.",
     playUrl: "/games/match/index.html",
@@ -276,7 +276,7 @@ export const SEED_GAMES: Game[] = [
   {
     id: "signal-lost",
     title: "Signal Lost",
-    developer: "playinweb Labs",
+    developer: "PlayInWeb Labs",
     description:
       "Tune a noisy radio until a station locks. Each clear channel opens a short log. A tiny found-audio toy.",
     playUrl: "/games/signal/index.html",

@@ -5,6 +5,7 @@ import { GameThumb } from "@/components/GameThumb";
 import { Button } from "@/components/ui/button";
 import { IconExpand, IconFullscreen, IconFullscreenExit, IconPlay, IconShrink } from "@/components/icons";
 import { cn } from "@/lib/cn";
+import { formatPlays } from "@/lib/format";
 import { projectPublicUrl } from "@/lib/host";
 import { playFrameSandbox } from "@/lib/html-game";
 import type { Game } from "@/lib/types";
@@ -17,6 +18,7 @@ type HeroCtx = {
   trailer: Trailer | null;
   tags: string[];
   playLabel?: string;
+  playCount: number;
   liked: boolean;
   slides: Slide[];
   slide: string;
@@ -44,6 +46,7 @@ export function ProjectHeroRoot({
   trailerUrl,
   tags,
   playLabel,
+  playCount,
   liked,
   autoPlay = false,
   allowPlay = true,
@@ -57,6 +60,7 @@ export function ProjectHeroRoot({
   trailerUrl?: string | null;
   tags: string[];
   playLabel?: string;
+  playCount?: number;
   liked: boolean;
   autoPlay?: boolean;
   allowPlay?: boolean;
@@ -96,6 +100,7 @@ export function ProjectHeroRoot({
       trailer,
       tags,
       playLabel,
+      playCount: playCount ?? game.playCount,
       liked,
       slides,
       slide,
@@ -139,6 +144,7 @@ export function ProjectHeroRoot({
       trailer,
       tags,
       playLabel,
+      playCount,
       liked,
       slides,
       slide,
@@ -163,6 +169,7 @@ export function ProjectHeroStage() {
     trailer,
     tags,
     playLabel,
+    playCount,
     playing,
     expanded,
     current,
@@ -259,10 +266,19 @@ export function ProjectHeroStage() {
       {!playing ? (
         <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-end gap-2 bg-gradient-to-t from-bg/70 to-transparent p-3 pt-12 sm:p-4">
           {canPlay ? (
-            <Button variant="primary" size="sm" className="h-14 px-6 text-[18px]! gap-2.5 sm:h-14" onClick={startPlay}>
-              <IconPlay className="h-6 w-6" />
-              {playLabel ?? "Play"}
-            </Button>
+            <button
+              type="button"
+              onClick={startPlay}
+              className="group flex items-center gap-2.5 rounded-full border-2 border-white/90 bg-transparent py-1 pl-1 pr-3"
+            >
+              <span className="flex h-7 translate-y-0 items-center gap-1.5 rounded-full bg-[#4CADFF] px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_3px_0_#2a7ac8] group-hover:bg-[#3d9ef0] group-active:translate-y-[2px] group-active:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_0_#2a7ac8]">
+                {playLabel ?? "Play"}
+                <IconPlay className="h-3 w-3 translate-x-px" />
+              </span>
+              <span className="whitespace-nowrap pr-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
+                Played <span className="tabular">{formatPlays(playCount)}</span>
+              </span>
+            </button>
           ) : null}
         </div>
       ) : null}

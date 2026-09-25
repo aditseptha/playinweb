@@ -52,7 +52,7 @@ export default function ManageGamesPage() {
 
   if (!user || !profile) {
     return (
-      <div className="mx-auto max-w-xl">
+      <div className="min-w-0 pt-4">
         <h1 className="text-display font-semibold tracking-tight">Manage games</h1>
         <p className="mt-1.5 text-body text-text-muted">Sign in to see views and edit your listings.</p>
         <div className="mt-6 flex gap-3">
@@ -71,23 +71,16 @@ export default function ManageGamesPage() {
   const totalPlays = (projects ?? []).reduce((n, p) => n + Math.min(p.play_count, p.view_count ?? 0), 0);
 
   return (
-    <div className="mx-auto min-w-0 max-w-[1100px]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <h1 className="text-display font-semibold tracking-tight">Manage games</h1>
-          <p className="mt-1.5 text-body text-text-muted">
-            {projects === null
-              ? "Loading your listings…"
-              : `${projects.length} ${projects.length === 1 ? "game" : "games"} · ${formatPlays(totalViews)} views · ${formatPlays(totalPlays)} plays`}
-          </p>
-        </div>
-        <LinkButton href={apexHref("/register")} variant="primary" size="sm">
-          Create a new game
-        </LinkButton>
-      </div>
+    <div className="min-w-0 pt-4">
+      <h1 className="text-display font-semibold tracking-tight">Manage games</h1>
+      <p className="mt-1.5 text-body text-text-muted">
+        {projects === null
+          ? "Loading your listings…"
+          : `${projects.length} ${projects.length === 1 ? "game" : "games"} · ${formatPlays(totalViews)} views · ${formatPlays(totalPlays)} plays`}
+      </p>
 
       {projects === null ? null : projects.length === 0 ? (
-        <div className="mt-10 rounded-panel bg-surface px-5 py-12 text-center">
+        <div className="mt-10 rounded-panel bg-surface-2 px-5 py-12 text-center">
           <p className="font-medium">No games yet</p>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted">
             Publish a listing and it will show up here with view counts.
