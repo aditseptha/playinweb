@@ -7,6 +7,7 @@ import { GameCard } from "@/components/GameCard";
 import { GameThumb } from "@/components/GameThumb";
 import { GameRail, Shelf } from "@/components/Shelf";
 import { IconCalendar, IconCheck, IconClock, IconPlay, IconTrophy } from "@/components/icons";
+import { useLoginDialog } from "@/components/LoginDialog";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
 import { FeatureGate } from "@/components/FeatureGate";
@@ -106,6 +107,7 @@ function resolveGame(input: string, games: Game[]): Game | null {
 export default function ShowcasePage() {
   const { games } = useGames();
   const { user, loading } = useAuth();
+  const { openLogin } = useLoginDialog();
   const [bids, setBids] = useState(readBids);
   const [filter, setFilter] = useState("");
   const [range, setRange] = useState<Range>("all");
@@ -150,7 +152,7 @@ export default function ShowcasePage() {
 
   function placeBid() {
     if (!user) {
-      window.location.assign(apexHref("/login"));
+      openLogin();
       return;
     }
     const game = matched;
@@ -317,9 +319,9 @@ export default function ShowcasePage() {
                 Claim rank
               </Button>
             ) : (
-              <LinkButton href={apexHref("/login")} variant="primary" className="h-10 shrink-0 px-4">
+              <Button type="button" variant="primary" className="h-10 shrink-0 px-4" onClick={() => openLogin()}>
                 Sign in
-              </LinkButton>
+              </Button>
             )}
           </div>
           {urlState === "valid" && matched ? (

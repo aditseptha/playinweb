@@ -6,15 +6,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { ProjectAside } from "@/components/ProjectAside";
 import { ProjectComments } from "@/components/ProjectComments";
+import { useLoginDialog } from "@/components/LoginDialog";
 import { ProjectHeroRoot, ProjectHeroStage, ProjectHeroThumbs } from "@/components/ProjectHero";
 import { IconBookmark, IconShare, IconThumbDown, IconThumbUp } from "@/components/icons";
 import { Button, LinkButton } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatPlays } from "@/lib/format";
-import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
+import { projectPublicUrl, siteOrigin } from "@/lib/host";
 import { cachedAvatarUrl } from "@/lib/media";
 import { isPersistedId, projectToGame, type ProjectRecord } from "@/lib/projects";
+import { addGuestPlayMs, GUEST_PLAY_LIMIT_MS, guestPlayExpired } from "@/lib/guest-play";
 import { claimSessionStat, releaseSessionStat } from "@/lib/session-stat";
 import { relatedGames, useGames } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
@@ -36,16 +38,33 @@ function writeLocalFollows(ids: string[]) {
   window.localStorage.setItem(LOCAL_FOLLOWS_KEY, JSON.stringify(ids));
 }
 
-function goToLoginForPlay() {
+function playReturnUrl() {
   const next = new URL(window.location.href);
   next.searchParams.set("play", "1");
-  window.location.assign(`${apexHref("/login")}?next=${encodeURIComponent(next.href)}`);
+  return `${next.pathname}${next.search}${next.hash}`;
+}
+
+function guestPlayLimitLabel() {
+  if (GUEST_PLAY_LIMIT_MS >= 60_000) {
+    const minutes = Math.round(GUEST_PLAY_LIMIT_MS / 60_000);
+    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+  }
+  const seconds = Math.round(GUEST_PLAY_LIMIT_MS / 1000);
+  return `${seconds} second${seconds === 1 ? "" : "s"}`;
+}
+
+function guestLoginOptions() {
+  return {
+    next: typeof window === "undefined" ? undefined : playReturnUrl(),
+    description: `Guest play is limited to ${guestPlayLimitLabel()}. Create an account or sign in to continue.`,
+  };
 }
 
 export function GameDetail({ project }: { project: ProjectRecord }) {
   const searchParams = useSearchParams();
   const { games, recordPlay, liked: localLiked, toggleLike, library, toggleLibrary } = useGames();
   const { user, loading } = useAuth();
+  const { openLogin } = useLoginDialog();
   const persisted = isPersistedId(project.id) && Boolean(project.owner_id);
   const game = projectToGame(project);
   const creator = project.profiles;
@@ -58,6 +77,9 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   const [followers, setFollowers] = useState(project.profiles?.follower_count ?? 0);
   const [following, setFollowing] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(autoPlay);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [guestExpired, setGuestExpired] = useState(false);
+  const [guestTimedOut, setGuestTimedOut] = useState(false);
   const [disliked, setDisliked] = useState(false);
   const [copied, setCopied] = useState(false);
   const autoPlayed = useRef(false);
@@ -96,9 +118,30 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   }, [persisted, projectId]);
 
   useEffect(() => {
+    if (user) {
+      setGuestExpired(false);
+      setGuestTimedOut(false);
+      return;
+    }
+    setGuestExpired(guestPlayExpired());
+  }, [user]);
+
+  useEffect(() => {
+    if (user || !isPlaying) return;
+    const id = window.setInterval(() => {
+      addGuestPlayMs(1000);
+      if (guestPlayExpired()) {
+        setGuestTimedOut(true);
+        openLogin(guestLoginOptions());
+      }
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [isPlaying, user]);
+
+  useEffect(() => {
     if (!autoPlay || loading) return;
-    if (!user) {
-      goToLoginForPlay();
+    if (!user && guestExpired) {
+      openLogin(guestLoginOptions());
       return;
     }
     if (autoPlayed.current) return;
@@ -107,7 +150,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
     if (persisted) void countPersistedPlay();
     else setPlays((n) => n + 1);
     window.history.replaceState(null, "", window.location.pathname);
-  }, [autoPlay, loading, persisted, projectId, recordPlay, user]);
+  }, [autoPlay, guestExpired, loading, persisted, projectId, recordPlay, user]);
 
   if (!creator) {
     return (
@@ -138,7 +181,8 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   }
 
   async function onPlay() {
-    if (loading || !user) return;
+    if (loading) return;
+    if (!user && guestExpired) return;
     recordPlay(game.id);
     if (persisted) {
       await countPersistedPlay();
@@ -171,7 +215,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
 
   async function onDislike() {
     if (persisted && !user && !loading) {
-      window.location.assign(`${apexHref("/login")}?next=${encodeURIComponent(window.location.href)}`);
+      openLogin();
       return;
     }
     if (liked) await onLike();
@@ -216,6 +260,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   }
 
   return (
+    <>
     <ProjectHeroRoot
       game={game}
       trailerUrl={project.trailer_url}
@@ -223,12 +268,15 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
       playLabel={game.embeddable ? "Play" : game.playUrl ? "Play in new tab" : undefined}
       playCount={plays}
       liked={liked}
-      autoPlay={Boolean(user) && autoPlay && game.embeddable}
-      allowPlay={Boolean(user)}
+      autoPlay={autoPlay && game.embeddable && (Boolean(user) || !guestExpired)}
+      allowPlay={Boolean(user) || !guestExpired}
+      playLocked={!user && guestTimedOut}
+      onLoginRequest={() => openLogin(guestLoginOptions())}
       onDeniedPlay={() => {
-        if (!loading) goToLoginForPlay();
+        if (!loading) openLogin(guestLoginOptions());
       }}
       onExpandedChange={setPlayerOpen}
+      onPlayingChange={setIsPlaying}
       onPlay={() => {
         if (game.embeddable) void onPlay();
         else if (game.playUrl) {
@@ -339,5 +387,6 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
         />
       </div>
     </ProjectHeroRoot>
+    </>
   );
 }

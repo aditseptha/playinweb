@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import { useLoginDialog } from "@/components/LoginDialog";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
-import { apexHref } from "@/lib/host";
 import { isPersistedId, type ProjectRecord } from "@/lib/projects";
 
 const DONATE_PRESETS = [1, 3, 5, 10, 25];
@@ -15,6 +15,7 @@ const DONATE_PRESETS = [1, 3, 5, 10, 25];
 export function ProjectCheckout({ project }: { project: ProjectRecord }) {
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
+  const { openLogin } = useLoginDialog();
   const paid = project.pricing_type === "paid";
   const donate = project.pricing_type === "donate";
   const min = paid ? Number(project.min_price ?? 0) : 1;
@@ -84,7 +85,7 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
       return;
     }
     if (!user) {
-      window.location.assign(`${apexHref("/login")}?next=${encodeURIComponent(window.location.href)}`);
+      openLogin();
       return;
     }
     if (!isPersistedId(project.id)) {

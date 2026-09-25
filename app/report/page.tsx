@@ -2,14 +2,15 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { IconCheck } from "@/components/icons";
+import { useLoginDialog } from "@/components/LoginDialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
-import { apexHref } from "@/lib/host";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ReportPage() {
   const { user, loading } = useAuth();
+  const { openLogin } = useLoginDialog();
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
@@ -27,7 +28,7 @@ export default function ReportPage() {
     e.preventDefault();
     if (loading || pending) return;
     if (!user?.email) {
-      window.location.assign(`${apexHref("/login")}?next=${encodeURIComponent(window.location.href)}`);
+      openLogin();
       return;
     }
     const form = e.currentTarget;

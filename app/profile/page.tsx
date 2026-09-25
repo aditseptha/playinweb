@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const params = useSearchParams();
   const router = useRouter();
   const editing = params.get("edit") === "1";
+  const setupHandle = params.get("setup") === "handle";
   const max = maxPopularity(games);
   const recent = historyGames(games, history);
   const listed = profile
@@ -32,6 +33,11 @@ export default function ProfilePage() {
         <h1 className="text-display font-semibold tracking-tight">
           {me?.display_name || profile?.name || "You"}
         </h1>
+        {setupHandle ? (
+          <p className="mt-2 text-body text-text-muted">
+            Pick a handle for your page — like <span className="text-text">yourname</span>.
+          </p>
+        ) : null}
         <div className="mt-8">
           <ProfileForm initial={profile} onSaved={() => router.replace("/profile")} />
         </div>

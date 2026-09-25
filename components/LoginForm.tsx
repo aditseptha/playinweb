@@ -1,55 +1,145 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Button } from "@/components/ui/button";
-import { Field, TextInput } from "@/components/ui/field";
+import {
+  AuthFooterLink,
+  AuthInput,
+  AuthOrDivider,
+  AuthPasswordInput,
+  AuthPrimaryButton,
+  GoogleAuthButton,
+} from "@/components/AuthModal";
 import { continueAfterAuth } from "@/lib/auth-redirect";
 import { createClient } from "@/lib/supabase/client";
 
-export function LoginForm() {
+type LoginFormMode = "sign-in" | "forgot";
+
+export function LoginForm({
+  next: nextProp,
+  onSuccess,
+  onModeChange,
+}: {
+  next?: string | null;
+  onSuccess?: () => void;
+  onModeChange?: (mode: LoginFormMode) => void;
+} = {}) {
   const router = useRouter();
   const params = useSearchParams();
+  const next = nextProp ?? params.get("next");
+  const [mode, setMode] = useState<LoginFormMode>("sign-in");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [pending, setPending] = useState(false);
+
+  function switchMode(nextMode: LoginFormMode) {
+    setMode(nextMode);
+    setError("");
+    setNotice("");
+    onModeChange?.(nextMode);
+  }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setNotice("");
     const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") ?? "").trim();
+    const nextEmail = String(fd.get("email") ?? "").trim();
     const password = String(fd.get("password") ?? "");
+    setEmail(nextEmail);
     setPending(true);
     const supabase = createClient();
-    const { data, error: signError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error: signError } = await supabase.auth.signInWithPassword({ email: nextEmail, password });
     if (signError) {
       setPending(false);
       setError(signError.message);
       return;
     }
-    continueAfterAuth(data.session, params.get("next"));
+    onSuccess?.();
+    continueAfterAuth(data.session, next);
     router.refresh();
   }
 
+  async function onForgotSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setNotice("");
+    const fd = new FormData(e.currentTarget);
+    const nextEmail = String(fd.get("email") ?? "").trim();
+    if (!nextEmail) {
+      setError("Enter the email for your account.");
+      return;
+    }
+    setEmail(nextEmail);
+    setPending(true);
+    const supabase = createClient();
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(nextEmail, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+    setPending(false);
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+    setNotice("Check your email for a reset link.");
+  }
+
+  if (mode === "forgot") {
+    return (
+      <form onSubmit={onForgotSubmit} className="flex flex-col gap-4">
+        <AuthInput
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        {error ? <p className="text-ui text-danger">{error}</p> : null}
+        {notice ? <p className="text-ui text-text-muted">{notice}</p> : null}
+        <AuthPrimaryButton pending={pending} pendingLabel="Sending…">Send reset link</AuthPrimaryButton>
+        <AuthFooterLink lead="Remembered it?" action="Back to sign in" onClick={() => switchMode("sign-in")} />
+      </form>
+    );
+  }
+
   return (
-    <form onSubmit={onSubmit} className="mx-auto flex max-w-md flex-col gap-5">
-      <Field label="Email">
-        <TextInput name="email" type="email" required />
-      </Field>
-      <Field label="Password">
-        <TextInput name="password" type="password" required />
-      </Field>
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <GoogleAuthButton next={next} disabled={pending} onError={setError} />
+      <AuthOrDivider />
+      <AuthInput
+        name="email"
+        type="email"
+        required
+        autoComplete="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <div className="space-y-2">
+        <AuthPasswordInput />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="text-meta text-text-subtle transition-colors hover:text-text hover:underline"
+            onClick={() => switchMode("forgot")}
+          >
+            Forgot password?
+          </button>
+        </div>
+      </div>
       {error ? <p className="text-ui text-danger">{error}</p> : null}
-      <Button type="submit" variant="primary" disabled={pending}>
-        {pending ? "Signing in…" : "Sign in"}
-      </Button>
-      <p className="text-ui text-text-muted">
-        Need an account?{" "}
-        <Link href="/signup" className="text-text hover:underline">
-          Create one
-        </Link>
-      </p>
+      <AuthPrimaryButton pending={pending} pendingLabel="Signing in…">Sign in</AuthPrimaryButton>
     </form>
   );
+}
+
+export function LoginFormFooter({
+  onCreateAccount,
+}: {
+  onCreateAccount: () => void;
+}) {
+  return <AuthFooterLink lead="No account yet?" action="Create one" onClick={onCreateAccount} />;
 }

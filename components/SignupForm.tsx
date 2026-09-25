@@ -1,15 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Button } from "@/components/ui/button";
-import { Field, TextInput } from "@/components/ui/field";
-import { getRootDomain, isHandle, siteOrigin } from "@/lib/host";
+import {
+  AuthFooterLink,
+  AuthInput,
+  AuthOrDivider,
+  AuthPasswordInput,
+  AuthPrimaryButton,
+  GoogleAuthButton,
+} from "@/components/AuthModal";
+import { SignupAgreeNote } from "@/components/SignupAgreeNote";
 import { slugify } from "@/lib/format";
+import { getRootDomain, isHandle, siteOrigin } from "@/lib/host";
 import { createClient } from "@/lib/supabase/client";
 
-export function SignupForm() {
+export function SignupForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   const router = useRouter();
   const [handle, setHandle] = useState("");
   const [error, setError] = useState("");
@@ -66,52 +72,47 @@ export function SignupForm() {
       setNotice("Check your email to confirm the account, then sign in.");
       return;
     }
+    onSuccess?.();
     router.push("/register");
     router.refresh();
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto flex max-w-md flex-col gap-5">
-      <Field label="Display name">
-        <TextInput
-          name="displayName"
-          required
-          placeholder="Ada Chen"
-          onChange={(e) => {
-            if (!handle) setHandle(slugify(e.target.value).slice(0, 32));
-          }}
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <GoogleAuthButton disabled={pending} onError={setError} />
+      <AuthOrDivider />
+      <AuthInput
+        name="displayName"
+        required
+        autoComplete="name"
+        placeholder="Display name"
+        onChange={(e) => {
+          if (!handle) setHandle(slugify(e.target.value).slice(0, 32));
+        }}
+      />
+      <div className="flex h-11 items-center overflow-hidden rounded-xl border border-border bg-surface-3">
+        <span className="hidden shrink-0 px-3 text-caption text-text-subtle sm:inline">{getRootDomain()}/</span>
+        <input
+          value={handle}
+          onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+          placeholder="yourname"
+          aria-label="Account URL"
+          className="h-full min-w-0 flex-1 bg-transparent px-3.5 text-body outline-none placeholder:text-text-subtle"
         />
-      </Field>
-      <Field label="Account URL" hint={`Your page will live at ${handle ? siteOrigin(handle) : siteOrigin("yourname")}`}>
-        <div className="flex h-10 items-center overflow-hidden rounded-lg bg-surface-2 sm:h-9">
-          <span className="hidden shrink-0 bg-surface-3 px-3 py-2 text-caption text-text-subtle sm:inline">
-            {getRootDomain()}/
-          </span>
-          <TextInput
-            value={handle}
-            onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-            placeholder="yourname"
-            className="h-full min-w-0 flex-1 rounded-none bg-transparent px-3 focus:bg-transparent sm:h-full"
-          />
-        </div>
-      </Field>
-      <Field label="Email">
-        <TextInput name="email" type="email" required />
-      </Field>
-      <Field label="Password">
-        <TextInput name="password" type="password" required minLength={8} />
-      </Field>
+      </div>
+      <p className="-mt-2 text-meta text-text-subtle">
+        Your page will live at {handle ? siteOrigin(handle) : siteOrigin("yourname")}
+      </p>
+      <AuthInput name="email" type="email" required autoComplete="email" placeholder="Email" />
+      <AuthPasswordInput autoComplete="new-password" placeholder="Password" minLength={8} />
       {error ? <p className="text-ui text-danger">{error}</p> : null}
       {notice ? <p className="text-ui text-text-muted">{notice}</p> : null}
-      <Button type="submit" variant="primary" disabled={pending}>
-        {pending ? "Creating…" : "Create account"}
-      </Button>
-      <p className="text-ui text-text-muted">
-        Already have an account?{" "}
-        <Link href="/login" className="text-text hover:underline">
-          Sign in
-        </Link>
-      </p>
+      <SignupAgreeNote popup />
+      <AuthPrimaryButton pending={pending} pendingLabel="Creating…">Create account</AuthPrimaryButton>
     </form>
   );
+}
+
+export function SignupFormFooter({ onSignIn }: { onSignIn: () => void }) {
+  return <AuthFooterLink lead="Already have an account?" action="Sign in" onClick={onSignIn} />;
 }

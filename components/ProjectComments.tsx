@@ -4,12 +4,13 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { IconThumbUp } from "@/components/icons";
-import { Button, LinkButton } from "@/components/ui/button";
+import { useLoginDialog } from "@/components/LoginDialog";
+import { Button } from "@/components/ui/button";
 import { TextArea } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatCommentTime, formatPlays } from "@/lib/format";
-import { apexHref, siteOrigin } from "@/lib/host";
+import { siteOrigin } from "@/lib/host";
 import { cachedAvatarUrl } from "@/lib/media";
 import { createClient } from "@/lib/supabase/client";
 
@@ -38,6 +39,7 @@ export function ProjectComments({
   enabled: boolean;
 }) {
   const { user, profile } = useAuth();
+  const { openLogin } = useLoginDialog();
   const [comments, setComments] = useState<Comment[]>([]);
   const [body, setBody] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
@@ -158,7 +160,7 @@ export function ProjectComments({
 
   async function onLike(comment: Comment) {
     if (!user) {
-      window.location.assign(`${apexHref("/login")}?next=${encodeURIComponent(window.location.href)}`);
+      openLogin();
       return;
     }
     const supabase = createClient();
@@ -179,7 +181,7 @@ export function ProjectComments({
 
   function startReply(comment: Comment) {
     if (!user) {
-      window.location.assign(`${apexHref("/login")}?next=${encodeURIComponent(window.location.href)}`);
+      openLogin();
       return;
     }
     setReplyTo(comment.parent_id ?? comment.id);
@@ -330,9 +332,9 @@ export function ProjectComments({
         </form>
       ) : (
         <p className="mt-5 text-ui text-text-muted">
-          <LinkButton href={apexHref("/login")} variant="secondary" size="sm">
+          <Button type="button" variant="secondary" size="sm" onClick={() => openLogin()}>
             Sign in
-          </LinkButton>
+          </Button>
           <span className="ml-2">to comment.</span>
         </p>
       )}

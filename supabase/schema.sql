@@ -138,7 +138,12 @@ declare
   n text;
 begin
   h := lower(trim(both from coalesce(new.raw_user_meta_data->>'handle', '')));
-  n := trim(both from coalesce(new.raw_user_meta_data->>'display_name', ''));
+  n := trim(both from coalesce(
+    new.raw_user_meta_data->>'display_name',
+    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'name',
+    ''
+  ));
   if h !~ '^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$' then
     h := 'user-' || substr(replace(new.id::text, '-', ''), 1, 8);
   end if;

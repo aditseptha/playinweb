@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ProjectForm } from "@/components/ProjectForm";
-import { LinkButton } from "@/components/ui/button";
+import { useLoginDialog } from "@/components/LoginDialog";
+import { Button, LinkButton } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { apexHref } from "@/lib/host";
 import { fetchProjectById, type ProjectRecord } from "@/lib/projects";
@@ -12,6 +13,7 @@ import { fetchProjectById, type ProjectRecord } from "@/lib/projects";
 export default function EditGamePage() {
   const { id } = useParams<{ id: string }>();
   const { user, loading } = useAuth();
+  const { openLogin } = useLoginDialog();
   const [project, setProject] = useState<ProjectRecord | null | undefined>(undefined);
 
   useEffect(() => {
@@ -35,9 +37,9 @@ export default function EditGamePage() {
         <h1 className="text-display font-semibold tracking-tight">Edit game</h1>
         <p className="mt-1.5 text-body text-text-muted">Sign in to edit your listing.</p>
         <div className="mt-6">
-          <LinkButton href={apexHref("/login")} variant="primary" size="sm">
+          <Button type="button" variant="primary" size="sm" onClick={() => openLogin()}>
             Sign in
-          </LinkButton>
+          </Button>
         </div>
       </div>
     );

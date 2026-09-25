@@ -4,6 +4,8 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GameThumb } from "@/components/GameThumb";
+import { useLoginDialog } from "@/components/LoginDialog";
+import { useSignupDialog } from "@/components/SignupDialog";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, TextInput } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
@@ -62,6 +64,8 @@ export default function DonationsPage() {
 
 function DonationsView() {
   const { user, profile, loading, refresh } = useAuth();
+  const { openLogin } = useLoginDialog();
+  const { openSignup } = useSignupDialog();
   const tab = useSearchParams().get("tab") === "cashout" ? "cashout" : "donations";
   const [give, setGive] = useState<DonationRow[] | null>(null);
   const [earn, setEarn] = useState<DonationRow[] | null>(null);
@@ -125,12 +129,12 @@ function DonationsView() {
         <h1 className="text-display font-semibold tracking-tight">Donations</h1>
         <p className="mt-1.5 text-body text-text-muted">Sign in to see games you gave to and earned from.</p>
         <div className="mt-6 flex gap-3">
-          <LinkButton href={apexHref("/login")} variant="primary" size="sm">
+          <Button type="button" variant="primary" size="sm" onClick={() => openLogin()}>
             Sign in
-          </LinkButton>
-          <LinkButton href={apexHref("/signup")} variant="secondary" size="sm">
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => openSignup()}>
             Create account
-          </LinkButton>
+          </Button>
         </div>
       </div>
     );

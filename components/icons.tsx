@@ -247,6 +247,15 @@ export function IconMegaphone(props: IconProps) {
   );
 }
 
+export function IconEye(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 12s2.8-5.5 8-5.5 8 5.5 8 5.5-2.8 5.5-8 5.5S4 12 4 12z" />
+      <circle cx="12" cy="12" r="2.2" />
+    </svg>
+  );
+}
+
 export function IconEyeOff(props: IconProps) {
   return (
     <svg {...base(props)}>

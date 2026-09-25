@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ManageStats } from "@/components/ManageStats";
-import { LinkButton } from "@/components/ui/button";
+import { useLoginDialog } from "@/components/LoginDialog";
+import { useSignupDialog } from "@/components/SignupDialog";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { formatPlays } from "@/lib/format";
 import { apexHref } from "@/lib/host";
@@ -17,6 +19,8 @@ function sinceDay(days: number) {
 
 export default function ManageGamesPage() {
   const { user, profile, loading } = useAuth();
+  const { openLogin } = useLoginDialog();
+  const { openSignup } = useSignupDialog();
   const [projects, setProjects] = useState<ProjectRecord[] | null>(null);
   const [days, setDays] = useState<StatDay[]>([]);
 
@@ -56,12 +60,12 @@ export default function ManageGamesPage() {
         <h1 className="text-display font-semibold tracking-tight">Manage games</h1>
         <p className="mt-1.5 text-body text-text-muted">Sign in to see views and edit your listings.</p>
         <div className="mt-6 flex gap-3">
-          <LinkButton href={apexHref("/login")} variant="primary" size="sm">
+          <Button type="button" variant="primary" size="sm" onClick={() => openLogin()}>
             Sign in
-          </LinkButton>
-          <LinkButton href={apexHref("/signup")} variant="secondary" size="sm">
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => openSignup()}>
             Create account
-          </LinkButton>
+          </Button>
         </div>
       </div>
     );

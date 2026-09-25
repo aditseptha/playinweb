@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { IconClose } from "@/components/icons";
+import { useLoginDialog } from "@/components/LoginDialog";
+import { useSignupDialog } from "@/components/SignupDialog";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, SelectInput, TextArea, TextInput } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
@@ -52,6 +54,8 @@ function asCommunity(value: string | undefined): Community {
 export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const editing = Boolean(project);
   const { user, profile, loading } = useAuth();
+  const { openLogin } = useLoginDialog();
+  const { openSignup } = useSignupDialog();
   const router = useRouter();
   const [title, setTitle] = useState(project?.title ?? "");
   const [slug, setSlug] = useState(project?.slug ?? "");
@@ -140,12 +144,12 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           Games are published on your page, like yourname/game.
         </p>
         <div className="mt-4 flex justify-center gap-3">
-          <LinkButton href="/signup" variant="primary" size="sm">
+          <Button type="button" variant="primary" size="sm" onClick={() => openSignup()}>
             Create account
-          </LinkButton>
-          <LinkButton href="/login" variant="secondary" size="sm">
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => openLogin()}>
             Sign in
-          </LinkButton>
+          </Button>
         </div>
       </div>
     );

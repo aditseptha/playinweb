@@ -4,11 +4,11 @@ import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { useLoginDialog } from "@/components/LoginDialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
-import { apexHref } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
 
 const PRESETS = [1, 3, 5, 10, 25, 100];
@@ -16,6 +16,7 @@ const PRESETS = [1, 3, 5, 10, 25, 100];
 export default function TipPage() {
   const searchParams = useSearchParams();
   const { user, profile, loading } = useAuth();
+  const { openLogin } = useLoginDialog();
   const [amount, setAmount] = useState("5.00");
   const [custom, setCustom] = useState(false);
   const [notice, setNotice] = useState("");
@@ -73,7 +74,7 @@ export default function TipPage() {
       return;
     }
     if (!user) {
-      window.location.assign(`${apexHref("/login")}?next=${encodeURIComponent(window.location.href)}`);
+      openLogin();
       return;
     }
     setPending(true);
@@ -241,7 +242,35 @@ function Certificate({
       }}
     >
       <div className="flex items-baseline justify-between gap-4 px-6 py-5 sm:px-8">
-        <p className="text-[22px] font-semibold tracking-tight">PlayInWeb certificate</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <Image
+              src="/playinweb-icon.png"
+              alt=""
+              width={40}
+              height={40}
+              unoptimized
+              className="size-5 shrink-0 rounded-md"
+            />
+            <Image
+              src="/playinweb-lettermark-white.webp"
+              alt="PlayInWeb"
+              width={109}
+              height={20}
+              unoptimized
+              className="hidden h-5 w-auto shrink-0 translate-y-[2px] dark:block"
+            />
+            <Image
+              src="/playinweb-lettermark-black.webp"
+              alt="PlayInWeb"
+              width={109}
+              height={20}
+              unoptimized
+              className="h-5 w-auto shrink-0 translate-y-[2px] dark:hidden"
+            />
+          </div>
+          <span className="text-[22px] font-semibold leading-none tracking-tight">certificate</span>
+        </div>
         <p className="shrink-0 text-caption text-text-subtle">
           {supporter}
           <span className="text-text-subtle/70"> · Sponsor</span>
@@ -254,10 +283,10 @@ function Certificate({
       </div>
       <div className="flex flex-col gap-6 px-6 py-8 sm:flex-row sm:items-center sm:px-8">
         <Image
-          src="/playinweb-mark.webp"
-          alt="PlayInWeb"
-          width={128}
-          height={128}
+          src="/playinweb-donation.webp"
+          alt="PlayInWeb donation"
+          width={256}
+          height={256}
           unoptimized
           className="size-28 shrink-0 rounded-[22px] sm:size-32"
         />

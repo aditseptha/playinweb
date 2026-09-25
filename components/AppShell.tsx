@@ -5,7 +5,9 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Fragment, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { Notices } from "@/components/Notices";
-import { LegalProvider, useLegal } from "@/components/LegalDialog";
+import { useLoginDialog } from "@/components/LoginDialog";
+import { LegalProvider } from "@/components/LegalModal";
+import { SignupProvider, useSignupDialog } from "@/components/SignupDialog";
 import {
   IconBookmark,
   IconChevron,
@@ -66,8 +68,8 @@ const SECONDARY_NAV = [
 ] as const;
 
 const LEGAL_NAV = [
-  { kind: "privacy" as const, label: "Privacy", icon: IconShield },
-  { kind: "terms" as const, label: "Terms", icon: IconDoc },
+  { href: "/privacy", label: "Privacy", icon: IconShield },
+  { href: "/terms", label: "Terms", icon: IconDoc },
 ] as const;
 
 const SIDEBAR_KEY = "playinweb.sidebar.collapsed";
@@ -99,6 +101,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <LegalProvider>
+    <SignupProvider>
     <div className="flex h-dvh max-w-full flex-col gap-2 overflow-hidden bg-transparent p-3 text-text md:flex-row">
       <a
         href="#content"
@@ -140,6 +143,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
     </div>
+    </SignupProvider>
     </LegalProvider>
   );
 }
@@ -228,19 +232,13 @@ function ThemeToggle() {
 
 function AuthLinks() {
   const { user, profile, loading } = useAuth();
-  const [returnTo, setReturnTo] = useState("");
-  useEffect(() => {
-    setReturnTo(window.location.href);
-  }, []);
+  const { openLogin } = useLoginDialog();
   if (loading) return <div className="size-8 rounded-lg bg-surface-2" />;
   if (!user) {
-    const href = returnTo
-      ? `${apexHref("/login")}?next=${encodeURIComponent(returnTo)}`
-      : apexHref("/login");
     return (
-      <LinkButton href={href} variant="secondary" size="sm">
+      <Button type="button" variant="secondary" size="sm" onClick={() => openLogin()}>
         Sign in
-      </LinkButton>
+      </Button>
     );
   }
   return (
@@ -317,13 +315,76 @@ function SearchForm({ initialQuery, autoFocus }: { initialQuery: string; autoFoc
           onChange={(e) => setValue(e.target.value)}
           placeholder="Search games and creators"
           autoFocus={autoFocus}
-          className="h-full min-w-0 flex-1 bg-transparent px-3 focus:bg-transparent sm:h-full"
+          className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 shadow-none focus:border-transparent focus:bg-transparent sm:h-full"
         />
         <Button type="submit" variant="ghost" size="icon-sm" aria-label="Search" className="mr-1">
           <IconSearch className="h-4 w-4" />
         </Button>
       </div>
     </form>
+  );
+}
+
+const BRAND_MARKS = ["/playinweb-icon.png", "/playinweb-mark.png"];
+
+function BrandMark() {
+  const [index, setIndex] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const id = window.setInterval(() => {
+      setIndex((current) => (current + 1) % BRAND_MARKS.length);
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [reduceMotion]);
+
+  return (
+    <span className="relative size-11 shrink-0">
+      {BRAND_MARKS.map((src, i) => (
+        <Image
+          key={src}
+          src={src}
+          alt=""
+          width={88}
+          height={88}
+          unoptimized
+          className={cn(
+            "absolute inset-0 size-11 rounded-xl transition-opacity duration-500 ease-out motion-reduce:transition-none",
+            i === index ? "opacity-100" : "opacity-0",
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+
+function SidebarCollapseToggle({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={collapsed ? "Expand sidebar" : "Minimize sidebar"}
+      aria-expanded={!collapsed}
+      className="group absolute right-0 top-7 z-10 flex h-8 w-5 items-center justify-center rounded-l-lg bg-brand-blue outline-none transition-opacity hover:opacity-90"
+    >
+      <IconChevron
+        className={cn(
+          "h-3.5 w-3.5 text-white transition-transform duration-300 ease-out-quint",
+          collapsed ? "" : "rotate-180",
+        )}
+      />
+    </button>
   );
 }
 
@@ -343,21 +404,29 @@ function BrandLink({
       className={cn("flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1", compact && "px-0", className)}
       aria-label="PlayInWeb home"
     >
-      <Image
-        src="/playinweb-mark.webp"
-        alt=""
-        width={32}
-        height={32}
-        unoptimized
-        className="size-8 shrink-0 rounded-lg"
-      />
+      <BrandMark />
       <span
         className={cn(
-          "overflow-hidden whitespace-nowrap text-title font-semibold transition-[max-width,opacity,margin] duration-300 ease-out-quint",
-          compact ? "ml-0 max-w-0 opacity-0" : "max-w-[8rem] opacity-100",
+          "overflow-hidden transition-[max-width,opacity,margin] duration-300 ease-out-quint",
+          compact ? "ml-0 max-w-0 opacity-0" : "max-w-[9rem] opacity-100",
         )}
       >
-        PlayIn<span className="text-text-muted">Web</span>
+        <Image
+          src="/playinweb-lettermark-white.webp"
+          alt="PlayInWeb"
+          width={109}
+          height={20}
+          unoptimized
+          className="hidden h-5 w-auto translate-y-[2px] dark:block"
+        />
+        <Image
+          src="/playinweb-lettermark-black.webp"
+          alt="PlayInWeb"
+          width={109}
+          height={20}
+          unoptimized
+          className="h-5 w-auto translate-y-[2px] dark:hidden"
+        />
       </span>
     </Link>
   );
@@ -378,7 +447,6 @@ function Sidebar({
   const { user } = useAuth();
   const { profile } = useGames();
   const { features } = useFeatures();
-  const { openLegal } = useLegal();
   const admin = isAdminEmail(user?.email);
 
   function isActive(href: string) {
@@ -393,33 +461,18 @@ function Sidebar({
   return (
     <nav
       className={cn(
-        "scrollbar-hide h-full shrink-0 flex-col overflow-x-hidden overflow-y-auto rounded-2xl bg-surface-2 py-4",
+        "scrollbar-hide relative h-full shrink-0 flex-col overflow-x-visible overflow-y-auto rounded-2xl bg-surface-2 py-4",
         "transition-[width,padding] duration-300 ease-out-quint",
         collapsed ? "w-24 px-2" : "w-60 px-3",
         className,
       )}
       aria-label="Primary"
     >
-      <div className={cn("mb-5 flex items-center gap-0.5", !collapsed && "justify-between")}>
+      {onToggleCollapse ? (
+        <SidebarCollapseToggle collapsed={collapsed} onToggle={onToggleCollapse} />
+      ) : null}
+      <div className={cn("mb-5 pr-7", collapsed ? "flex justify-center" : "")}>
         <BrandLink compact={collapsed} onClick={onNavigate} />
-        {onToggleCollapse ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="shrink-0"
-            onClick={onToggleCollapse}
-            aria-label={collapsed ? "Expand sidebar" : "Minimize sidebar"}
-            aria-expanded={!collapsed}
-          >
-            <IconChevron
-              className={cn(
-                "h-4 w-4 transition-transform duration-300 ease-out-quint",
-                collapsed ? "" : "rotate-180",
-              )}
-            />
-          </Button>
-        ) : null}
       </div>
       <div className="flex flex-col">
         {PRIMARY_NAV.map((group, i) => (
@@ -508,29 +561,19 @@ function Sidebar({
         </a>
         <div className={cn("flex items-center", collapsed && "flex-col")}>
           {LEGAL_NAV.map((item, i) => (
-            <Fragment key={item.kind}>
+            <Fragment key={item.href}>
               {i > 0 && !collapsed ? (
                 <span className="text-caption text-text-subtle" aria-hidden>
                   •
                 </span>
               ) : null}
-              <button
-                type="button"
-                onClick={() => {
-                  openLegal(item.kind);
-                  onNavigate?.();
-                }}
-                className={cn(
-                  "flex items-center font-medium transition-[color,background-color,width,height,padding,border-radius] duration-300 ease-out-quint",
-                  collapsed
-                    ? "size-11 justify-center rounded-full text-text hover:bg-surface-2"
-                    : "min-h-8 rounded-lg px-3 text-ui text-text-muted hover:bg-surface-2 hover:text-text",
-                )}
-                aria-label={item.label}
-                title={collapsed ? item.label : undefined}
-              >
-                {collapsed ? <item.icon className="h-4 w-4" /> : item.label}
-              </button>
+              <NavLink
+                item={item}
+                active={isActive(item.href)}
+                onNavigate={onNavigate}
+                quiet={!collapsed}
+                collapsed={collapsed}
+              />
             </Fragment>
           ))}
         </div>
@@ -596,7 +639,7 @@ function NavLink({
           className={cn(
             "grid shrink-0 place-items-center rounded-full transition-[width,height,background-color,color] duration-300 ease-out-quint",
             iconOnly ? "size-8" : "size-[35px]",
-            iconOnly ? (active ? "bg-accent text-accent-fg" : "") : active ? "bg-accent text-accent-fg" : "bg-bg",
+            active ? "bg-accent text-accent-fg" : "bg-bg",
           )}
         >
           <Icon className="h-4 w-4" />

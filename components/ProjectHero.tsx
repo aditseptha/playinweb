@@ -7,6 +7,7 @@ import { IconExpand, IconFullscreen, IconFullscreenExit, IconPlay, IconShrink } 
 import { cn } from "@/lib/cn";
 import { formatPlays } from "@/lib/format";
 import { projectPublicUrl } from "@/lib/host";
+import { GUEST_PLAY_LIMIT_MS } from "@/lib/guest-play";
 import { playFrameSandbox } from "@/lib/html-game";
 import type { Game } from "@/lib/types";
 import { parseTrailer, type Trailer } from "@/lib/trailer";
@@ -26,6 +27,8 @@ type HeroCtx = {
   expanded: boolean;
   current: Slide | undefined;
   canPlay: boolean;
+  playLocked: boolean;
+  onLoginRequest?: () => void;
   startPlay: () => void;
   shrink: () => void;
   expand: () => void;
@@ -50,9 +53,12 @@ export function ProjectHeroRoot({
   liked,
   autoPlay = false,
   allowPlay = true,
+  playLocked = false,
+  onLoginRequest,
   onDeniedPlay,
   onPlay,
   onExpandedChange,
+  onPlayingChange,
   onLike,
   children,
 }: {
@@ -64,9 +70,12 @@ export function ProjectHeroRoot({
   liked: boolean;
   autoPlay?: boolean;
   allowPlay?: boolean;
+  playLocked?: boolean;
+  onLoginRequest?: () => void;
   onDeniedPlay?: () => void;
   onPlay: () => void;
   onExpandedChange?: (expanded: boolean) => void;
+  onPlayingChange?: (playing: boolean) => void;
   onLike: () => void;
   children: ReactNode;
 }) {
@@ -94,6 +103,16 @@ export function ProjectHeroRoot({
     setExpanded(true);
   }, [allowPlay, autoPlay, game.embeddable]);
 
+  useEffect(() => {
+    onPlayingChange?.(playing);
+  }, [onPlayingChange, playing]);
+
+  useEffect(() => {
+    if (!playLocked) return;
+    setPlaying(false);
+    setExpanded(false);
+  }, [playLocked]);
+
   const value = useMemo<HeroCtx>(
     () => ({
       game,
@@ -108,6 +127,8 @@ export function ProjectHeroRoot({
       expanded,
       current,
       canPlay,
+      playLocked,
+      onLoginRequest,
       startPlay() {
         if (!canPlay) return;
         if (!allowPlay) {
@@ -152,6 +173,8 @@ export function ProjectHeroRoot({
       expanded,
       current,
       canPlay,
+      playLocked,
+      onLoginRequest,
       allowPlay,
       listingUrl,
       onDeniedPlay,
@@ -174,6 +197,8 @@ export function ProjectHeroStage() {
     expanded,
     current,
     canPlay,
+    playLocked,
+    onLoginRequest,
     startPlay,
     shrink,
     expand,
@@ -209,7 +234,7 @@ export function ProjectHeroStage() {
       ref={stageRef}
       className="project-stage relative aspect-video overflow-hidden rounded-panel bg-bg-inset"
     >
-      {playing && game.embeddable ? (
+      {playing && game.embeddable && !playLocked ? (
         <iframe
           src={game.playUrl}
           title={game.title}
@@ -263,7 +288,25 @@ export function ProjectHeroStage() {
         </div>
       ) : null}
 
-      {!playing ? (
+      {playLocked ? (
+        <div className="absolute inset-0 z-20 grid place-items-center bg-bg/85 p-6 backdrop-blur-sm">
+          <div className="max-w-sm text-center">
+            <p className="text-heading font-semibold">Sign in to keep playing</p>
+            <p className="mt-2 text-body text-text-muted">
+              Guest play is limited to{" "}
+              {GUEST_PLAY_LIMIT_MS >= 60_000
+                ? `${Math.round(GUEST_PLAY_LIMIT_MS / 60_000)} minutes`
+                : `${Math.round(GUEST_PLAY_LIMIT_MS / 1000)} seconds`}
+              . Create an account or sign in to continue.
+            </p>
+            {onLoginRequest ? (
+              <Button type="button" variant="primary" className="mt-5" onClick={onLoginRequest}>
+                Sign in
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : !playing ? (
         <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-end gap-2 bg-gradient-to-t from-bg/70 to-transparent p-3 pt-12 sm:p-4">
           {canPlay ? (
             <button
