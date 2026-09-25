@@ -1,5 +1,4 @@
-/** TODO: restore to `5 * 60 * 1000` after guest-play testing. */
-export const GUEST_PLAY_LIMIT_MS = 5 * 1000;
+export const GUEST_PLAY_LIMIT_MS = 3 * 60 * 1000;
 
 const STORAGE_KEY = `showcase.guest-play.${GUEST_PLAY_LIMIT_MS}`;
 
