@@ -5,7 +5,6 @@ import { GameThumb } from "@/components/GameThumb";
 import { Button } from "@/components/ui/button";
 import { IconExpand, IconFullscreen, IconFullscreenExit, IconPlay, IconShrink } from "@/components/icons";
 import { cn } from "@/lib/cn";
-import { formatPlays } from "@/lib/format";
 import { projectPublicUrl } from "@/lib/host";
 import { GUEST_PLAY_LIMIT_MS } from "@/lib/guest-play";
 import { playFrameSandbox } from "@/lib/html-game";
@@ -192,7 +191,6 @@ export function ProjectHeroStage() {
     trailer,
     tags,
     playLabel,
-    playCount,
     playing,
     expanded,
     current,
@@ -307,23 +305,24 @@ export function ProjectHeroStage() {
           </div>
         </div>
       ) : !playing ? (
-        <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-end gap-2 bg-gradient-to-t from-bg/70 to-transparent p-3 pt-12 sm:p-4">
-          {canPlay ? (
-            <button
-              type="button"
-              onClick={startPlay}
-              className="group flex items-center gap-2.5 rounded-full border-2 border-white/90 bg-transparent py-1 pl-1 pr-3"
-            >
-              <span className="flex h-7 translate-y-0 items-center gap-1.5 rounded-full bg-[#4CADFF] px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_3px_0_#2a7ac8] group-hover:bg-[#3d9ef0] group-active:translate-y-[2px] group-active:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_1px_0_#2a7ac8]">
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[30%] bg-[linear-gradient(to_top,oklch(1_0_0/0.72)_0%,oklch(1_0_0/0.22)_55%,transparent_100%)]"
+          />
+          <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-end gap-2 p-3 sm:p-4">
+            {canPlay ? (
+              <button
+                type="button"
+                onClick={startPlay}
+                className="inline-flex h-[50px] items-center gap-2 rounded-full bg-brand-blue px-6 text-sm font-bold uppercase tracking-[0.08em] text-white outline-none transition-opacity hover:opacity-90"
+              >
                 {playLabel ?? "Play"}
-                <IconPlay className="h-3 w-3 translate-x-px" />
-              </span>
-              <span className="whitespace-nowrap pr-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white">
-                Played <span className="tabular">{formatPlays(playCount)}</span>
-              </span>
-            </button>
-          ) : null}
-        </div>
+                <IconPlay className="h-4 w-4 translate-x-px" />
+              </button>
+            ) : null}
+          </div>
+        </>
       ) : null}
     </div>
   );

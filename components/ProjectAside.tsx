@@ -3,11 +3,10 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import Link from "next/link";
 import { GameThumb } from "@/components/GameThumb";
-import { IconDownload, IconExternal } from "@/components/icons";
+import { IconExternal } from "@/components/icons";
 import { ProjectCheckout } from "@/components/ProjectCheckout";
 import { cn } from "@/lib/cn";
 import { formatJoined, formatPlays, gamePath } from "@/lib/format";
-import { publicMediaUrl } from "@/lib/media";
 import { CLASSIFICATIONS, PROJECT_KINDS, RELEASE_STATUSES, STORES } from "@/lib/project-fields";
 import type { ProjectRecord } from "@/lib/projects";
 import type { Game } from "@/lib/types";
@@ -25,7 +24,6 @@ export function ProjectAside({
   moreGames?: Game[];
   className?: string;
 }) {
-  const files = project.project_files ?? [];
   const stores = project.project_store_links ?? [];
   const genre = project.genre && project.genre !== "No genre" ? project.genre : null;
   const facts: { label: string; value: ReactNode }[] = [
@@ -60,32 +58,6 @@ export function ProjectAside({
       </section>
 
       <ProjectCheckout project={project} />
-
-      {files.length > 0 ? (
-        <section>
-          <h2 className="text-eyebrow font-medium uppercase text-text-subtle">Downloads</h2>
-          <ul className="mt-2 space-y-1">
-            {files.map((file) => {
-              const href = file.external_url || publicMediaUrl(file.storage_path);
-              const size = formatBytes(file.size_bytes);
-              return (
-                <li key={file.file_name + (file.storage_path ?? file.external_url)}>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1.5 -mx-1.5 text-ui transition-colors duration-150 ease-out-quint hover:bg-surface-2"
-                  >
-                    <IconDownload className="h-3.5 w-3.5 shrink-0 text-text-muted transition-transform duration-150 ease-out-quint group-hover:translate-y-0.5 group-hover:text-text" />
-                    <span className="min-w-0 truncate font-medium">{file.file_name}</span>
-                    {size ? <span className="ml-auto shrink-0 text-caption text-text-subtle">{size}</span> : null}
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
 
       {stores.length > 0 ? (
         <section>
@@ -178,12 +150,3 @@ function shortLabel(items: readonly { id: string; label: string }[], id: string)
   return found.split(" — ")[0];
 }
 
-function formatBytes(n: number | null | undefined) {
-  if (n == null || n <= 0) return "";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) {
-    const kb = n / 1024;
-    return `${kb >= 10 ? kb.toFixed(0) : kb.toFixed(1)} KB`;
-  }
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
