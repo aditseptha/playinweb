@@ -38,7 +38,7 @@ function NavIconStroke({
   className,
   children,
   ...props
-}: NavIconProps & { children: (gradId: string) => ReactNode }) {
+}: Omit<NavIconProps, "children"> & { children: (gradId: string) => ReactNode }) {
   const id = useId();
   const { primary, secondary } = navColors(active);
   return (

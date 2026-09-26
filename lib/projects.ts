@@ -292,6 +292,7 @@ export function gameToProjectRecord(game: Game): ProjectRecord {
     play_url: game.playUrl,
     embeddable: game.embeddable,
     kind: game.embeddable ? "html" : "external",
+    html_build_name: null,
     cover_path: game.thumbnailUrl || null,
     created_at: game.createdAt,
     updated_at: game.createdAt,

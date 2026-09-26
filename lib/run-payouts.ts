@@ -1,8 +1,7 @@
-import { money } from "@/lib/cashout";
+import { money, readCashoutMin } from "@/lib/cashout";
 import { isDummyUser } from "@/lib/dummy-seed";
 import { sendPaypalPayout } from "@/lib/paypal-payout";
 import { payoutScheduleDueNow, readPayoutSchedule } from "@/lib/payout-schedule";
-import { readCashoutMin } from "@/lib/site-settings";
 import type { createClient } from "@/lib/supabase/server";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -108,7 +107,7 @@ export async function runPayouts(input: {
         p_amount: candidate.amount,
         p_status: "paid",
         p_creator_email: candidate.walletAddress,
-        p_creator_handle: candidate.handle,
+        p_creator_handle: candidate.handle ?? "",
       });
       if (recordError) {
         results.push({

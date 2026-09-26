@@ -224,7 +224,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
   }, [editing, project]);
 
   const kindOptions = useMemo(() => {
-    const options = [...PROJECT_KINDS];
+    const options: { id: string; label: string }[] = [...PROJECT_KINDS];
     if (project && LEGACY_PROJECT_KINDS.includes(project.kind as (typeof LEGACY_PROJECT_KINDS)[number])) {
       options.push({ id: project.kind, label: `${project.kind} (legacy)` });
     }
