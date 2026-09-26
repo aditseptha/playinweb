@@ -1,12 +1,14 @@
 import {
-  POLAR_PRODUCT_ID,
-  POLAR_TIP_PRODUCT_ID,
+  CHECKOUT_MAX_AMOUNT,
   clientIp,
   polarConfigured,
+  polarProductId,
   polarRequest,
   type PolarCheckout,
+  type PolarCheckoutKind,
 } from "@/lib/polar";
 import { isPersistedId } from "@/lib/projects";
+import { minShowcaseClaimAmount, showcaseRangeCutoffMs, type ShowcaseRange } from "@/lib/showcase-bids";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -24,28 +26,30 @@ export async function POST(request: Request) {
     kind?: unknown;
     projectId?: unknown;
     amount?: unknown;
+    range?: unknown;
     successUrl?: unknown;
     returnUrl?: unknown;
   } | null;
 
-  const kind = body?.kind === "tip" ? "tip" : "donation";
+  const kind = parseKind(body?.kind);
   const projectId = typeof body?.projectId === "string" ? body.projectId : "";
+  const range = parseRange(body?.range);
   const amount = Number(body?.amount);
   const successUrl = typeof body?.successUrl === "string" ? body.successUrl : "";
   const returnUrl = typeof body?.returnUrl === "string" ? body.returnUrl : successUrl;
   if (!Number.isFinite(amount) || amount < 1) {
     return Response.json({ error: "Minimum is $1.00." }, { status: 400 });
   }
+  if (amount > CHECKOUT_MAX_AMOUNT) {
+    return Response.json({ error: `Maximum is $${CHECKOUT_MAX_AMOUNT.toFixed(2)}.` }, { status: 400 });
+  }
   if (!safeAppUrl(successUrl) || !safeAppUrl(returnUrl)) {
     return Response.json({ error: "Invalid return URL." }, { status: 400 });
   }
 
-  const productId = kind === "tip" ? POLAR_TIP_PRODUCT_ID : POLAR_PRODUCT_ID;
+  const productId = polarProductId(kind);
   if (!productId) {
-    return Response.json(
-      { error: kind === "tip" ? "Polar tip product is not configured." : "Polar donation product is not configured." },
-      { status: 503 },
-    );
+    return Response.json({ error: polarProductError(kind) }, { status: 503 });
   }
 
   const { data: profile } = await supabase
@@ -76,6 +80,33 @@ export async function POST(request: Request) {
       user_id: auth.user.id,
       donor_email: auth.user.email ?? "",
       donor_handle: profile?.handle ?? "",
+      amount: amount.toFixed(2),
+    };
+  } else if (kind === "showcase") {
+    if (!isPersistedId(projectId)) {
+      return Response.json({ error: "This listing cannot take showcase bids." }, { status: 400 });
+    }
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id, title, slug, published, profiles!projects_owner_id_fkey ( handle, display_name )")
+      .eq("id", projectId)
+      .maybeSingle();
+    if (!project?.published) {
+      return Response.json({ error: "This listing is not on the showcase yet." }, { status: 400 });
+    }
+    const minBid = await minShowcaseBid(supabase, range);
+    if (amount < minBid) {
+      return Response.json({ error: `Bid at least $${minBid} to claim #1 in this view.` }, { status: 400 });
+    }
+    metadata = {
+      kind: "showcase",
+      project_id: project.id,
+      user_id: auth.user.id,
+      bidder_email: auth.user.email ?? "",
+      bidder_handle: profile?.handle ?? "",
+      game_title: project.title,
+      game_slug: project.slug,
+      range,
       amount: amount.toFixed(2),
     };
   } else {
@@ -127,6 +158,37 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : "Could not start Polar checkout.";
     return Response.json({ error: message }, { status: 502 });
   }
+}
+
+function parseKind(value: unknown): PolarCheckoutKind {
+  if (value === "tip") return "tip";
+  if (value === "showcase") return "showcase";
+  return "donation";
+}
+
+function parseRange(value: unknown): ShowcaseRange {
+  if (value === "today" || value === "week") return value;
+  return "all";
+}
+
+function polarProductError(kind: PolarCheckoutKind) {
+  if (kind === "tip") return "Polar tip product is not configured.";
+  if (kind === "showcase") return "Polar showcase product is not configured.";
+  return "Polar donation product is not configured.";
+}
+
+async function minShowcaseBid(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  range: ShowcaseRange,
+) {
+  const cutoff = showcaseRangeCutoffMs(range);
+  let query = supabase.from("showcase_bids").select("amount, created_at").order("amount", { ascending: false }).limit(200);
+  if (cutoff > 0) {
+    query = query.gte("created_at", new Date(cutoff).toISOString());
+  }
+  const { data } = await query;
+  const top = (data ?? []).reduce((max, row) => Math.max(max, Number(row.amount) || 0), 0);
+  return minShowcaseClaimAmount(top);
 }
 
 function clampCommission(value: number) {

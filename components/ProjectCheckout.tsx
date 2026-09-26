@@ -8,6 +8,7 @@ import { TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
+import { CHECKOUT_MAX_AMOUNT } from "@/lib/polar";
 import { isPersistedId, type ProjectRecord } from "@/lib/projects";
 
 const DONATE_PRESETS = [1, 3, 5, 10, 25];
@@ -84,6 +85,10 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
       setNotice(paid ? `Minimum is $${min.toFixed(2)}.` : "Minimum is $1.00.");
       return;
     }
+    if (value > CHECKOUT_MAX_AMOUNT) {
+      setNotice(`Maximum is $${CHECKOUT_MAX_AMOUNT.toFixed(2)}.`);
+      return;
+    }
     if (!user) {
       openLogin();
       return;
@@ -149,6 +154,7 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
           <TextInput
             type="number"
             min={min}
+            max={CHECKOUT_MAX_AMOUNT}
             step="1"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -160,7 +166,7 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
         </Button>
       </div>
       <p className="mt-2 text-meta text-text-subtle">
-        {paid ? `Minimum $${min.toFixed(2)}. ` : "Name your price. "}
+        {paid ? `Minimum $${min.toFixed(2)}. ` : `Name your price ($1–$${CHECKOUT_MAX_AMOUNT}). `}
         Paid with Polar.
       </p>
       {notice ? <p className="mt-2 text-ui text-text-muted">{notice}</p> : null}

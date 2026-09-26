@@ -5,7 +5,7 @@ import { LinkButton } from "@/components/ui/button";
 import { channelPath, formatPlays, gamePath } from "@/lib/format";
 import type { Game } from "@/lib/types";
 
-type Variant = "grid" | "rail" | "featured" | "related" | "promo" | "mini" | "thumb";
+type Variant = "grid" | "rail" | "featured" | "related" | "mini" | "thumb";
 
 export function GameCard({
   game,
@@ -45,32 +45,6 @@ export function GameCard({
           </Link>
           <p className="mt-0.5 text-xs text-muted tabular-nums">{formatPlays(game.playCount)} plays</p>
         </div>
-      </article>
-    );
-  }
-
-  if (variant === "promo") {
-    return (
-      <article className="w-[232px] shrink-0 snap-start">
-        <Link
-          href={gamePath(game)}
-          className="group block overflow-hidden rounded-2xl bg-[#16181d] shadow-[0_12px_28px_-16px_oklch(0_0_0_/_0.55)]"
-        >
-          <div className="relative aspect-[16/10] bg-surface-2">
-            <GameThumb game={game} priority={priority} sizes="232px" />
-            {isNewThisWeek(game.createdAt) ? (
-              <span className="absolute left-2.5 top-2.5 rounded-md bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em] text-white uppercase">
-                New this week
-              </span>
-            ) : null}
-            <span className="absolute bottom-2.5 left-2.5 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white tabular">
-              {formatPlays(game.playCount)} plays
-            </span>
-          </div>
-          <h3 className="truncate px-3 py-3 text-[15px] font-semibold tracking-tight text-white">
-            {game.title}
-          </h3>
-        </Link>
       </article>
     );
   }
@@ -178,6 +152,7 @@ export function GameCard({
       >
         <GameThumb
           game={game}
+          priority={priority}
           sizes={variant === "rail" ? "260px" : "(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"}
         />
         <Badges game={game} />
@@ -213,22 +188,36 @@ function playHref(game: Game) {
   return base;
 }
 
-function Badges({ game }: { game: Game }) {
-  return game.embeddable ? (
-    <span className="absolute bottom-2.5 left-2.5 rounded-md bg-bg/75 px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide text-text backdrop-blur-sm">
-      Play in browser
-    </span>
-  ) : (
-    <span className="absolute bottom-2.5 left-2.5 rounded-md bg-bg/75 px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide text-text backdrop-blur-sm">
-      Web
-    </span>
-  );
-}
-
 function isNewThisWeek(iso: string) {
   const at = new Date(iso).getTime();
   if (Number.isNaN(at)) return false;
   return Date.now() - at < 7 * 86_400_000;
+}
+
+function NewThisWeekBadge({ createdAt }: { createdAt: string }) {
+  if (!isNewThisWeek(createdAt)) return null;
+  return (
+    <span className="rounded-md bg-brand-blue px-2 py-0.5 text-[10px] font-semibold tracking-[0.06em] text-white uppercase">
+      New
+    </span>
+  );
+}
+
+function PlayBadge({ game }: { game: Game }) {
+  return (
+    <span className="rounded-md bg-bg/75 px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide text-text backdrop-blur-sm">
+      {game.embeddable ? "Instant play" : "Web"}
+    </span>
+  );
+}
+
+function Badges({ game }: { game: Game }) {
+  return (
+    <div className="absolute bottom-2.5 left-2.5 flex flex-wrap items-center gap-1">
+      <NewThisWeekBadge createdAt={game.createdAt} />
+      <PlayBadge game={game} />
+    </div>
+  );
 }
 
 function Meta({ game }: { game: Game }) {

@@ -18,6 +18,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${url.origin}/?auth_error=${encodeURIComponent(error.message)}`);
   }
 
+  if (next === "/auth/reset-password") {
+    return NextResponse.redirect(`${url.origin}/auth/reset-password`);
+  }
+
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
   let needsSetup = false;

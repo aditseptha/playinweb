@@ -11,6 +11,7 @@ import {
   GoogleAuthButton,
 } from "@/components/AuthModal";
 import { continueAfterAuth } from "@/lib/auth-redirect";
+import { passwordResetCallbackUrl } from "@/lib/oauth";
 import { createClient } from "@/lib/supabase/client";
 
 type LoginFormMode = "sign-in" | "forgot";
@@ -75,7 +76,7 @@ export function LoginForm({
     setPending(true);
     const supabase = createClient();
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(nextEmail, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: passwordResetCallbackUrl(),
     });
     setPending(false);
     if (resetError) {

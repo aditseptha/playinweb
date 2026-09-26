@@ -2,14 +2,27 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { TextInput } from "@/components/ui/field";
+import { Field, SelectInput, TextInput } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
+import { DEFAULT_CASHOUT_MIN, normalizeCashoutMin, readCashoutMin } from "@/lib/cashout";
 import { formatMoney, formatPlays } from "@/lib/format";
 import { useFeatures } from "@/lib/features";
 import { projectPublicUrl, siteOrigin } from "@/lib/host";
 import { isDummyDonation, isDummyPayout, isDummyProjectId, isDummyUser } from "@/lib/dummy-seed";
+import { maskEmail } from "@/lib/paypal-email";
+import {
+  DEFAULT_PAYOUT_FREQUENCY,
+  DEFAULT_PAYOUT_HOUR_UTC,
+  DEFAULT_PAYOUT_WEEKDAY,
+  PAYOUT_WEEKDAYS,
+  type PayoutFrequency,
+  payoutAdminScheduleSummary,
+  payoutFrequencyToStore,
+  readPayoutSchedule,
+} from "@/lib/payout-schedule";
+import { fetchSiteSettings, siteSettingsSaveError, upsertSiteSettings, WALLET_SETTING_IDS } from "@/lib/site-settings";
 import { createClient } from "@/lib/supabase/client";
 
 type Overview = {
@@ -42,6 +55,7 @@ type AdminReport = {
 
 type AdminPayout = {
   id: string;
+  user_id: string;
   amount: number;
   status: string;
   created_at: string;
@@ -60,6 +74,24 @@ type AdminDonation = {
   creator_handle: string | null;
   game_title: string | null;
   game_slug: string | null;
+};
+
+type AdminDonationWithOwner = AdminDonation & {
+  owner_id: string;
+};
+
+type AdminWallet = {
+  user_id: string;
+  email: string | null;
+  handle: string | null;
+  display_name: string | null;
+  wallet_address: string | null;
+  donation_count: number;
+  gross_total: number;
+  commission_total: number;
+  earned_total: number;
+  paid_out: number;
+  outstanding: number;
 };
 
 type AdminTip = {
@@ -85,7 +117,8 @@ type AdminGame = {
 export function AdminPanel() {
   const searchParams = useSearchParams();
   const rawTab = searchParams.get("tab");
-  const tab = rawTab === "reports" || rawTab === "features" ? rawTab : "overview";
+  const tab =
+    rawTab === "reports" || rawTab === "features" || rawTab === "wallet" ? rawTab : "overview";
   const { features, setFlags } = useFeatures();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
@@ -96,6 +129,17 @@ export function AdminPanel() {
   const [commission, setCommission] = useState("10");
   const [commissionSaved, setCommissionSaved] = useState("");
   const [reports, setReports] = useState<AdminReport[] | null>(null);
+  const [wallets, setWallets] = useState<AdminWallet[] | null>(null);
+  const [walletDonations, setWalletDonations] = useState<AdminDonationWithOwner[] | null>(null);
+  const [walletPayouts, setWalletPayouts] = useState<AdminPayout[] | null>(null);
+  const [payoutFrequency, setPayoutFrequency] = useState<PayoutFrequency>(DEFAULT_PAYOUT_FREQUENCY);
+  const [payoutWeekday, setPayoutWeekday] = useState(String(DEFAULT_PAYOUT_WEEKDAY));
+  const [payoutHourUtc, setPayoutHourUtc] = useState(String(DEFAULT_PAYOUT_HOUR_UTC));
+  const [cashoutMin, setCashoutMin] = useState(String(DEFAULT_CASHOUT_MIN));
+  const [payoutScheduleSaved, setPayoutScheduleSaved] = useState("");
+  const [payoutRunBusy, setPayoutRunBusy] = useState(false);
+  const [payoutRunMessage, setPayoutRunMessage] = useState("");
+  const [walletReloadToken, setWalletReloadToken] = useState(0);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -117,7 +161,7 @@ export function AdminPanel() {
       supabase.from("site_settings").select("value").eq("id", "donation_commission_pct").maybeSingle(),
       supabase
         .from("payouts")
-        .select("id, amount, status, created_at, creator_email, creator_handle")
+        .select("id, user_id, amount, status, created_at, creator_email, creator_handle")
         .order("created_at", { ascending: false })
         .limit(200),
       supabase
@@ -174,15 +218,149 @@ export function AdminPanel() {
     };
   }, [tab]);
 
+  useEffect(() => {
+    if (tab !== "wallet") return;
+    const supabase = createClient();
+    let cancelled = false;
+    Promise.all([
+      supabase.rpc("admin_list_wallets"),
+      supabase
+        .from("donations")
+        .select(
+          "id, amount, commission_pct, created_at, donor_email, donor_handle, creator_name, creator_handle, game_title, game_slug, projects!inner(owner_id)",
+        )
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase
+        .from("payouts")
+        .select("id, user_id, amount, status, created_at, creator_email, creator_handle")
+        .order("created_at", { ascending: false })
+        .limit(500),
+      fetchSiteSettings(WALLET_SETTING_IDS.filter((id) => id !== "donation_commission_pct")),
+    ]).then(([walletsRes, donationsRes, payoutsRes, scheduleRes]) => {
+      if (cancelled) return;
+      if (walletsRes.error || donationsRes.error || payoutsRes.error) {
+        setError("Could not load wallet data.");
+        setWallets([]);
+        setWalletDonations([]);
+        setWalletPayouts([]);
+        return;
+      }
+      setError("");
+      setWallets(
+        ((walletsRes.data ?? []) as AdminWallet[]).filter(
+          (row) => !isDummyUser({ id: row.user_id, email: row.email, handle: row.handle }),
+        ),
+      );
+      setWalletDonations(
+        (donationsRes.data ?? []).flatMap((row) => {
+          const item = row as Record<string, unknown>;
+          const project = Array.isArray(item.projects) ? item.projects[0] : item.projects;
+          const owner =
+            project && typeof project === "object" ? String((project as Record<string, unknown>).owner_id ?? "") : "";
+          if (!owner) return [];
+          const donation = {
+            id: String(item.id ?? ""),
+            amount: Number(item.amount ?? 0),
+            commission_pct: Number(item.commission_pct ?? 0),
+            created_at: String(item.created_at ?? ""),
+            donor_email: typeof item.donor_email === "string" ? item.donor_email : null,
+            donor_handle: typeof item.donor_handle === "string" ? item.donor_handle : null,
+            creator_name: typeof item.creator_name === "string" ? item.creator_name : null,
+            creator_handle: typeof item.creator_handle === "string" ? item.creator_handle : null,
+            game_title: typeof item.game_title === "string" ? item.game_title : null,
+            game_slug: typeof item.game_slug === "string" ? item.game_slug : null,
+            owner_id: owner,
+          };
+          if (isDummyDonation(donation)) return [];
+          return [donation];
+        }),
+      );
+      setWalletPayouts(((payoutsRes.data ?? []) as AdminPayout[]).filter((row) => !isDummyPayout(row)));
+      if (!scheduleRes.error && scheduleRes.data) {
+        const schedule = readPayoutSchedule(scheduleRes.data);
+        setPayoutFrequency(schedule.frequency);
+        setPayoutWeekday(String(schedule.weekday));
+        setPayoutHourUtc(String(schedule.hourUtc));
+        setCashoutMin(String(readCashoutMin(scheduleRes.data)));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, walletReloadToken]);
+
+  async function runPayoutsNow() {
+    setPayoutRunBusy(true);
+    setPayoutRunMessage("Sending payouts via PayPal…");
+    try {
+      const res = await fetch("/api/admin/run-payouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true }),
+      });
+      const body = (await res.json().catch(() => null)) as {
+        error?: string;
+        message?: string;
+        results?: { status: string; message?: string }[];
+      } | null;
+      if (!res.ok) {
+        setPayoutRunMessage(body?.error || "Payout run failed.");
+        return;
+      }
+      const failed = (body?.results ?? []).filter((row) => row.status === "failed");
+      const failNote = failed.map((row) => row.message).filter(Boolean).join(" ");
+      setPayoutRunMessage(
+        failNote ? `${body?.message || "Done."} ${failNote}` : body?.message || "Payouts sent.",
+      );
+      setWalletReloadToken((value) => value + 1);
+    } catch {
+      setPayoutRunMessage("Could not reach the payout server.");
+    } finally {
+      setPayoutRunBusy(false);
+    }
+  }
+
+  async function savePayoutSchedule() {
+    const weekday = Math.min(6, Math.max(0, Math.round(Number(payoutWeekday))));
+    const hourUtc = Math.min(23, Math.max(0, Math.round(Number(payoutHourUtc))));
+    const minPayout = normalizeCashoutMin(cashoutMin);
+    if (!Number.isFinite(weekday) || !Number.isFinite(hourUtc)) return;
+    setPayoutWeekday(String(weekday));
+    setPayoutHourUtc(String(hourUtc));
+    setCashoutMin(String(minPayout));
+    const rows = [
+      { id: "payout_frequency", value: payoutFrequencyToStore(payoutFrequency) },
+      { id: "payout_weekday", value: weekday },
+      { id: "payout_hour_utc", value: hourUtc },
+      { id: "cashout_min", value: minPayout },
+    ];
+    const saveError = await upsertSiteSettings(rows);
+    if (saveError) {
+      setPayoutScheduleSaved(siteSettingsSaveError(saveError));
+      return;
+    }
+    const { data: savedRows, error: reloadError } = await fetchSiteSettings(
+      WALLET_SETTING_IDS.filter((id) => id !== "donation_commission_pct"),
+    );
+    if (!reloadError && savedRows) {
+      const schedule = readPayoutSchedule(savedRows);
+      setPayoutFrequency(schedule.frequency);
+      setPayoutWeekday(String(schedule.weekday));
+      setPayoutHourUtc(String(schedule.hourUtc));
+      setCashoutMin(String(readCashoutMin(savedRows)));
+    }
+    setPayoutScheduleSaved(
+      `Payout settings saved. Cash outs run ${payoutAdminScheduleSummary(payoutFrequency, weekday, hourUtc)} with a ${formatMoney(minPayout)} minimum.`,
+    );
+  }
+
   async function saveCommission() {
     const next = Math.min(100, Math.max(0, Number(commission)));
     if (!Number.isFinite(next)) return;
     setCommission(String(next));
-    const { error: saveError } = await createClient()
-      .from("site_settings")
-      .update({ value: next })
-      .eq("id", "donation_commission_pct");
-    setCommissionSaved(saveError ? "Could not save commission." : "Commission saved. New donations use this rate.");
+    const saveError = await upsertSiteSettings([{ id: "donation_commission_pct", value: next }]);
+    setCommissionSaved(saveError ? siteSettingsSaveError(saveError) : "Commission saved. New donations use this rate.");
   }
 
   return (
@@ -194,6 +372,7 @@ export function AdminPanel() {
           value={tab}
           options={[
             { value: "overview", label: "Overview", href: "/admin" },
+            { value: "wallet", label: "Wallet", href: "/admin?tab=wallet" },
             { value: "reports", label: "Reported issue", href: "/admin?tab=reports" },
             { value: "features", label: "Feature list", href: "/admin?tab=features" },
           ]}
@@ -204,6 +383,26 @@ export function AdminPanel() {
 
       {tab === "reports" ? <ReportsTable reports={reports} /> : null}
       {tab === "features" ? <FeatureList features={features} setFlags={setFlags} /> : null}
+      {tab === "wallet" ? (
+        <WalletPanel
+          wallets={wallets}
+          donations={walletDonations}
+          payouts={walletPayouts}
+          payoutFrequency={payoutFrequency}
+          payoutWeekday={payoutWeekday}
+          payoutHourUtc={payoutHourUtc}
+          cashoutMin={cashoutMin}
+          payoutScheduleSaved={payoutScheduleSaved}
+          onPayoutFrequencyChange={setPayoutFrequency}
+          onPayoutWeekdayChange={setPayoutWeekday}
+          onPayoutHourUtcChange={setPayoutHourUtc}
+          onCashoutMinChange={setCashoutMin}
+          onSavePayoutSchedule={() => void savePayoutSchedule()}
+          onRunPayouts={() => void runPayoutsNow()}
+          payoutRunBusy={payoutRunBusy}
+          payoutRunMessage={payoutRunMessage}
+        />
+      ) : null}
       {tab === "overview" ? (
         <>
 
@@ -558,6 +757,310 @@ function PayoutRecords({ rows }: { rows: AdminPayout[] | null }) {
                   <td className="px-4 py-3 text-text-muted">{formatWhen(row.created_at)}</td>
                 </tr>
               ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function WalletPanel({
+  wallets,
+  donations,
+  payouts,
+  payoutFrequency,
+  payoutWeekday,
+  payoutHourUtc,
+  cashoutMin,
+  payoutScheduleSaved,
+  onPayoutFrequencyChange,
+  onPayoutWeekdayChange,
+  onPayoutHourUtcChange,
+  onCashoutMinChange,
+  onSavePayoutSchedule,
+  onRunPayouts,
+  payoutRunBusy,
+  payoutRunMessage,
+}: {
+  wallets: AdminWallet[] | null;
+  donations: AdminDonationWithOwner[] | null;
+  payouts: AdminPayout[] | null;
+  payoutFrequency: PayoutFrequency;
+  payoutWeekday: string;
+  payoutHourUtc: string;
+  cashoutMin: string;
+  payoutScheduleSaved: string;
+  onPayoutFrequencyChange: (value: PayoutFrequency) => void;
+  onPayoutWeekdayChange: (value: string) => void;
+  onPayoutHourUtcChange: (value: string) => void;
+  onCashoutMinChange: (value: string) => void;
+  onSavePayoutSchedule: () => void;
+  onRunPayouts: () => void;
+  payoutRunBusy: boolean;
+  payoutRunMessage: string;
+}) {
+  const [openUserId, setOpenUserId] = useState<string | null>(null);
+  const weekday = Math.min(6, Math.max(0, Math.round(Number(payoutWeekday))));
+  const hourUtc = Math.min(23, Math.max(0, Math.round(Number(payoutHourUtc))));
+  const minPayout = normalizeCashoutMin(cashoutMin);
+  const weekly = payoutFrequency === "weekly";
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-title font-semibold tracking-tight">Wallet</h2>
+      <p className="mt-1 text-caption text-text-muted">
+        In account is what they can still cash out. Expand a row for donation and payout history.
+      </p>
+      <form
+        className="mt-4 rounded-panel border border-border bg-surface-2 p-4 sm:p-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSavePayoutSchedule();
+        }}
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="text-ui font-medium">Payout schedule</p>
+            <p className="mt-1 max-w-xl text-caption text-text-muted">
+              Controls when automatic PayPal cash outs run. Times are stored in UTC and shown to creators in their local
+              timezone.
+            </p>
+            <div className="mt-4">
+              <Segmented
+                aria-label="Payout frequency"
+                value={payoutFrequency}
+                onChange={onPayoutFrequencyChange}
+                options={[
+                  { value: "weekly", label: "Weekly" },
+                  { value: "daily", label: "Daily" },
+                ]}
+              />
+            </div>
+          </div>
+          <div className="rounded-xl bg-surface-3 px-4 py-3 lg:min-w-[14rem] lg:shrink-0">
+            <p className="text-caption font-medium text-text-subtle">Preview</p>
+            <p className="mt-1 text-body font-medium">
+              {payoutAdminScheduleSummary(payoutFrequency, weekday, hourUtc)}
+            </p>
+            <p className="mt-1 text-caption text-text-muted">Minimum {formatMoney(minPayout)}</p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_9rem_auto] sm:items-end">
+          <Field
+            label="Payout day (UTC)"
+            hint={weekly ? "Cash outs run on this weekday each week." : "Only used for weekly payouts."}
+            className={weekly ? "" : "opacity-50"}
+          >
+            <SelectInput
+              id="payout-weekday"
+              value={payoutWeekday}
+              onChange={(e) => onPayoutWeekdayChange(e.target.value)}
+              disabled={!weekly}
+            >
+              {PAYOUT_WEEKDAYS.map((row) => (
+                <option key={row.value} value={row.value}>
+                  {row.label}
+                </option>
+              ))}
+            </SelectInput>
+          </Field>
+          <Field label="Hour (UTC)" hint="0–23">
+            <TextInput
+              id="payout-hour-utc"
+              type="number"
+              min={0}
+              max={23}
+              step={1}
+              value={payoutHourUtc}
+              onChange={(e) => onPayoutHourUtcChange(e.target.value)}
+            />
+          </Field>
+          <Field label="Minimum payout" hint="Balance required to cash out.">
+            <div className="relative">
+              <TextInput
+                id="cashout-min"
+                type="number"
+                min={0}
+                step="0.01"
+                value={cashoutMin}
+                onChange={(e) => onCashoutMinChange(e.target.value)}
+                className="pr-7"
+              />
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-caption text-text-subtle">
+                $
+              </span>
+            </div>
+          </Field>
+          <Button type="submit" variant="secondary" size="sm" className="sm:mb-0.5 sm:w-full sm:max-w-[8rem]">
+            Save
+          </Button>
+        </div>
+        {payoutScheduleSaved ? <p className="mt-3 text-caption text-text-muted">{payoutScheduleSaved}</p> : null}
+      </form>
+      <div className="mt-4 flex flex-col gap-3 rounded-panel border border-border bg-surface-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-ui font-medium">Run payouts now</p>
+          <p className="mt-1 max-w-xl text-caption text-text-muted">
+            Sends PayPal payouts immediately for every creator with PayPal connected and at least the minimum in
+            account. Ignores the schedule. Requires PayPal REST credentials in the server environment.
+          </p>
+          {payoutRunMessage ? <p className="mt-2 text-caption text-text-muted">{payoutRunMessage}</p> : null}
+        </div>
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          className="shrink-0"
+          disabled={payoutRunBusy}
+          onClick={onRunPayouts}
+        >
+          {payoutRunBusy ? "Sending…" : "Run payouts now"}
+        </Button>
+      </div>
+      <div className="mt-4 overflow-x-auto rounded-panel bg-surface-2">
+        <table className="w-full min-w-[48rem] text-left text-ui">
+          <thead className="text-caption text-text-subtle">
+            <tr className="border-b border-border">
+              <th className="px-4 py-3 font-medium">Email</th>
+              <th className="px-4 py-3 font-medium">PayPal</th>
+              <th className="px-4 py-3 font-medium">In account</th>
+              <th className="px-4 py-3 font-medium">Lifetime earned</th>
+              <th className="px-4 py-3 font-medium">Paid out</th>
+              <th className="px-4 py-3 font-medium">Donations</th>
+              <th className="px-4 py-3 font-medium" />
+            </tr>
+          </thead>
+          <tbody>
+            {wallets === null || donations === null || payouts === null ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-text-muted">
+                  Loading wallet data…
+                </td>
+              </tr>
+            ) : wallets.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-text-muted">
+                  No donations recorded yet.
+                </td>
+              </tr>
+            ) : (
+              wallets.map((row) => {
+                const open = openUserId === row.user_id;
+                const userDonations = donations.filter((gift) => gift.owner_id === row.user_id);
+                const userPayouts = payouts.filter((payout) => payout.user_id === row.user_id);
+                return (
+                  <Fragment key={row.user_id}>
+                    <tr className="border-b border-border/70">
+                      <td className="px-4 py-3 font-medium">
+                        {row.email ? maskEmail(row.email) : "—"}
+                      </td>
+                      <td className="max-w-[12rem] truncate px-4 py-3 text-text-muted">
+                        {row.wallet_address || "—"}
+                      </td>
+                      <td className="px-4 py-3 tabular font-semibold">{formatMoney(Number(row.outstanding))}</td>
+                      <td className="px-4 py-3 tabular">{formatMoney(Number(row.earned_total))}</td>
+                      <td className="px-4 py-3 tabular">{formatMoney(Number(row.paid_out))}</td>
+                      <td className="px-4 py-3 tabular">{formatPlays(row.donation_count)}</td>
+                      <td className="px-4 py-3">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setOpenUserId(open ? null : row.user_id)}
+                        >
+                          {open ? "Hide" : "View"}
+                        </Button>
+                      </td>
+                    </tr>
+                    {open ? (
+                      <tr className="border-b border-border/70 bg-surface-3/40">
+                        <td colSpan={7} className="px-4 py-4">
+                          <div className="grid gap-6 lg:grid-cols-2">
+                            <div>
+                              <p className="mb-3 text-caption font-medium uppercase tracking-wide text-text-subtle">
+                                Donations received
+                              </p>
+                              {userDonations.length === 0 ? (
+                                <p className="text-caption text-text-muted">No donations yet.</p>
+                              ) : (
+                                <div className="overflow-x-auto rounded-lg bg-surface-2">
+                                  <table className="w-full min-w-[20rem] text-left text-caption">
+                                    <thead className="text-text-subtle">
+                                      <tr className="border-b border-border">
+                                        <th className="px-3 py-2 font-medium">Game</th>
+                                        <th className="px-3 py-2 font-medium">Gross</th>
+                                        <th className="px-3 py-2 font-medium">Earned</th>
+                                        <th className="px-3 py-2 font-medium">Date</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {userDonations.map((gift) => {
+                                        const pct = Number(gift.commission_pct) || 0;
+                                        const earned = Number(gift.amount) * (1 - pct / 100);
+                                        return (
+                                          <tr key={gift.id} className="border-b border-border/60 last:border-0">
+                                            <td className="px-3 py-2">
+                                              {gift.creator_handle && gift.game_slug ? (
+                                                <Link
+                                                  href={projectPublicUrl(gift.creator_handle, gift.game_slug)}
+                                                  className="truncate font-medium hover:text-text-muted"
+                                                >
+                                                  {gift.game_title || "Untitled"}
+                                                </Link>
+                                              ) : (
+                                                <span className="truncate font-medium">{gift.game_title || "Untitled"}</span>
+                                              )}
+                                            </td>
+                                            <td className="px-3 py-2 tabular">{formatMoney(Number(gift.amount))}</td>
+                                            <td className="px-3 py-2 tabular">{formatMoney(earned)}</td>
+                                            <td className="px-3 py-2 text-text-muted">{formatWhen(gift.created_at)}</td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="mb-3 text-caption font-medium uppercase tracking-wide text-text-subtle">
+                                Payout history
+                              </p>
+                              {userPayouts.length === 0 ? (
+                                <p className="text-caption text-text-muted">No payouts yet.</p>
+                              ) : (
+                                <div className="overflow-x-auto rounded-lg bg-surface-2">
+                                  <table className="w-full min-w-[16rem] text-left text-caption">
+                                    <thead className="text-text-subtle">
+                                      <tr className="border-b border-border">
+                                        <th className="px-3 py-2 font-medium">Amount</th>
+                                        <th className="px-3 py-2 font-medium">Status</th>
+                                        <th className="px-3 py-2 font-medium">Date</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {userPayouts.map((payout) => (
+                                        <tr key={payout.id} className="border-b border-border/60 last:border-0">
+                                          <td className="px-3 py-2 tabular font-medium">
+                                            {formatMoney(Number(payout.amount))}
+                                          </td>
+                                          <td className="px-3 py-2 capitalize text-text-muted">{payout.status}</td>
+                                          <td className="px-3 py-2 text-text-muted">{formatWhen(payout.created_at)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>

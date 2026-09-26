@@ -10,6 +10,14 @@ export function htmlStoragePrefix(ownerId: string, projectId: string) {
   return `${ownerId}/html/${projectId}`;
 }
 
+export function htmlBuildSourcePath(prefix: string) {
+  return `${prefix}/.build-source`;
+}
+
+export function flashStoragePrefix(ownerId: string, projectId: string) {
+  return `${ownerId}/flash/${projectId}`;
+}
+
 export function hostedPlayPath(slug: string) {
   return `/${slug}/index.html`;
 }

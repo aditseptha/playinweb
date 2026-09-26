@@ -7,23 +7,28 @@ import { useLoginDialog } from "@/components/LoginDialog";
 import { useSignupDialog } from "@/components/SignupDialog";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, SelectInput, TextArea, TextInput } from "@/components/ui/field";
-import { Segmented } from "@/components/ui/segmented";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { slugify } from "@/lib/format";
 import { apexOrigin, isSlug, projectPublicUrl } from "@/lib/host";
 import { fileExt, MEDIA_BUCKET, publicMediaUrl } from "@/lib/media";
-import { contentType, filesFromHtmlUpload, hostedPlayPath, htmlStoragePrefix, MAX_HTML_BYTES } from "@/lib/html-game";
 import {
-  CLASSIFICATIONS,
+  contentType,
+  filesFromHtmlUpload,
+  hostedPlayPath,
+  flashStoragePrefix,
+  htmlBuildSourcePath,
+  htmlStoragePrefix,
+  MAX_HTML_BYTES,
+} from "@/lib/html-game";
+import {
   COMMUNITIES,
   GENRES,
-  PRICING_TYPES,
+  LEGACY_PROJECT_KINDS,
   PROJECT_KINDS,
   RELEASE_STATUSES,
   STORES,
   type Community,
-  type PricingType,
   type ProjectKind,
 } from "@/lib/project-fields";
 import { clearCatalogueCache, type ProjectRecord } from "@/lib/projects";
@@ -40,15 +45,67 @@ type HtmlPreview = {
 };
 
 function asKind(value: string | undefined): ProjectKind {
-  return PROJECT_KINDS.some((item) => item.id === value) ? (value as ProjectKind) : "html";
+  if (!value) return "html";
+  if (PROJECT_KINDS.some((item) => item.id === value)) return value as ProjectKind;
+  if (LEGACY_PROJECT_KINDS.includes(value as (typeof LEGACY_PROJECT_KINDS)[number])) return value as ProjectKind;
+  return "html";
 }
 
-function asPricing(value: string | undefined): PricingType {
-  return PRICING_TYPES.some((item) => item.id === value) ? (value as PricingType) : "donate";
+function isHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function saveErrorMessage(err: unknown) {
+  const raw =
+    err instanceof Error
+      ? err.message
+      : typeof err === "object" && err && "message" in err && typeof err.message === "string"
+        ? err.message
+        : "";
+  if (!raw) return "Could not save the game.";
+  if (raw.includes("projects_kind_check")) {
+    return "That game type is not enabled in the database yet. Update projects_kind_check in Supabase to allow this kind.";
+  }
+  if (raw.includes("html_build_name")) {
+    return "Missing html_build_name column. Run: alter table public.projects add column if not exists html_build_name text;";
+  }
+  return raw;
 }
 
 function asCommunity(value: string | undefined): Community {
   return COMMUNITIES.some((item) => item.id === value) ? (value as Community) : "comments";
+}
+
+function fieldLabel(title: string, hint: string) {
+  return (
+    <>
+      {title}{" "}
+      <span className="font-normal text-text-subtle">({hint})</span>
+    </>
+  );
+}
+
+function sectionLabel(title: string, hint: string) {
+  return (
+    <p className="text-caption font-medium text-text-muted">
+      {title}{" "}
+      <span className="font-normal text-text-subtle">({hint})</span>
+    </p>
+  );
+}
+
+function fieldLegend(title: string, hint: string) {
+  return (
+    <legend className="text-caption font-medium text-text-muted">
+      {title}{" "}
+      <span className="font-normal text-text-subtle">({hint})</span>
+    </legend>
+  );
 }
 
 export function ProjectForm({ project }: { project?: ProjectRecord }) {
@@ -59,8 +116,9 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const router = useRouter();
   const [title, setTitle] = useState(project?.title ?? "");
   const [slug, setSlug] = useState(project?.slug ?? "");
+  const [slugTouched, setSlugTouched] = useState(false);
   const [kind, setKind] = useState<ProjectKind>(asKind(project?.kind));
-  const [pricing, setPricing] = useState<PricingType>(asPricing(project?.pricing_type));
+  const [allowDonations, setAllowDonations] = useState(project ? project.pricing_type !== "no_payments" : true);
   const [community, setCommunity] = useState<Community>(asCommunity(project?.community));
   const [containsAi, setContainsAi] = useState<"" | "yes" | "no">(
     project ? (project.contains_ai ? "yes" : "no") : "",
@@ -78,6 +136,11 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const [uploads, setUploads] = useState<File[]>([]);
   const [htmlBuild, setHtmlBuild] = useState<File | null>(null);
   const [htmlPreview, setHtmlPreview] = useState<HtmlPreview | null>(null);
+  const [flashBuild, setFlashBuild] = useState<File | null>(null);
+  const [storedBuildName, setStoredBuildName] = useState(project?.html_build_name ?? "");
+  const [playLink, setPlayLink] = useState(
+    project?.kind === "external" && project.play_url.startsWith("http") ? project.play_url : "",
+  );
   const [visibility, setVisibility] = useState<"public" | "private">(project?.published === false ? "private" : "public");
   const [externalName, setExternalName] = useState("");
   const [externalUrl, setExternalUrl] = useState("");
@@ -134,6 +197,40 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
     };
   }, [htmlBuild]);
 
+  useEffect(() => {
+    if (!editing || !project || (project.kind !== "html" && project.kind !== "flash")) return;
+    if (project.html_build_name) {
+      setStoredBuildName(project.html_build_name);
+      return;
+    }
+    let cancelled = false;
+    const supabase = createClient();
+    const prefix =
+      project.kind === "flash"
+        ? flashStoragePrefix(project.owner_id, project.id)
+        : htmlStoragePrefix(project.owner_id, project.id);
+    const sourcePath = htmlBuildSourcePath(prefix);
+    void supabase.storage
+      .from(MEDIA_BUCKET)
+      .download(sourcePath)
+      .then(async ({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const name = (await data.text()).trim();
+        if (name) setStoredBuildName(name);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, project]);
+
+  const kindOptions = useMemo(() => {
+    const options = [...PROJECT_KINDS];
+    if (project && LEGACY_PROJECT_KINDS.includes(project.kind as (typeof LEGACY_PROJECT_KINDS)[number])) {
+      options.push({ id: project.kind, label: `${project.kind} (legacy)` });
+    }
+    return options;
+  }, [project]);
+
   if (loading) return <p className="text-ui text-text-muted">Loading account…</p>;
 
   if (!user || !profile) {
@@ -188,6 +285,25 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
       setError("HTML5 game must be 100 MB or smaller.");
       return;
     }
+    if (kind === "flash" && !flashBuild && (!editing || !project?.play_url)) {
+      setError("Upload a .swf file.");
+      return;
+    }
+    if (kind === "flash" && flashBuild && flashBuild.size > MAX_FILE) {
+      setError("Flash game must be 50 MB or smaller.");
+      return;
+    }
+    if (kind === "flash" && flashBuild && !flashBuild.name.toLowerCase().endsWith(".swf")) {
+      setError("Flash uploads must be a .swf file.");
+      return;
+    }
+    if (kind === "external") {
+      const url = playLink.trim();
+      if (!url || !isHttpUrl(url)) {
+        setError("Enter a valid http(s) URL where players can play your game.");
+        return;
+      }
+    }
 
     if (!user || !profile) return;
     setPending(true);
@@ -228,19 +344,16 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         });
       }
 
-      const suggested = pricing === "donate" ? Number(fd.get("suggestedDonation") || 2) : null;
-      const minPrice = pricing === "paid" ? Number(fd.get("minPrice") || 0) : null;
-
       const fields = {
         title: nextTitle,
         slug: nextSlug,
         tagline: String(fd.get("tagline") ?? "").trim(),
-        classification: String(fd.get("classification") ?? "game"),
+        classification: "game",
         kind,
         release_status: String(fd.get("releaseStatus") ?? "released"),
-        pricing_type: pricing,
-        suggested_donation: Number.isFinite(suggested) ? suggested : null,
-        min_price: Number.isFinite(minPrice) ? minPrice : null,
+        pricing_type: allowDonations ? "donate" : "no_payments",
+        suggested_donation: null,
+        min_price: null,
         cover_path: coverPath,
         trailer_url: String(fd.get("trailerUrl") ?? "").trim() || null,
         description: String(fd.get("description") ?? "").trim(),
@@ -283,15 +396,49 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           );
           if (htmlError) throw htmlError;
         }
+        const { error: sourceError } = await supabase.storage.from(MEDIA_BUCKET).upload(
+          htmlBuildSourcePath(prefix),
+          new Blob([htmlBuild.name], { type: "text/plain" }),
+          { contentType: "text/plain", upsert: true },
+        );
+        if (sourceError) throw sourceError;
         const { error: playError } = await supabase
           .from("projects")
           .update({ play_url: hostedPlayPath(nextSlug) })
           .eq("id", projectId);
         if (playError) throw playError;
+        void supabase.from("projects").update({ html_build_name: htmlBuild.name }).eq("id", projectId);
       } else if (kind === "html" && editing && project && nextSlug !== project.slug) {
         const { error: playError } = await supabase
           .from("projects")
           .update({ play_url: hostedPlayPath(nextSlug) })
+          .eq("id", projectId);
+        if (playError) throw playError;
+      } else if (kind === "flash" && flashBuild) {
+        const prefix = flashStoragePrefix(uid, projectId);
+        const safeName = flashBuild.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const storagePath = `${prefix}/${safeName}`;
+        const { error: flashError } = await supabase.storage.from(MEDIA_BUCKET).upload(storagePath, flashBuild, {
+          contentType: "application/x-shockwave-flash",
+          upsert: true,
+        });
+        if (flashError) throw flashError;
+        const { error: sourceError } = await supabase.storage.from(MEDIA_BUCKET).upload(
+          htmlBuildSourcePath(prefix),
+          new Blob([flashBuild.name], { type: "text/plain" }),
+          { contentType: "text/plain", upsert: true },
+        );
+        if (sourceError) throw sourceError;
+        const { error: playError } = await supabase
+          .from("projects")
+          .update({ play_url: storagePath })
+          .eq("id", projectId);
+        if (playError) throw playError;
+        void supabase.from("projects").update({ html_build_name: flashBuild.name }).eq("id", projectId);
+      } else if (kind === "external") {
+        const { error: playError } = await supabase
+          .from("projects")
+          .update({ play_url: playLink.trim() })
           .eq("id", projectId);
         if (playError) throw playError;
       }
@@ -349,23 +496,20 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
       router.refresh();
     } catch (err) {
       setPending(false);
-      setError(err instanceof Error ? err.message : "Could not save the game.");
+      setError(saveErrorMessage(err));
     }
   }
 
   return (
     <form onSubmit={onSubmit} className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="flex min-w-0 flex-col gap-6">
-        <div className="rounded-lg bg-warning/12 px-4 py-3 text-ui text-warning">
-          Payments are not live. If you set a paid price, people still cannot check out here.
-        </div>
-
         <Field label="Title">
           <TextInput
             value={title}
             onChange={(e) => {
-              setTitle(e.target.value);
-              if (!editing && !slug) setSlug(slugify(e.target.value).slice(0, 48));
+              const nextTitle = e.target.value;
+              setTitle(nextTitle);
+              if (!editing && !slugTouched) setSlug(slugify(nextTitle).slice(0, 48));
             }}
             required
           />
@@ -385,35 +529,16 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
             </span>
             <TextInput
               value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+              onChange={(e) => {
+                setSlugTouched(true);
+                setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+              }}
               required
               readOnly={editing}
               disabled={editing}
               className="h-full min-w-0 flex-1 rounded-none bg-transparent px-3 focus:bg-transparent sm:h-full"
             />
           </div>
-        </Field>
-
-        <Field label="Short description or tagline" hint="Optional. Avoid duplicating your game's title.">
-          <TextInput name="tagline" placeholder="Optional" defaultValue={project?.tagline ?? ""} />
-        </Field>
-
-        <SelectField label="Classification" name="classification" hint="What are you uploading?" defaultValue={project?.classification ?? "game"}>
-          {CLASSIFICATIONS.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </SelectField>
-
-        <Field label="Kind of game" hint="You can add additional downloadable files for any of the types above.">
-          <SelectInput value={kind} onChange={(e) => setKind(e.target.value as ProjectKind)}>
-            {PROJECT_KINDS.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </SelectInput>
         </Field>
 
         <SelectField label="Release status" name="releaseStatus" defaultValue={project?.release_status ?? "released"}>
@@ -423,6 +548,20 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
             </option>
           ))}
         </SelectField>
+
+        <Field label={fieldLabel("Short description or tagline", "Optional. Avoid duplicating your game's title.")}>
+          <TextInput name="tagline" placeholder="Optional" defaultValue={project?.tagline ?? ""} />
+        </Field>
+
+        <Field label={fieldLabel("Kind of game", "Choose how players access your game.")}>
+          <SelectInput value={kind} onChange={(e) => setKind(e.target.value as ProjectKind)}>
+            {kindOptions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </SelectInput>
+        </Field>
 
         {kind === "html" ? (
           <Field
@@ -456,87 +595,99 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
             {htmlPreview ? (
               <HtmlBuildPreview preview={htmlPreview} />
             ) : htmlBuild ? (
-              <span className="text-meta text-text-subtle">{htmlBuild.name}</span>
-            ) : editing && project ? (
+              <p className="text-meta text-text-subtle">Selected file: {htmlBuild.name}</p>
+            ) : storedBuildName ? (
+              <p className="text-meta text-text-subtle">Current file: {storedBuildName}</p>
+            ) : editing && project?.play_url ? (
               <p className="text-meta text-text-subtle">
-                Current file: {project.play_url || hostedPlayPath(project.slug)}
+                Current file: Name not saved — re-upload your .zip to show the file name here.
               </p>
             ) : null}
           </Field>
         ) : null}
 
-        <div>
-          <p className="text-caption font-medium text-text-muted">Pricing</p>
-          <Segmented
-            className="mt-2"
-            value={pricing}
-            onChange={setPricing}
-            options={PRICING_TYPES.map((item) => ({ value: item.id, label: item.label }))}
-          />
-          {pricing === "donate" ? (
-            <Field label="Suggested donation" className="mt-3 max-w-xs">
-              <TextInput
-                name="suggestedDonation"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={project?.suggested_donation != null ? String(project.suggested_donation) : "2.00"}
-              />
-            </Field>
-          ) : null}
-          {pricing === "paid" ? (
-            <Field label="Minimum price" className="mt-3 max-w-xs">
-              <TextInput
-                name="minPrice"
-                type="number"
-                min="0"
-                step="0.01"
-                defaultValue={project?.min_price != null ? String(project.min_price) : "0.00"}
-              />
-            </Field>
-          ) : null}
-        </div>
+        {kind === "flash" ? (
+          <Field
+            label={fieldLabel("Flash game", "Upload a .swf file. Max 50 MB.")}
+          >
+            <input
+              type="file"
+              accept=".swf,application/x-shockwave-flash"
+              className="block w-full text-ui text-text-muted file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:text-body file:text-text"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                if (file && file.size > MAX_FILE) {
+                  e.target.value = "";
+                  setFlashBuild(null);
+                  setError("Flash game must be 50 MB or smaller.");
+                  return;
+                }
+                setFlashBuild(file);
+                setError("");
+              }}
+            />
+            {flashBuild ? (
+              <p className="text-meta text-text-subtle">Selected file: {flashBuild.name}</p>
+            ) : storedBuildName ? (
+              <p className="text-meta text-text-subtle">Current file: {storedBuildName}</p>
+            ) : editing && project?.play_url ? (
+              <p className="text-meta text-text-subtle">
+                Current file: Name not saved — re-upload your .swf to show the file name here.
+              </p>
+            ) : null}
+          </Field>
+        ) : null}
 
-        <div>
-          <p className="text-caption font-medium text-text-muted">Uploads</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <label className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-accent px-3.5 text-body font-medium text-accent-fg sm:h-9">
-              Upload files
-              <input
-                type="file"
-                multiple
-                className="sr-only"
-                onChange={(e) => setUploads([...(e.target.files ?? [])])}
-              />
-            </label>
-            <button type="button" onClick={() => setShowExternal(true)} className="text-ui text-text-muted hover:text-text">
-              Add external file
-            </button>
+        {kind === "external" ? (
+          <Field label={fieldLabel("Play URL", "Link to itch.io, Steam, your site, or anywhere players can play.")}>
+            <TextInput
+              type="url"
+              value={playLink}
+              onChange={(e) => setPlayLink(e.target.value)}
+              placeholder="https://…"
+              required
+            />
+          </Field>
+        ) : null}
+
+        <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-surface-2 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-ui font-medium">Allow donations</p>
+            <p className="mt-0.5 text-meta text-text-subtle">Let players support your game with a voluntary donation.</p>
           </div>
-          <p className="mt-2 text-meta text-text-subtle">File size limit: 50 MB per file.</p>
-          {uploads.length > 0 ? (
-            <ul className="mt-2 text-ui text-text-muted">
-              {uploads.map((f) => (
-                <li key={f.name}>{f.name}</li>
-              ))}
-            </ul>
-          ) : null}
-          {showExternal ? (
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <TextInput value={externalName} onChange={(e) => setExternalName(e.target.value)} placeholder="File name" />
-              <TextInput value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://…" />
-            </div>
-          ) : null}
-        </div>
+          <span className="relative inline-flex h-7 w-12 shrink-0">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={allowDonations}
+              onChange={(e) => setAllowDonations(e.target.checked)}
+              className="peer sr-only"
+            />
+            <span
+              aria-hidden
+              className={cn(
+                "absolute inset-0 rounded-full transition-colors duration-200 ease-out-quint",
+                "bg-surface-3 peer-checked:bg-brand-blue",
+                "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-blue",
+              )}
+            />
+            <span
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out-quint",
+                "peer-checked:translate-x-5",
+              )}
+            />
+          </span>
+        </label>
 
-        <Field label="Description" hint="This will make up the content of your game page.">
-          <TextArea name="description" rows={10} className="min-h-[12rem]" defaultValue={project?.description ?? ""} />
+        <Field label={fieldLabel("Description", "This will make up the content of your game page.")}>
+          <TextArea name="description" className="h-[150px] min-h-[150px]" defaultValue={project?.description ?? ""} />
         </Field>
 
         <SelectField
-          label="Genre"
+          label={fieldLabel("Genre", "You can add additional genres with tags.")}
           name="genre"
-          hint="You can add additional genres with tags."
           defaultValue={project?.genre && GENRES.includes(project.genre as (typeof GENRES)[number]) ? project.genre : "No genre"}
         >
           {GENRES.map((g) => (
@@ -547,8 +698,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         </SelectField>
 
         <div>
-          <p className="text-caption font-medium text-text-muted">Tags</p>
-          <p className="text-meta text-text-subtle">Any other keywords someone might search. Max of 10.</p>
+          {sectionLabel("Tags", "Any other keywords someone might search. Max of 10.")}
           <div className="mt-2 flex flex-wrap gap-2">
             {tags.map((tag) => (
               <button
@@ -576,8 +726,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         </div>
 
         <fieldset>
-          <legend className="text-caption font-medium text-text-muted">Generative AI disclosure</legend>
-          <p className="text-meta text-text-subtle">Does this game contain output from generative AI tools?</p>
+          {fieldLegend("Generative AI disclosure", "Does this game contain output from generative AI tools?")}
           <label className="mt-2 flex items-start gap-2 text-ui">
             <input type="radio" name="ai" checked={containsAi === "yes"} onChange={() => setContainsAi("yes")} />
             Yes — This game contains the output of Generative AI
@@ -589,8 +738,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         </fieldset>
 
         <div>
-          <p className="text-caption font-medium text-text-muted">App store links</p>
-          <p className="text-meta text-text-subtle">These will be linked to on the game page.</p>
+          {sectionLabel("App store links", "These will be linked to on the game page.")}
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {STORES.map((store) => (
               <TextInput
@@ -614,12 +762,12 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         </fieldset>
 
         <fieldset>
-          <legend className="text-caption font-medium text-text-muted">Visibility</legend>
-          <p className="text-meta text-text-subtle">
-            {visibility === "private"
+          {fieldLegend(
+            "Visibility",
+            visibility === "private"
               ? "Only you can open this listing. It stays off the catalogue and your public page."
-              : "Anyone can find and play this listing."}
-          </p>
+              : "Anyone can find and play this listing.",
+          )}
           <label className="mt-2 flex items-start gap-2 text-ui">
             <input type="radio" name="visibility" checked={visibility === "public"} onChange={() => setVisibility("public")} />
             Public
@@ -771,18 +919,16 @@ function formatSize(n: number) {
 function SelectField({
   label,
   name,
-  hint,
   defaultValue,
   children,
 }: {
-  label: string;
+  label: React.ReactNode;
   name: string;
-  hint?: string;
   defaultValue?: string;
   children: React.ReactNode;
 }) {
   return (
-    <Field label={label} hint={hint}>
+    <Field label={label}>
       <SelectInput name={name} defaultValue={defaultValue}>
         {children}
       </SelectInput>

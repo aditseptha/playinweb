@@ -256,7 +256,11 @@ export function projectToGame(project: ProjectRecord): Game {
     .map((s) => publicMediaUrl(s.storage_path));
   const hosted =
     project.kind === "html" && isPersistedId(project.id) && project.profiles?.handle && project.slug;
-  const play = hosted ? projectEmbedUrl(project.profiles!.handle, project.slug) : project.play_url;
+  const play = hosted
+    ? projectEmbedUrl(project.profiles!.handle, project.slug)
+    : project.play_url.startsWith("http")
+      ? project.play_url
+      : publicMediaUrl(project.play_url) || project.play_url;
   return {
     id: project.id,
     title: project.title,

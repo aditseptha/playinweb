@@ -86,7 +86,7 @@ export function ProjectHeroRoot({
   ];
   const [slide, setSlide] = useState(slides.find((s) => s.kind === "image")?.id ?? slides[0]?.id ?? "");
   const [playing, setPlaying] = useState(autoPlay && game.embeddable);
-  const [expanded, setExpanded] = useState(autoPlay && game.embeddable);
+  const [expanded, setExpanded] = useState(false);
   const current = slides.find((s) => s.id === slide) ?? slides[0];
   const canPlay = Boolean(game.playUrl);
   const listingUrl =
@@ -328,12 +328,23 @@ export function ProjectHeroStage() {
   );
 }
 
+export function ProjectHeroGrid({ children }: { children: ReactNode }) {
+  return <div className="grid min-w-0 grid-cols-1">{children}</div>;
+}
+
+export function ProjectHeroTitle({ children }: { children: ReactNode }) {
+  const { slides } = useHero();
+  return (
+    <h1 className={cn(slides.length > 1 ? "mt-6" : "mt-3", "text-display font-semibold")}>{children}</h1>
+  );
+}
+
 export function ProjectHeroThumbs() {
   const { game, slides, slide, playing, pickSlide } = useHero();
   if (slides.length <= 1) return null;
 
   return (
-    <div className="scrollbar-hide flex gap-2 overflow-x-auto p-1">
+    <div className="scrollbar-hide mt-2 flex gap-2 overflow-x-auto p-1">
       {slides.map((item) => (
         <button
           key={item.id}

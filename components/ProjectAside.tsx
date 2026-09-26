@@ -42,7 +42,7 @@ export function ProjectAside({
       ref={scroller}
       className={cn(
         "flex min-w-0 flex-col gap-5",
-        "scrollbar-hide lg:h-[calc(100dvh-7rem)] lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain",
+        "scrollbar-hide lg:max-h-[calc(100dvh-7rem)] lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain",
         className,
       )}
     >

@@ -139,17 +139,17 @@ export default function HomePage() {
           </p>
         ) : (
           <section className="min-w-0">
-            <GameRail games={featured} maxScore={max} variant="promo" />
+            <GameRail games={featured} maxScore={max} />
           </section>
         )}
         {more.length > 0 ? (
           <Shelf title="More games">
-            <GameRail games={more} maxScore={max} variant="promo" />
+            <GameRail games={more} maxScore={max} />
           </Shelf>
         ) : null}
         {recent.length > 0 ? (
           <Shelf title="Continue playing" href="/profile">
-            <GameRail games={recent.slice(0, 8)} maxScore={max} variant="promo" />
+            <GameRail games={recent.slice(0, 8)} maxScore={max} />
           </Shelf>
         ) : null}
       </div>

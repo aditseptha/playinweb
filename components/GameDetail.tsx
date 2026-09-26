@@ -1,13 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { notFound, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { ProjectAside } from "@/components/ProjectAside";
 import { ProjectComments } from "@/components/ProjectComments";
 import { useLoginDialog } from "@/components/LoginDialog";
-import { ProjectHeroRoot, ProjectHeroStage, ProjectHeroThumbs } from "@/components/ProjectHero";
+import {
+  ProjectHeroGrid,
+  ProjectHeroRoot,
+  ProjectHeroStage,
+  ProjectHeroThumbs,
+  ProjectHeroTitle,
+} from "@/components/ProjectHero";
 import { IconBookmark, IconShare, IconThumbDown, IconThumbUp } from "@/components/icons";
 import { Button, LinkButton } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
@@ -76,8 +82,13 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   const [plays, setPlays] = useState(Math.min(project.play_count, views));
   const [followers, setFollowers] = useState(project.profiles?.follower_count ?? 0);
   const [following, setFollowing] = useState(false);
-  const [playerOpen, setPlayerOpen] = useState(autoPlay);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(
+    autoPlay && game.embeddable && (Boolean(user) || !guestPlayExpired()),
+  );
+  const [playerExpanded, setPlayerExpanded] = useState(
+    autoPlay && game.embeddable && (Boolean(user) || !guestPlayExpired()),
+  );
+  const layoutWide = isPlaying && playerExpanded;
   const [guestExpired, setGuestExpired] = useState(false);
   const [guestTimedOut, setGuestTimedOut] = useState(false);
   const [disliked, setDisliked] = useState(false);
@@ -152,16 +163,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
     window.history.replaceState(null, "", window.location.pathname);
   }, [autoPlay, guestExpired, loading, persisted, projectId, recordPlay, user]);
 
-  if (!creator) {
-    return (
-      <div className="mx-auto max-w-lg py-16 text-center">
-        <h1 className="text-heading font-semibold">Game not found</h1>
-        <LinkButton href="/" variant="primary" className="mt-6">
-          Back to catalogue
-        </LinkButton>
-      </div>
-    );
-  }
+  if (!creator) notFound();
 
   const tags = [
     ...(project.project_tags ?? []).map((t) => t.tag),
@@ -265,7 +267,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
       game={game}
       trailerUrl={project.trailer_url}
       tags={tags}
-      playLabel={game.embeddable ? "Play" : game.playUrl ? "Play in new tab" : undefined}
+      playLabel={game.embeddable || game.playUrl ? "Play" : undefined}
       playCount={plays}
       liked={liked}
       autoPlay={autoPlay && game.embeddable && (Boolean(user) || !guestExpired)}
@@ -275,7 +277,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
       onDeniedPlay={() => {
         if (!loading) openLogin(guestLoginOptions());
       }}
-      onExpandedChange={setPlayerOpen}
+      onExpandedChange={setPlayerExpanded}
       onPlayingChange={setIsPlaying}
       onPlay={() => {
         if (game.embeddable) void onPlay();
@@ -286,106 +288,103 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
       }}
       onLike={() => void onLike()}
     >
-      <div
-        className={cn(
-          "grid min-w-0 items-start lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-x-8",
-          "duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-safe:transition-[row-gap]",
-          playerOpen ? "gap-y-8" : "gap-y-2",
-        )}
-      >
-        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+      <ProjectHeroGrid>
+        <div className="grid min-w-0 grid-cols-1 items-start gap-y-2 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-x-8">
           <div
             className={cn(
-              "relative z-10 min-w-0 w-full origin-top duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-safe:transition-[width]",
-              playerOpen && "lg:w-[calc(100%+312px)]",
+              "relative z-10 min-w-0 origin-top duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-safe:transition-[width]",
+              "lg:col-start-1 lg:row-start-1",
+              layoutWide && "lg:col-span-2",
             )}
           >
             <ProjectHeroStage />
           </div>
-        </div>
 
-        <div className="min-w-0 lg:col-start-1 lg:row-start-2">
-          <ProjectHeroThumbs />
-          <h1 className="mt-6 text-display font-semibold">{project.title}</h1>
-          <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <Link href={siteOrigin(creator.handle)} className="rounded-lg">
-                <Avatar
-                  name={creator.display_name}
-                  src={cachedAvatarUrl(project.owner_id, creator.avatar_path) || undefined}
-                  size={40}
-                />
-              </Link>
-              <div className="min-w-0">
-                <Link href={siteOrigin(creator.handle)} className="block truncate text-ui font-medium hover:text-text-muted">
-                  {creator.display_name}
-                </Link>
-                <p className="text-caption text-text-subtle">
-                  {formatPlays(followers)} {followers === 1 ? "follower" : "followers"}
-                </p>
-              </div>
-              {persisted ? (
-                <Button variant={following ? "secondary" : "primary"} size="sm" onClick={() => void onFollow()}>
-                  {following ? "Following" : "Follow"}
-                </Button>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => toggleLibrary(projectId)}
-                aria-pressed={library.includes(projectId)}
-                aria-label={library.includes(projectId) ? "Remove from library" : "Save to library"}
-              >
-                <IconBookmark className="h-3.5 w-3.5" filled={library.includes(projectId)} />
-                {library.includes(projectId) ? "Saved" : "Save"}
-              </Button>
-              <div className="flex overflow-hidden rounded-lg bg-surface-2">
-                <button
-                  type="button"
-                  onClick={() => void onLike()}
-                  className="inline-flex h-8 items-center gap-1.5 px-3 text-ui font-medium hover:bg-surface-3"
-                  aria-pressed={liked}
-                  aria-label="Like"
-                >
-                  <IconThumbUp className="h-3.5 w-3.5" filled={liked} />
-                  {formatPlays(likes)}
-                </button>
-                <span className="w-px self-stretch bg-border" />
-                <button
-                  type="button"
-                  onClick={() => void onDislike()}
-                  className="inline-flex h-8 items-center px-2.5 text-ui hover:bg-surface-3"
-                  aria-pressed={disliked}
-                  aria-label="Dislike"
-                >
-                  <IconThumbDown className="h-3.5 w-3.5" filled={disliked} />
-                </button>
-              </div>
-              <Button variant="secondary" size="sm" onClick={() => void onShare()}>
-                <IconShare className="h-3.5 w-3.5" />
-                {copied ? "Copied" : "Share"}
-              </Button>
-            </div>
-          </div>
-          {project.tagline ? <p className="mt-3 text-body text-text-muted">{project.tagline}</p> : null}
-          <div className="mt-4 min-w-0 whitespace-pre-wrap text-body leading-relaxed text-text-muted">
-            {project.description || "No description yet."}
-          </div>
-          <ProjectComments projectId={projectId} enabled={persisted && project.community !== "disabled"} />
-        </div>
+          <ProjectAside
+            project={project}
+            plays={plays}
+            moreGames={moreGames}
+            className={cn(
+              "lg:sticky lg:top-0 lg:self-start",
+              layoutWide
+                ? "lg:col-start-2 lg:row-start-2"
+                : "lg:col-start-2 lg:row-span-2 lg:row-start-1",
+            )}
+          />
 
-        <ProjectAside
-          project={project}
-          plays={plays}
-          moreGames={moreGames}
-          className={cn(
-            "lg:col-start-2 lg:sticky lg:top-0 lg:self-start",
-            playerOpen ? "lg:row-start-2" : "lg:row-start-1 lg:row-span-2",
-          )}
-        />
-      </div>
+          <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+            <ProjectHeroThumbs />
+            <ProjectHeroTitle>{project.title}</ProjectHeroTitle>
+              <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Link href={siteOrigin(creator.handle)} className="rounded-lg">
+                    <Avatar
+                      name={creator.display_name}
+                      src={cachedAvatarUrl(project.owner_id, creator.avatar_path) || undefined}
+                      size={40}
+                    />
+                  </Link>
+                  <div className="min-w-0">
+                    <Link href={siteOrigin(creator.handle)} className="block truncate text-ui font-medium hover:text-text-muted">
+                      {creator.display_name}
+                    </Link>
+                    <p className="text-caption text-text-subtle">
+                      {formatPlays(followers)} {followers === 1 ? "follower" : "followers"}
+                    </p>
+                  </div>
+                  {persisted ? (
+                    <Button variant={following ? "secondary" : "primary"} size="sm" onClick={() => void onFollow()}>
+                      {following ? "Following" : "Follow"}
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => toggleLibrary(projectId)}
+                    aria-pressed={library.includes(projectId)}
+                    aria-label={library.includes(projectId) ? "Remove from library" : "Save to library"}
+                  >
+                    <IconBookmark className="h-3.5 w-3.5" filled={library.includes(projectId)} />
+                    {library.includes(projectId) ? "Saved" : "Save"}
+                  </Button>
+                  <div className="flex overflow-hidden rounded-lg bg-surface-2">
+                    <button
+                      type="button"
+                      onClick={() => void onLike()}
+                      className="inline-flex h-8 items-center gap-1.5 px-3 text-ui font-medium hover:bg-surface-3"
+                      aria-pressed={liked}
+                      aria-label="Like"
+                    >
+                      <IconThumbUp className="h-3.5 w-3.5" filled={liked} />
+                      {formatPlays(likes)}
+                    </button>
+                    <span className="w-px self-stretch bg-border" />
+                    <button
+                      type="button"
+                      onClick={() => void onDislike()}
+                      className="inline-flex h-8 items-center px-2.5 text-ui hover:bg-surface-3"
+                      aria-pressed={disliked}
+                      aria-label="Dislike"
+                    >
+                      <IconThumbDown className="h-3.5 w-3.5" filled={disliked} />
+                    </button>
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => void onShare()}>
+                    <IconShare className="h-3.5 w-3.5" />
+                    {copied ? "Copied" : "Share"}
+                  </Button>
+                </div>
+              </div>
+              {project.tagline ? <p className="mt-3 text-body text-text-muted">{project.tagline}</p> : null}
+              <div className="mt-4 min-w-0 whitespace-pre-wrap text-body leading-relaxed text-text-muted">
+                {project.description || "No description yet."}
+              </div>
+            <ProjectComments projectId={projectId} enabled={persisted && project.community !== "disabled"} />
+          </div>
+        </div>
+      </ProjectHeroGrid>
     </ProjectHeroRoot>
     </>
   );

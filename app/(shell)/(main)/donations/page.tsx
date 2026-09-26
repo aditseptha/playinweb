@@ -10,7 +10,19 @@ import { Button, LinkButton } from "@/components/ui/button";
 import { Field, TextInput } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { useAuth } from "@/lib/auth";
-import { CASHOUT_MIN, money } from "@/lib/cashout";
+import { money, paidOutAmount, reservedPayoutAmount } from "@/lib/cashout";
+import {
+  payoutCycleLabel,
+  payoutDayLocalName,
+  payoutScheduleLocalLabel,
+  payoutScheduleLocalSentence,
+} from "@/lib/payout-schedule";
+import {
+  DEFAULT_WALLET_SETTINGS,
+  formatCommissionPct,
+  readWalletSettings,
+  WALLET_SETTING_IDS,
+} from "@/lib/site-settings";
 import { isPaypalEmail, maskEmail } from "@/lib/paypal-email";
 import { formatJoined, formatMoney, gamePath } from "@/lib/format";
 import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
@@ -70,8 +82,26 @@ function DonationsView() {
   const [give, setGive] = useState<DonationRow[] | null>(null);
   const [earn, setEarn] = useState<DonationRow[] | null>(null);
   const [payouts, setPayouts] = useState<Payout[] | null>(null);
-  const [commission, setCommission] = useState(10);
+  const [walletSettings, setWalletSettings] = useState(DEFAULT_WALLET_SETTINGS);
   const [error, setError] = useState("");
+  const { commission, frequency: payoutFrequency, weekday: payoutWeekday, hourUtc: payoutHourUtc, cashoutMin } =
+    walletSettings;
+
+  useEffect(() => {
+    if (loading) return;
+    let cancelled = false;
+    createClient()
+      .from("site_settings")
+      .select("id, value")
+      .in("id", [...WALLET_SETTING_IDS])
+      .then(({ data, error: settingsError }) => {
+        if (cancelled) return;
+        if (!settingsError && data) setWalletSettings(readWalletSettings(data));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loading]);
 
   useEffect(() => {
     if (loading) return;
@@ -87,8 +117,7 @@ function DonationsView() {
       supabase.from("donations").select(SELECT).eq("user_id", user.id).order("created_at", { ascending: false }),
       supabase.from("projects").select("id").eq("owner_id", user.id),
       supabase.from("payouts").select("id, amount, status, created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("site_settings").select("value").eq("id", "donation_commission_pct").maybeSingle(),
-    ]).then(async ([givenRes, ownedRes, payoutRes, commissionRes]) => {
+    ]).then(async ([givenRes, ownedRes, payoutRes]) => {
       if (cancelled) return;
       if (givenRes.error || ownedRes.error || payoutRes.error) {
         setError("Could not load donations.");
@@ -113,8 +142,6 @@ function DonationsView() {
       setGive(groupDonations(givenRes.data, "give"));
       setEarn(groupDonations(received.data, "earn"));
       setPayouts(((payoutRes.data ?? []) as Payout[]).filter((row) => !isDummyPayout(row)));
-      const pct = Number(commissionRes.data?.value);
-      if (Number.isFinite(pct)) setCommission(Math.min(100, Math.max(0, pct)));
     });
     return () => {
       cancelled = true;
@@ -126,7 +153,7 @@ function DonationsView() {
   if (!user) {
     return (
       <div className="min-w-0 pt-4">
-        <h1 className="text-display font-semibold tracking-tight">Donations</h1>
+        <h1 className="text-display font-semibold tracking-tight">Wallet</h1>
         <p className="mt-1.5 text-body text-text-muted">Sign in to see games you gave to and earned from.</p>
         <div className="mt-6 flex gap-3">
           <Button type="button" variant="primary" size="sm" onClick={() => openLogin()}>
@@ -143,9 +170,9 @@ function DonationsView() {
   return (
     <div className="min-w-0 pt-4">
       <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-display font-semibold tracking-tight">Donations</h1>
+        <h1 className="text-display font-semibold tracking-tight">Wallet</h1>
         <Segmented
-          aria-label="Donations menu"
+          aria-label="Wallet menu"
           value={tab}
           options={[
             { value: "donations", label: "Donations", href: "/donations" },
@@ -160,12 +187,12 @@ function DonationsView() {
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <MoneyTile
               label="Outstanding"
-              value={earn === null ? "—" : formatMoney(money(sumRows(earn) - cashedOut(payouts)))}
-              note={`Payouts occur every Friday when your pocket is at least ${formatMoney(CASHOUT_MIN)}.`}
+              value={earn === null ? "—" : formatMoney(money(sumRows(earn) - reservedPayoutAmount(payouts)))}
+              note={`Payouts occur ${payoutScheduleLocalLabel(payoutFrequency, payoutWeekday, payoutHourUtc)} when your pocket is at least ${formatMoney(cashoutMin)}.`}
             />
             <MoneyTile
               label="Lifetime payout"
-              value={payouts === null ? "—" : formatMoney(money(cashedOut(payouts)))}
+              value={payouts === null ? "—" : formatMoney(paidOutAmount(payouts))}
             />
           </div>
           {earn === null ? null : <CashoutHistory payouts={payouts ?? []} />}
@@ -178,15 +205,21 @@ function DonationsView() {
             <p className="text-ui font-medium">How cash out works</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5 text-caption text-text-muted">
               <li>
-                PlayInWeb keeps a {commission}% platform fee from each donation. That cut stays with the site. You receive
-                the rest.
+                PlayInWeb keeps a {formatCommissionPct(commission)}% platform fee from each donation. That cut stays with
+                the site. You receive the rest.
               </li>
               <li>
-                Every Friday, if your outstanding is at least {formatMoney(CASHOUT_MIN)}, the full amount is sent to the
-                PayPal on this account. There is no cash out button.
+                {payoutScheduleLocalSentence(payoutFrequency, payoutWeekday, payoutHourUtc)}, if your outstanding is at
+                least {formatMoney(cashoutMin)}, the full amount is sent to the PayPal on this account. There is no cash
+                out button.
               </li>
-              <li>Below {formatMoney(CASHOUT_MIN)} stays in your pocket until a Friday you have enough.</li>
-              <li>Connect PayPal before Friday. Without it, that week is skipped.</li>
+              <li>
+                Below {formatMoney(cashoutMin)} stays in your pocket until a{" "}
+                {payoutDayLocalName(payoutFrequency, payoutWeekday, payoutHourUtc)} you have enough.
+              </li>
+              <li>
+                Connect PayPal before each payout. Without it, that {payoutCycleLabel(payoutFrequency)} is skipped.
+              </li>
             </ul>
           </div>
         </section>
@@ -831,10 +864,6 @@ function formatMoneyParts(value: string) {
 
 function sumRows(rows: DonationRow[] | null) {
   return (rows ?? []).reduce((n, row) => n + row.total, 0);
-}
-
-function cashedOut(rows: Payout[] | null) {
-  return (rows ?? []).reduce((n, row) => (row.status === "cancelled" ? n : n + (Number(row.amount) || 0)), 0);
 }
 
 function asGame(row: DonationRow): Game {

@@ -11,13 +11,12 @@ export const CLASSIFICATIONS = [
 ] as const;
 
 export const PROJECT_KINDS = [
-  { id: "downloadable", label: "Downloadable — You only have files to be downloaded" },
-  { id: "html", label: "HTML — Playable in the browser" },
-  { id: "flash", label: "Flash — .swf file" },
-  { id: "unity", label: "Unity — Web player or WebGL" },
-  { id: "java", label: "Java applet" },
-  { id: "other", label: "Other" },
+  { id: "html", label: "HTML — Upload a .zip or .html playable in the browser" },
+  { id: "flash", label: "Flash — Upload a .swf file" },
+  { id: "external", label: "External link — Attach a URL to play elsewhere" },
 ] as const;
+
+export const LEGACY_PROJECT_KINDS = ["downloadable", "unity", "java", "other"] as const;
 
 export const RELEASE_STATUSES = [
   { id: "released", label: "Released — Game is complete, but might receive some updates" },
@@ -68,7 +67,7 @@ export const COMMUNITIES = [
 ] as const;
 
 export type Classification = (typeof CLASSIFICATIONS)[number]["id"];
-export type ProjectKind = (typeof PROJECT_KINDS)[number]["id"];
+export type ProjectKind = (typeof PROJECT_KINDS)[number]["id"] | (typeof LEGACY_PROJECT_KINDS)[number];
 export type ReleaseStatus = (typeof RELEASE_STATUSES)[number]["id"];
 export type PricingType = (typeof PRICING_TYPES)[number]["id"];
 export type StoreId = (typeof STORES)[number]["id"];

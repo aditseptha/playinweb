@@ -9,26 +9,30 @@ import { useLoginDialog } from "@/components/LoginDialog";
 import { LegalProvider } from "@/components/LegalModal";
 import { SignupProvider, useSignupDialog } from "@/components/SignupDialog";
 import {
-  IconBookmark,
   IconChevron,
   IconClose,
   IconCoin,
   IconDoc,
-  IconDownload,
   IconFlag,
-  IconLineGraph,
-  IconGrid,
-  IconHome,
   IconMail,
-  IconMegaphone,
   IconMenu,
   IconPlus,
   IconSearch,
   IconMoon,
   IconShield,
   IconSun,
-  IconUser,
 } from "@/components/icons";
+import {
+  IconBookmarkNav,
+  IconDownloadNav,
+  IconWalletNav,
+  IconGridNav,
+  IconHomeNav,
+  IconLineGraphNav,
+  IconMegaphoneNav,
+  IconUserNav,
+  type NavIconProps,
+} from "@/components/NavIcon";
 import { Avatar } from "@/components/Avatar";
 import { Button, LinkButton } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/field";
@@ -42,24 +46,24 @@ import { useGames } from "@/lib/store";
 import { applyTheme, THEME_KEY, type Theme } from "@/lib/theme";
 
 const PRIMARY_NAV = [
-  { title: "Browse", items: [{ href: "/", label: "Home", icon: IconHome }] },
+  { title: "Browse", items: [{ href: "/", label: "Home", icon: IconHomeNav }] },
   {
     title: "You",
     items: [
-      { href: "/profile", label: "Channel", icon: IconUser },
-      { href: "/manage", label: "Manage games", icon: IconGrid },
-      { href: "/library", label: "Library", icon: IconBookmark },
-      { href: "/donations", label: "Donations", icon: IconCoin },
+      { href: "/profile", label: "Channel", icon: IconUserNav },
+      { href: "/manage", label: "Manage games", icon: IconGridNav },
+      { href: "/library", label: "Library", icon: IconBookmarkNav },
+      { href: "/donations", label: "Wallet", icon: IconWalletNav },
     ],
   },
   {
     title: "Discover",
     items: [
-      { href: "/top", label: "Top Played", icon: IconLineGraph },
-      { href: "/showcase", label: "Showcase", icon: IconMegaphone },
+      { href: "/top", label: "Top Played", icon: IconLineGraphNav },
+      { href: "/showcase", label: "Showcase", icon: IconMegaphoneNav },
     ],
   },
-  { title: "Files", items: [{ href: "/downloads", label: "Downloads", icon: IconDownload }] },
+  { title: "Files", items: [{ href: "/downloads", label: "Downloads", icon: IconDownloadNav }] },
 ] as const;
 
 const SECONDARY_NAV = [
@@ -75,6 +79,7 @@ const LEGAL_NAV = [
 const AUTH_GATED_HREFS = new Set(["/profile", "/manage", "/library", "/donations"]);
 
 const SIDEBAR_KEY = "playinweb.sidebar.collapsed";
+const SIDEBAR_TRANSITION = "duration-300 ease-out-quint";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -382,7 +387,7 @@ function SidebarCollapseToggle({
     >
       <IconChevron
         className={cn(
-          "h-3.5 w-3.5 text-white transition-transform duration-300 ease-out-quint",
+          `h-3.5 w-3.5 text-white transition-transform ${SIDEBAR_TRANSITION}`,
           collapsed ? "" : "rotate-180",
         )}
       />
@@ -409,8 +414,8 @@ function BrandLink({
       <BrandMark />
       <span
         className={cn(
-          "overflow-hidden transition-[max-width,opacity,margin] duration-300 ease-out-quint",
-          compact ? "ml-0 max-w-0 opacity-0" : "max-w-[9rem] opacity-100",
+          `transition-[max-width,opacity,margin] ${SIDEBAR_TRANSITION}`,
+          compact ? "ml-0 max-w-0 overflow-hidden opacity-0" : "max-w-[9rem] overflow-visible opacity-100",
         )}
       >
         <Image
@@ -419,7 +424,7 @@ function BrandLink({
           width={109}
           height={20}
           unoptimized
-          className="hidden h-5 w-auto translate-y-[2px] dark:block"
+          className="hidden h-5 w-auto dark:block"
         />
         <Image
           src="/playinweb-lettermark-black.webp"
@@ -427,7 +432,7 @@ function BrandLink({
           width={109}
           height={20}
           unoptimized
-          className="h-5 w-auto translate-y-[2px] dark:hidden"
+          className="h-5 w-auto dark:hidden"
         />
       </span>
     </Link>
@@ -464,9 +469,9 @@ function Sidebar({
   return (
     <nav
       className={cn(
-        "scrollbar-hide relative h-full shrink-0 flex-col overflow-x-visible overflow-y-auto rounded-2xl bg-surface-2 py-4",
-        "transition-[width,padding] duration-300 ease-out-quint",
-        collapsed ? "w-24 px-2" : "w-60 px-3",
+        "scrollbar-hide relative flex h-full shrink-0 flex-col overflow-hidden overflow-y-auto rounded-2xl bg-surface-2 px-3 pt-4 pb-0",
+        `transition-[width] ${SIDEBAR_TRANSITION}`,
+        collapsed ? "w-24" : "w-60",
         className,
       )}
       aria-label="Primary"
@@ -474,7 +479,13 @@ function Sidebar({
       {onToggleCollapse ? (
         <SidebarCollapseToggle collapsed={collapsed} onToggle={onToggleCollapse} />
       ) : null}
-      <div className={cn("mb-5 pr-7", collapsed ? "flex justify-center" : "")}>
+      <div
+        className={cn(
+          "mb-5 transition-[padding] ease-out-quint",
+          SIDEBAR_TRANSITION,
+          collapsed ? "flex justify-center pr-0" : "pr-7",
+        )}
+      >
         <BrandLink compact={collapsed} onClick={onNavigate} />
       </div>
       <div className="flex flex-col">
@@ -483,20 +494,20 @@ function Sidebar({
             {group.title ? (
               <p
                 className={cn(
-                  "mb-2 overflow-hidden whitespace-nowrap px-3 text-caption text-text-subtle transition-[max-height,opacity,margin] duration-300 ease-out-quint",
+                  `mb-2 overflow-hidden whitespace-nowrap px-3 text-caption text-text-subtle transition-[max-height,opacity,margin,padding] ${SIDEBAR_TRANSITION}`,
                   i > 0 && "mt-5",
-                  collapsed ? "pointer-events-none mb-0 mt-3 max-h-0 px-0 opacity-0" : "max-h-6 opacity-100",
+                  collapsed ? "pointer-events-none m-0 max-h-0 px-0 opacity-0" : "max-h-6 opacity-100",
                 )}
               >
                 {group.title}
               </p>
             ) : i > 0 ? (
-              <div className={cn("transition-[margin] duration-300 ease-out-quint", collapsed ? "mt-3" : "mt-5")} />
+              <div className={cn(`transition-[margin] ${SIDEBAR_TRANSITION}`, collapsed ? "mt-4" : "mt-5")} />
             ) : null}
             <div
               className={cn(
-                "flex flex-col gap-4 transition-[align-items] duration-300 ease-out-quint",
-                collapsed ? "items-center" : "items-start",
+                `flex w-full flex-col gap-4 transition-[align-items] ${SIDEBAR_TRANSITION}`,
+                collapsed ? "items-center" : "items-stretch",
               )}
             >
               {group.items.map((item) => {
@@ -523,74 +534,99 @@ function Sidebar({
           </Fragment>
         ))}
       </div>
-      <div
-        className={cn(
-          "mt-auto flex flex-col pt-6 transition-[align-items] duration-300 ease-out-quint",
-          collapsed && "items-center",
-        )}
-      >
-        <p
+      <div className="relative -mx-3 mt-auto shrink-0 overflow-hidden rounded-b-2xl">
+        <Image
+          src="/sidebar-footer.png"
+          alt=""
+          width={741}
+          height={1024}
+          unoptimized
+          className="block h-[332px] w-full rounded-b-2xl object-cover object-left-bottom"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-52 rounded-b-2xl bg-gradient-to-t from-black/85 via-black/55 to-transparent"
+          aria-hidden
+        />
+        <div
           className={cn(
-            "mb-2 overflow-hidden whitespace-nowrap px-3 text-caption text-text-subtle transition-[max-height,opacity,margin] duration-300 ease-out-quint",
-            collapsed ? "pointer-events-none mb-0 max-h-0 px-0 opacity-0" : "max-h-6 opacity-100",
+            `absolute inset-x-0 bottom-4 z-10 flex flex-col px-3 pb-1 pt-2 transition-[align-items] ${SIDEBAR_TRANSITION} [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]`,
+            collapsed ? "items-center" : "items-stretch",
           )}
         >
-          Support
-        </p>
-        {SECONDARY_NAV.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            active={isActive(item.href)}
-            onNavigate={onNavigate}
-            quiet={!collapsed}
-            collapsed={collapsed}
-          />
-        ))}
-        <a
-          href="mailto:support@playinweb.com"
-          className={cn(
-            "flex items-center font-medium transition-[color,background-color,width,height,padding,border-radius] duration-300 ease-out-quint",
-            collapsed
-              ? "size-11 justify-center rounded-full text-text hover:bg-surface-3"
-              : "min-h-8 rounded-lg px-3 text-ui text-text-muted hover:bg-surface-3 hover:text-text",
-          )}
-          aria-label="Contact us"
-          title="support@playinweb.com"
-          onClick={() => onNavigate?.()}
-        >
-          {collapsed ? (
-            <IconMail className="h-4 w-4" />
-          ) : (
-            "Contact us"
-          )}
-        </a>
-        <div className={cn("flex items-center", collapsed && "flex-col")}>
-          {LEGAL_NAV.map((item, i) => (
-            <Fragment key={item.href}>
-              {i > 0 && !collapsed ? (
-                <span className="text-caption text-text-subtle" aria-hidden>
-                  •
-                </span>
-              ) : null}
-              <NavLink
-                item={item}
-                active={isActive(item.href)}
-                onNavigate={onNavigate}
-                quiet={!collapsed}
-                collapsed={collapsed}
-              />
-            </Fragment>
+          <p
+            className={cn(
+              `mb-1 overflow-hidden whitespace-nowrap px-3 text-caption font-semibold tracking-wide text-white transition-[max-height,opacity,margin,padding] ${SIDEBAR_TRANSITION}`,
+              collapsed ? "pointer-events-none m-0 max-h-0 px-0 opacity-0" : "max-h-6 opacity-100",
+            )}
+          >
+            Support
+          </p>
+          {SECONDARY_NAV.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              active={isActive(item.href)}
+              onNavigate={onNavigate}
+              quiet
+              collapsed={collapsed}
+              footer
+            />
           ))}
+          <a
+            href="mailto:support@playinweb.com"
+            className={cn(
+              `flex h-9 max-w-full items-center overflow-hidden font-medium text-white transition-[background-color,color,gap,padding,width] ${SIDEBAR_TRANSITION}`,
+              collapsed ? "w-9 shrink-0 justify-center rounded-full hover:bg-white/10" : "w-full gap-1.5 rounded-lg px-2 hover:bg-white/15",
+            )}
+            aria-label="Contact us"
+            title="support@playinweb.com"
+            onClick={() => onNavigate?.()}
+          >
+            {collapsed ? (
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white/15 text-white">
+                <IconMail className="h-4 w-4" />
+              </span>
+            ) : (
+              <>
+                <span className="grid size-0 shrink-0 place-items-center overflow-hidden rounded-full bg-white/15 text-white opacity-0">
+                  <IconMail className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 max-w-[10rem] overflow-hidden whitespace-nowrap text-body opacity-100">
+                  Contact us
+                </span>
+              </>
+            )}
+          </a>
+          <div className={cn("flex", collapsed ? "flex-col items-center" : "h-9 w-full items-stretch")}>
+            {LEGAL_NAV.map((item, i) => (
+              <Fragment key={item.href}>
+                {i > 0 && !collapsed ? (
+                  <span className="flex shrink-0 items-center text-body text-white/60" aria-hidden>
+                    •
+                  </span>
+                ) : null}
+                <NavLink
+                  item={item}
+                  active={isActive(item.href)}
+                  onNavigate={onNavigate}
+                  quiet
+                  shareRow={!collapsed}
+                  collapsed={collapsed}
+                  footer
+                />
+              </Fragment>
+            ))}
+          </div>
+          <p
+            className={cn(
+              `whitespace-nowrap px-3 pt-5 text-caption leading-normal text-white/80 transition-[max-height,opacity,padding] ${SIDEBAR_TRANSITION}`,
+              collapsed ? "pointer-events-none max-h-0 overflow-hidden px-0 pt-0 opacity-0" : "opacity-100",
+            )}
+          >
+            © 2026 PlayInWeb
+          </p>
         </div>
-        <p
-          className={cn(
-            "overflow-hidden whitespace-nowrap px-3 pt-2 text-caption text-text-subtle transition-[max-height,opacity,padding] duration-300 ease-out-quint",
-            collapsed ? "pointer-events-none max-h-0 px-0 pt-0 opacity-0" : "max-h-8 opacity-100",
-          )}
-        >
-          © 2026 PlayInWeb
-        </p>
       </div>
     </nav>
   );
@@ -601,85 +637,130 @@ function NavLink({
   active,
   onNavigate,
   quiet,
-  fit,
+  shareRow,
   soon,
   hidden,
   locked,
   collapsed,
+  footer,
   authGated,
   onAuthGate,
 }: {
-  item: { href: string; label: string; icon: typeof IconHome };
+  item: { href: string; label: string; icon: (props: NavIconProps) => React.JSX.Element };
   active: boolean;
   onNavigate?: () => void;
   quiet?: boolean;
-  fit?: boolean;
+  shareRow?: boolean;
   soon?: boolean;
   hidden?: boolean;
   locked?: boolean;
   collapsed?: boolean;
+  footer?: boolean;
   authGated?: boolean;
   onAuthGate?: () => void;
 }) {
   const Icon = item.icon;
   const iconOnly = Boolean(collapsed);
+  const showIcon = !quiet || iconOnly;
+  const showLabel = !iconOnly;
   const className = cn(
-    "flex items-center font-medium transition-[color,background-color,width,height,padding,border-radius,gap] duration-300 ease-out-quint",
+    `flex max-w-full items-center overflow-hidden font-medium transition-[background-color,color,gap,padding,border-radius,height,width] ${SIDEBAR_TRANSITION}`,
+    iconOnly ? (footer ? "w-9 shrink-0" : "w-11 shrink-0") : shareRow ? "min-w-0 flex-1" : "w-full",
+    footer ? "h-9" : "h-12",
     iconOnly
-      ? "size-11 justify-center gap-0 rounded-full"
+      ? "justify-center gap-0 rounded-full px-0"
       : quiet
-        ? "min-h-8 rounded-lg px-3 text-ui"
-        : "h-11 w-fit max-w-full gap-1.5 rounded-full py-1 pl-1 pr-3 text-body",
+        ? footer
+          ? "gap-1.5 rounded-lg px-2 text-body"
+          : "gap-2 rounded-lg px-3 text-body"
+        : "gap-1.5 rounded-full py-1 pl-1 pr-3 text-title",
     locked
-      ? "cursor-not-allowed text-text-subtle opacity-50"
-      : active
-        ? "bg-surface-3 text-text"
-        : quiet && !iconOnly
-          ? "text-text-muted hover:bg-surface-2 hover:text-text"
-          : iconOnly
-            ? active
-              ? "bg-surface-3 text-text"
-              : "text-text hover:bg-surface-2"
-            : "bg-surface-2 text-text hover:bg-surface-3",
+      ? footer
+        ? "cursor-not-allowed text-white/40 opacity-50"
+        : "cursor-not-allowed text-text-subtle opacity-50"
+      : footer
+        ? active
+          ? "bg-white/20 text-white"
+          : quiet && !iconOnly
+            ? "text-white hover:bg-white/15 hover:text-white"
+            : iconOnly
+              ? active
+                ? "bg-white/20 text-white"
+                : "text-white hover:bg-white/10"
+              : "bg-white/10 text-white hover:bg-white/15"
+        : active
+          ? "bg-surface-3 text-text"
+          : quiet && !iconOnly
+            ? "text-text-muted hover:bg-surface-2 hover:text-text"
+            : iconOnly
+              ? active
+                ? "bg-surface-3 text-text"
+                : "text-text hover:bg-surface-2"
+              : "bg-surface-2 text-text hover:bg-surface-3",
   );
-  const inner = (
+  const iconWrapClass = cn(
+    `grid shrink-0 place-items-center rounded-full transition-[width,height,opacity,margin,background-color,color] ${SIDEBAR_TRANSITION}`,
+    showIcon
+      ? iconOnly
+        ? footer
+          ? "size-8"
+          : "size-9"
+        : quiet
+          ? "size-0 overflow-hidden opacity-0"
+          : "size-10"
+      : "size-0 overflow-hidden opacity-0",
+    footer
+      ? active
+        ? "bg-white/25 text-white"
+        : "bg-white/15 text-white"
+      : active
+        ? "bg-brand-blue text-white"
+        : "bg-bg",
+  );
+  const inner = iconOnly ? (
+    <span className={iconWrapClass}>
+      <Icon className={cn("shrink-0", footer ? "h-4 w-4" : "h-5 w-5")} active={footer ? false : active} />
+    </span>
+  ) : (
     <>
-      {quiet && !iconOnly ? null : (
-        <span
-          className={cn(
-            "grid shrink-0 place-items-center rounded-full transition-[width,height,background-color,color] duration-300 ease-out-quint",
-            iconOnly ? "size-8" : "size-[35px]",
-            active ? "bg-accent text-accent-fg" : "bg-bg",
-          )}
-        >
-          <Icon className="h-4 w-4" />
-        </span>
-      )}
+      <span className={iconWrapClass}>
+        <Icon className={cn("shrink-0", footer ? "h-4 w-4" : "h-5 w-5")} active={footer ? false : active} />
+      </span>
       <span
         className={cn(
-          "min-w-0 overflow-hidden whitespace-nowrap transition-[max-width,opacity,margin] duration-300 ease-out-quint",
-          iconOnly ? "ml-0 max-w-0 opacity-0" : cn("max-w-[10rem] opacity-100", fit ? "" : quiet ? "flex-1" : ""),
+          `min-w-0 overflow-hidden whitespace-nowrap transition-[max-width,opacity,margin] ${SIDEBAR_TRANSITION}`,
+          showLabel ? cn("max-w-[10rem] opacity-100", shareRow ? "" : quiet ? "flex-1" : "") : "max-w-0 opacity-0",
         )}
       >
         {item.label}
       </span>
       <span
         className={cn(
-          "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-300 ease-out-quint",
-          soon && !iconOnly ? "max-w-[3.5rem] opacity-100" : "max-w-0 opacity-0",
+          `overflow-hidden whitespace-nowrap transition-[max-width,opacity] ${SIDEBAR_TRANSITION}`,
+          soon && showLabel ? "max-w-[3.5rem] opacity-100" : "max-w-0 opacity-0",
         )}
       >
-        <span className="rounded-full bg-bg px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide text-text-subtle">
+        <span
+          className={cn(
+            "rounded-full px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide",
+            footer ? "bg-black/45 text-white" : "bg-bg text-text-subtle",
+          )}
+        >
           Soon
         </span>
       </span>
       <span
         className={cn(
-          "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-300 ease-out-quint",
-          hidden && !iconOnly ? "max-w-[4rem] opacity-100" : "max-w-0 opacity-0",
+          `overflow-hidden whitespace-nowrap transition-[max-width,opacity] ${SIDEBAR_TRANSITION}`,
+          hidden && showLabel ? "max-w-[4rem] opacity-100" : "max-w-0 opacity-0",
         )}
       >
-        <span className="rounded-full bg-bg px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide text-text-subtle">
+        <span
+          className={cn(
+            "rounded-full px-1.5 py-0.5 text-badge font-medium uppercase tracking-wide",
+            footer ? "bg-black/45 text-white" : "bg-bg text-text-subtle",
+          )}
+        >
           Hidden
         </span>
       </span>

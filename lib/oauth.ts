@@ -9,6 +9,10 @@ export function oauthCallbackUrl(next?: string | null) {
   return callback.toString();
 }
 
+export function passwordResetCallbackUrl() {
+  return oauthCallbackUrl("/auth/reset-password");
+}
+
 export async function signInWithGoogle(next?: string | null) {
   const supabase = createClient();
   return supabase.auth.signInWithOAuth({

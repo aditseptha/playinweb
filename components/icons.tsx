@@ -319,6 +319,17 @@ export function IconCheck(props: IconProps) {
   );
 }
 
+export function IconWallet(props: IconProps) {
+  return (
+    <svg {...glyph(props)}>
+      <path
+        fillRule="evenodd"
+        d="M5 7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-1V7a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v1H5zm11 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"
+      />
+    </svg>
+  );
+}
+
 export function IconCoin(props: IconProps) {
   return (
     <svg {...glyph(props)}>

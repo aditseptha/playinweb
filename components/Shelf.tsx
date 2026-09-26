@@ -45,7 +45,7 @@ export function GameRail({
 }: {
   games: Game[];
   maxScore: number;
-  variant?: "rail" | "promo" | "mini";
+  variant?: "rail" | "mini";
   onRemove?: (id: string) => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -92,7 +92,7 @@ export function GameRail({
               game={game}
               maxScore={maxScore}
               variant={variant}
-              priority={variant === "promo" && i < 3}
+              priority={variant === "rail" && i < 3}
             />
             {onRemove ? (
               <button

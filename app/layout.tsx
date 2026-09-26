@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Script from "next/script";
-import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/lib/auth";
-import { AppShell } from "@/components/AppShell";
 import { FeaturesProvider } from "@/lib/features";
 import { GamesProvider } from "@/lib/store";
 import { THEME_BOOT } from "@/lib/theme";
@@ -62,11 +60,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full bg-bg font-sans text-text">
         <GamesProvider>
           <AuthProvider>
-            <FeaturesProvider>
-              <Suspense fallback={null}>
-                <AppShell>{children}</AppShell>
-              </Suspense>
-            </FeaturesProvider>
+            <FeaturesProvider>{children}</FeaturesProvider>
           </AuthProvider>
         </GamesProvider>
         <Analytics />

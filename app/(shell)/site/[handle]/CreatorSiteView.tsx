@@ -1,14 +1,11 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChannelHero } from "@/components/ChannelHero";
 import { GameCard } from "@/components/GameCard";
-import { LinkButton } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { publicMediaUrl } from "@/lib/media";
 import { maxPopularity } from "@/lib/popularity";
-import { fetchProjectsForHandle, projectToGame } from "@/lib/projects";
 import { useGames } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
@@ -16,29 +13,23 @@ import type { Game } from "@/lib/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
-export default function CreatorSitePage() {
-  const { handle } = useParams<{ handle: string }>();
+export function CreatorSiteView({
+  profile: initialProfile,
+  games,
+}: {
+  profile: Profile;
+  games: Game[];
+}) {
   const { user, profile: me, refresh } = useAuth();
   const { profile: local } = useGames();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [games, setGames] = useState<Game[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [profile, setProfile] = useState(initialProfile);
 
   useEffect(() => {
-    let cancelled = false;
-    fetchProjectsForHandle(handle).then((res) => {
-      if (cancelled) return;
-      setProfile(res.profile);
-      setGames(res.projects.map(projectToGame));
-      setLoaded(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [handle]);
+    setProfile(initialProfile);
+  }, [initialProfile]);
 
   useEffect(() => {
-    if (!user || !profile || me?.handle !== profile.handle) return;
+    if (!user || me?.handle !== profile.handle) return;
     const next = (me.bio || local?.bio || "").trim();
     if (!next || profile.bio) return;
     void createClient()
@@ -47,22 +38,10 @@ export default function CreatorSitePage() {
       .eq("id", user.id)
       .then(({ error }) => {
         if (error) return;
-        setProfile((row) => (row ? { ...row, bio: next } : row));
+        setProfile((row) => ({ ...row, bio: next }));
         void refresh();
       });
-  }, [user, profile, me, local?.bio, refresh]);
-
-  if (!loaded) return <p className="text-sm text-muted">Loading…</p>;
-  if (!profile) {
-    return (
-      <div className="mx-auto max-w-lg py-16 text-center">
-        <h1 className="text-xl font-semibold">Creator not found</h1>
-        <LinkButton href="/" variant="primary" className="mt-6">
-          Back to catalogue
-        </LinkButton>
-      </div>
-    );
-  }
+  }, [user, profile.bio, profile.handle, me, local?.bio, refresh]);
 
   const max = maxPopularity(games.length ? games : [{ playCount: 1, promotionBoost: 0 } as Game]);
   const views = games.reduce((n, game) => n + (game.viewCount ?? 0), 0);

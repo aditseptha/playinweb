@@ -235,6 +235,7 @@ export type Database = {
           description: string
           embeddable: boolean
           genre: string | null
+          html_build_name: string | null
           id: string
           kind: string
           like_count: number
@@ -263,6 +264,7 @@ export type Database = {
           description?: string
           embeddable?: boolean
           genre?: string | null
+          html_build_name?: string | null
           id?: string
           kind?: string
           like_count?: number
@@ -334,6 +336,32 @@ export type Database = {
           user_id: string
         }
         Update: Partial<Database["public"]["Tables"]["tips"]["Insert"]>
+        Relationships: []
+      }
+      showcase_bids: {
+        Row: {
+          amount: number
+          bidder_email: string | null
+          bidder_handle: string | null
+          created_at: string
+          game_slug: string | null
+          game_title: string | null
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bidder_email?: string | null
+          bidder_handle?: string | null
+          created_at?: string
+          game_slug?: string | null
+          game_title?: string | null
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Update: Partial<Database["public"]["Tables"]["showcase_bids"]["Insert"]>
         Relationships: []
       }
       payouts: {
@@ -432,9 +460,39 @@ export type Database = {
           last_sign_in_at: string | null
         }[]
       }
+      admin_list_wallets: {
+        Args: Record<string, never>
+        Returns: {
+          commission_total: number
+          display_name: string | null
+          donation_count: number
+          earned_total: number
+          email: string | null
+          gross_total: number
+          handle: string | null
+          outstanding: number
+          paid_out: number
+          user_id: string
+          wallet_address: string | null
+        }[]
+      }
       admin_set_feature: {
         Args: { fid: string; hide: boolean; is_soon: boolean }
         Returns: undefined
+      }
+      admin_upsert_site_settings: {
+        Args: { settings: Json }
+        Returns: undefined
+      }
+      admin_record_payout: {
+        Args: {
+          p_amount: number
+          p_creator_email: string
+          p_creator_handle: string
+          p_status: string
+          p_user_id: string
+        }
+        Returns: string
       }
       admin_overview: {
         Args: Record<string, never>

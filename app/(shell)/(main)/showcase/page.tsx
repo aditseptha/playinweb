@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { GameCard } from "@/components/GameCard";
 import { GameThumb } from "@/components/GameThumb";
 import { GameRail, Shelf } from "@/components/Shelf";
@@ -13,59 +14,26 @@ import { Segmented } from "@/components/ui/segmented";
 import { FeatureGate } from "@/components/FeatureGate";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
-import { formatPlays, gamePath } from "@/lib/format";
+import { formatMoney, formatPlays, gamePath } from "@/lib/format";
 import { apexHref, parseSubdomain } from "@/lib/host";
 import { maxPopularity } from "@/lib/popularity";
+import {
+  aggregateShowcaseBids,
+  minShowcaseClaimAmount,
+  type ShowcaseBid,
+  type ShowcaseRange,
+} from "@/lib/showcase-bids";
 import { useGames } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 import { umamiShareUrl } from "@/lib/umami";
 import type { Game } from "@/lib/types";
 
-const BID_KEY = "showcase.bids.v2";
-const BID_KEY_LEGACY = "showcase.bids.v1";
-
-type Range = "all" | "today" | "week";
-type Bid = { amount: number; at: number };
-
-function startOfToday() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-function startOfWeek() {
-  return Date.now() - 7 * 86_400_000;
-}
-
-function readBids(): Record<string, Bid> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(BID_KEY) ?? window.localStorage.getItem(BID_KEY_LEGACY);
-    const parsed = raw ? (JSON.parse(raw) as Record<string, Bid | number>) : {};
-    const next: Record<string, Bid> = {};
-    for (const [id, value] of Object.entries(parsed)) {
-      if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
-        next[id] = { amount: value, at: Date.now() };
-      } else if (value && typeof value === "object" && Number.isFinite(value.amount) && value.amount >= 0) {
-        next[id] = { amount: value.amount, at: Number.isFinite(value.at) ? value.at : Date.now() };
-      }
-    }
-    return next;
-  } catch {
-    return {};
-  }
-}
-
 function categoryOf(game: Game) {
   return game.tags[0] ? game.tags[0] : "Other";
 }
 
-function bidOf(game: Game, bids: Record<string, Bid>, range: Range) {
-  const bid = bids[game.id];
-  if (!bid) return game.promotionBoost ?? 0;
-  if (range === "today" && bid.at < startOfToday()) return 0;
-  if (range === "week" && bid.at < startOfWeek()) return 0;
-  return bid.amount;
+function bidOf(game: Game, bids: Record<string, ShowcaseBid>) {
+  return bids[game.id]?.amount ?? game.promotionBoost ?? 0;
 }
 
 function resolveGame(input: string, games: Game[]): Game | null {
@@ -105,16 +73,35 @@ function resolveGame(input: string, games: Game[]): Game | null {
 }
 
 export default function ShowcasePage() {
+  const searchParams = useSearchParams();
   const { games } = useGames();
   const { user, loading } = useAuth();
   const { openLogin } = useLoginDialog();
-  const [bids, setBids] = useState(readBids);
+  const [bidRows, setBidRows] = useState<{ project_id: string; amount: number; created_at: string }[]>([]);
   const [filter, setFilter] = useState("");
-  const [range, setRange] = useState<Range>("all");
+  const [range, setRange] = useState<ShowcaseRange>("all");
   const [url, setUrl] = useState("");
   const [amount, setAmount] = useState(1);
   const [notice, setNotice] = useState("");
+  const [pending, setPending] = useState(false);
+  const polarCheckout = searchParams.get("polar_checkout") ?? searchParams.get("checkout_id");
   const max = maxPopularity(games);
+
+  const loadBids = useCallback(async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("showcase_bids")
+      .select("project_id, amount, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (!error) setBidRows(data ?? []);
+  }, []);
+
+  useEffect(() => {
+    void loadBids();
+  }, [loadBids]);
+
+  const bids = useMemo(() => aggregateShowcaseBids(bidRows, range), [bidRows, range]);
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -131,16 +118,16 @@ export default function ShowcasePage() {
   const ranked = useMemo(() => {
     const pool = filter ? games.filter((g) => categoryOf(g) === filter) : games;
     return [...pool].sort((a, b) => {
-      const bidGap = bidOf(b, bids, range) - bidOf(a, bids, range);
+      const bidGap = bidOf(b, bids) - bidOf(a, bids);
       if (bidGap !== 0) return bidGap;
       return b.playCount - a.playCount;
     });
-  }, [bids, filter, games, range]);
+  }, [bids, filter, games]);
 
   const matched = useMemo(() => resolveGame(url, games), [games, url]);
   const urlState = !url.trim() ? "empty" : matched ? "valid" : "invalid";
-  const topBid = ranked[0] ? bidOf(ranked[0], bids, range) : 0;
-  const minClaim = Math.max(1, Math.floor(topBid) + 1);
+  const topBid = ranked[0] ? bidOf(ranked[0], bids) : 0;
+  const minClaim = minShowcaseClaimAmount(topBid);
 
   useEffect(() => {
     setAmount(minClaim);
@@ -150,7 +137,47 @@ export default function ShowcasePage() {
     if (filter && !categories.includes(filter)) setFilter("");
   }, [categories, filter]);
 
-  function placeBid() {
+  useEffect(() => {
+    if (!polarCheckout || loading || !user) return;
+    let cancelled = false;
+    setPending(true);
+    fetch("/api/polar/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ checkoutId: polarCheckout }),
+    })
+      .then(async (res) => {
+        const data = (await res.json().catch(() => null)) as { amount?: number; error?: string } | null;
+        if (cancelled) return;
+        if (!res.ok) {
+          setNotice(data?.error || "Could not confirm this showcase bid.");
+          return;
+        }
+        const paidAmount = Number(data?.amount);
+        setNotice(
+          Number.isFinite(paidAmount)
+            ? `Thanks — your ${formatMoney(paidAmount)} bid is live on the showcase.`
+            : "Thanks — your showcase bid is live.",
+        );
+        await loadBids();
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete("polar_checkout");
+        nextUrl.searchParams.delete("checkout_id");
+        window.history.replaceState(null, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+      })
+      .catch(() => {
+        if (!cancelled) setNotice("Could not confirm this showcase bid.");
+      })
+      .finally(() => {
+        if (!cancelled) setPending(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, loadBids, polarCheckout, user]);
+
+  async function placeBid() {
+    if (loading || pending) return;
     if (!user) {
       openLogin();
       return;
@@ -164,10 +191,28 @@ export default function ShowcasePage() {
       setNotice(`Bid at least $${minClaim} to claim #1 in this view.`);
       return;
     }
-    const next = { ...bids, [game.id]: { amount, at: Date.now() } };
-    window.localStorage.setItem(BID_KEY, JSON.stringify(next));
-    setBids(next);
-    setNotice(`Preview bid of $${amount.toFixed(0)} is live for ${game.title}. No charge was made.`);
+    setPending(true);
+    setNotice("");
+    const here = window.location.href;
+    const res = await fetch("/api/polar/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "showcase",
+        projectId: game.id,
+        amount,
+        range,
+        successUrl: here,
+        returnUrl: here,
+      }),
+    });
+    const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
+    if (!res.ok || !data?.url) {
+      setPending(false);
+      setNotice(data?.error || "Could not start Polar checkout.");
+      return;
+    }
+    window.location.assign(data.url);
   }
 
   return (
@@ -254,7 +299,7 @@ export default function ShowcasePage() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          placeBid();
+          void placeBid();
         }}
       >
         <div className="flex flex-wrap items-center justify-center gap-4">
@@ -315,8 +360,13 @@ export default function ShowcasePage() {
             />
             {urlState === "valid" ? <IconCheck className="h-4 w-4 shrink-0 text-success" /> : null}
             {user || loading ? (
-              <Button type="submit" variant="primary" className="h-10 shrink-0 px-4" disabled={loading || urlState !== "valid"}>
-                Claim rank
+              <Button
+                type="submit"
+                variant="primary"
+                className="h-10 shrink-0 px-4"
+                disabled={loading || pending || urlState !== "valid"}
+              >
+                {pending ? "Redirecting…" : "Claim rank"}
               </Button>
             ) : (
               <Button type="button" variant="primary" className="h-10 shrink-0 px-4" onClick={() => openLogin()}>
@@ -334,14 +384,14 @@ export default function ShowcasePage() {
             <p className="mt-2 text-center text-caption text-warning">No listing matches that URL or slug.</p>
           ) : null}
           <p className="mt-2 text-center text-meta text-text-subtle">
-            Signed-in bids can target any listing. Payments are a preview for now.
+            Signed-in bids can target any listing. Paid with Polar.
           </p>
           {notice ? <p className="mt-2 text-center text-ui text-warning">{notice}</p> : null}
         </div>
       </form>
 
       <div className="mx-auto mt-12 w-full max-w-3xl">
-        <RankedBlock games={ranked} bids={bids} range={range} max={max} />
+        <RankedBlock games={ranked} bids={bids} max={max} />
       </div>
     </div>
     </FeatureGate>
@@ -460,12 +510,10 @@ function CategoryChip({ label, active, onClick }: { label: string; active: boole
 function RankedBlock({
   games,
   bids,
-  range,
   max,
 }: {
   games: Game[];
-  bids: Record<string, Bid>;
-  range: Range;
+  bids: Record<string, ShowcaseBid>;
   max: number;
 }) {
   const [first, second, third, ...rest] = games;
@@ -479,7 +527,7 @@ function RankedBlock({
         <PodiumSlot
           game={first}
           rank={1}
-          bid={bidOf(first, bids, range)}
+          bid={bidOf(first, bids)}
           max={max}
           featured
         />
@@ -487,10 +535,10 @@ function RankedBlock({
       {second || third ? (
         <div className="mt-3 flex flex-col gap-3">
           {second ? (
-            <PodiumSlot game={second} rank={2} bid={bidOf(second, bids, range)} max={max} />
+            <PodiumSlot game={second} rank={2} bid={bidOf(second, bids)} max={max} />
           ) : null}
           {third ? (
-            <PodiumSlot game={third} rank={3} bid={bidOf(third, bids, range)} max={max} />
+            <PodiumSlot game={third} rank={3} bid={bidOf(third, bids)} max={max} />
           ) : null}
         </div>
       ) : null}
@@ -498,7 +546,7 @@ function RankedBlock({
         <ol className="mt-6 flex flex-col gap-3">
           {head.map((game, i) => (
             <li key={game.id}>
-              <ShowcaseRow game={game} rank={i + 4} bid={bidOf(game, bids, range)} />
+              <ShowcaseRow game={game} rank={i + 4} bid={bidOf(game, bids)} />
             </li>
           ))}
         </ol>
@@ -514,7 +562,7 @@ function RankedBlock({
         <ol className="mt-8 flex flex-col gap-3">
           {tail.map((game, i) => (
             <li key={game.id}>
-              <ShowcaseRow game={game} rank={i + 9} bid={bidOf(game, bids, range)} />
+              <ShowcaseRow game={game} rank={i + 9} bid={bidOf(game, bids)} />
             </li>
           ))}
         </ol>

@@ -176,7 +176,7 @@ export function HomeHero({
 
       <div className="relative z-10 flex min-h-[320px] flex-col justify-between gap-10 px-5 py-8 sm:min-h-[380px] sm:px-8 sm:py-10 lg:min-h-[420px] lg:px-12 lg:py-12">
         <div>
-          <h1 className="max-w-[18ch] text-[40px] font-semibold leading-[1.02] tracking-tight text-white [text-shadow:0_1px_2px_oklch(0_0_0_/_0.45),0_12px_28px_oklch(0_0_0_/_0.28)] sm:text-[52px] lg:text-[64px]">
+          <h1 className="max-w-[18ch] text-[40px] font-bold leading-[1.02] tracking-tight text-white [text-shadow:0_1px_2px_oklch(0_0_0_/_0.45),0_12px_28px_oklch(0_0_0_/_0.28)] sm:text-[52px] lg:text-[64px]">
             <span className="sr-only">Play free online, instant, indie web, or anywhere games</span>
             <span aria-hidden>
               Play <TypedPhrase /> Games

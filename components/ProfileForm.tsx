@@ -132,7 +132,7 @@ export function ProfileForm({
             spellCheck={false}
             onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
             placeholder="ada-chen"
-            className="h-full min-w-0 flex-1 rounded-none bg-transparent pl-0.5 focus:bg-transparent sm:h-full"
+            className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent pl-0.5 shadow-none focus:border-transparent focus:bg-transparent focus:ring-0 sm:h-full"
           />
         </div>
       </Field>

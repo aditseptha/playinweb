@@ -17,33 +17,57 @@ export default function ResetPasswordPage() {
 function ResetPasswordForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const code = params.get("code");
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
+    if (code) {
+      const callback = new URL("/auth/callback", window.location.origin);
+      callback.searchParams.set("code", code);
+      callback.searchParams.set("next", "/auth/reset-password");
+      window.location.replace(callback.toString());
+      return;
+    }
+
     const supabase = createClient();
-    const code = params.get("code");
     let cancelled = false;
 
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
     });
 
     async function prepare() {
-      if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (cancelled) return;
-        if (exchangeError) {
-          setError(exchangeError.message);
+      const hash = window.location.hash.replace(/^#/, "");
+      if (hash) {
+        const hashParams = new URLSearchParams(hash);
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        if (hashParams.get("type") === "recovery" && accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (cancelled) return;
+          if (sessionError) {
+            setError(sessionError.message);
+            return;
+          }
+          window.history.replaceState(null, "", window.location.pathname);
+          setReady(true);
           return;
         }
-        setReady(true);
+      }
+
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (sessionError) {
+        setError(sessionError.message);
         return;
       }
-      const { data } = await supabase.auth.getSession();
-      if (cancelled) return;
       if (data.session) setReady(true);
+      else setError("This reset link is invalid or has expired. Request a new one from the sign-in page.");
     }
 
     void prepare();
@@ -52,7 +76,7 @@ function ResetPasswordForm() {
       cancelled = true;
       listener.subscription.unsubscribe();
     };
-  }, [params]);
+  }, [code]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

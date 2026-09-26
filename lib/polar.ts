@@ -1,8 +1,24 @@
 export const POLAR_PRODUCT_ID = process.env.POLAR_PRODUCT_ID ?? "";
 export const POLAR_TIP_PRODUCT_ID = process.env.POLAR_TIP_PRODUCT_ID ?? "";
+export const POLAR_SHOWCASE_PRODUCT_ID = process.env.POLAR_SHOWCASE_PRODUCT_ID ?? "";
+
+export type PolarCheckoutKind = "donation" | "tip" | "showcase";
+
+export function polarProductId(kind: PolarCheckoutKind) {
+  if (kind === "tip") return POLAR_TIP_PRODUCT_ID;
+  if (kind === "showcase") return POLAR_SHOWCASE_PRODUCT_ID;
+  return POLAR_PRODUCT_ID;
+}
+export const CHECKOUT_MAX_AMOUNT = 100;
+
+export const POLAR_WEBHOOK_SECRET = process.env.POLAR_WEBHOOK_SECRET ?? "";
 
 export function polarConfigured() {
   return Boolean(process.env.POLAR_ACCESS_TOKEN);
+}
+
+export function polarWebhookConfigured() {
+  return Boolean(POLAR_WEBHOOK_SECRET);
 }
 
 function polarBaseUrl() {
@@ -36,6 +52,28 @@ export async function polarRequest<T>(path: string, init?: RequestInit): Promise
 
 export function polarCheckoutPaid(checkout: PolarCheckout) {
   return checkout.status === "succeeded";
+}
+
+export function polarCheckoutFailed(checkout: PolarCheckout) {
+  return checkout.status === "failed" || checkout.status === "expired";
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Polar may still be processing when the browser returns from checkout. */
+export async function waitForPolarCheckout(checkoutId: string, attempts = 10, delayMs = 1500) {
+  let last: PolarCheckout | null = null;
+  for (let i = 0; i < attempts; i++) {
+    last = await polarRequest<PolarCheckout>(`/checkouts/${checkoutId}`);
+    if (polarCheckoutPaid(last)) return last;
+    if (polarCheckoutFailed(last)) {
+      throw new Error("Payment did not complete on Polar.");
+    }
+    if (i < attempts - 1) await sleep(delayMs);
+  }
+  throw new Error("Payment is not complete yet. Check Polar in a minute, then refresh this page.");
 }
 
 export function clientIp(request: Request) {

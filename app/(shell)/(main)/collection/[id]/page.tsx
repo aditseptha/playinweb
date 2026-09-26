@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { GameGrid } from "@/components/GameGrid";
-import { LinkButton } from "@/components/ui/button";
 import { gamesByIds, useGames } from "@/lib/store";
 import { maxPopularity } from "@/lib/popularity";
 
@@ -13,17 +12,7 @@ export default function CollectionPage() {
   const collection = collections.find((c) => c.id === id);
   const max = maxPopularity(games);
 
-  if (!collection) {
-    return (
-      <div className="mx-auto max-w-lg py-16 text-center">
-        <h1 className="text-xl font-semibold">Collection not found</h1>
-        <p className="mt-2 text-sm text-muted">It may have been removed from this browser.</p>
-        <LinkButton href="/library" variant="primary" className="mt-6">
-          Back to library
-        </LinkButton>
-      </div>
-    );
-  }
+  if (!collection) notFound();
 
   const listed = gamesByIds(games, collection.gameIds);
 

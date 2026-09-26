@@ -57,6 +57,7 @@ create table public.projects (
   community text not null default 'comments',
   contains_ai boolean,
   play_url text not null default '',
+  html_build_name text,
   embeddable boolean not null default false,
   published boolean not null default true,
   play_count integer not null default 0,
@@ -72,7 +73,7 @@ create table public.projects (
     classification in ('game', 'assets', 'mod', 'physical', 'soundtrack', 'tool', 'comic', 'book', 'other')
   ),
   constraint projects_kind_check check (
-    kind in ('downloadable', 'html', 'flash', 'java', 'unity', 'other')
+    kind in ('downloadable', 'html', 'flash', 'java', 'unity', 'other', 'external')
   ),
   constraint projects_release_status_check check (
     release_status in ('released', 'in_development', 'prototype', 'canceled')
@@ -683,11 +684,81 @@ end;
 $$;
 
 revoke all on function public.is_admin() from public;
+create or replace function public.admin_list_wallets()
+returns table (
+  user_id uuid,
+  email text,
+  handle text,
+  display_name text,
+  wallet_address text,
+  donation_count integer,
+  gross_total numeric,
+  commission_total numeric,
+  earned_total numeric,
+  paid_out numeric,
+  outstanding numeric
+)
+language plpgsql
+stable
+security definer
+set search_path = public, auth
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'not allowed';
+  end if;
+  return query
+  with earned as (
+    select
+      p.owner_id as creator_id,
+      count(d.id)::integer as donation_count,
+      coalesce(sum(d.amount), 0)::numeric as gross_total,
+      coalesce(sum(d.amount * d.commission_pct / 100), 0)::numeric as commission_total,
+      coalesce(sum(d.amount * (1 - d.commission_pct / 100)), 0)::numeric as earned_total
+    from public.donations d
+    join public.projects p on p.id = d.project_id
+    group by p.owner_id
+  ),
+  paid as (
+    select po.user_id as creator_id, coalesce(sum(po.amount), 0)::numeric as paid_out
+    from public.payouts po
+    where po.status = 'paid'
+    group by po.user_id
+  ),
+  reserved as (
+    select po.user_id as creator_id, coalesce(sum(po.amount), 0)::numeric as reserved_total
+    from public.payouts po
+    where po.status in ('paid', 'requested')
+    group by po.user_id
+  )
+  select
+    pr.id,
+    u.email::text,
+    pr.handle,
+    pr.display_name,
+    pr.wallet_address,
+    e.donation_count,
+    round(e.gross_total, 2),
+    round(e.commission_total, 2),
+    round(e.earned_total, 2),
+    round(coalesce(pa.paid_out, 0), 2),
+    round(e.earned_total - coalesce(re.reserved_total, 0), 2)
+  from earned e
+  join public.profiles pr on pr.id = e.creator_id
+  left join auth.users u on u.id = pr.id
+  left join paid pa on pa.creator_id = pr.id
+  left join reserved re on re.creator_id = pr.id
+  order by e.earned_total desc, e.donation_count desc;
+end;
+$$;
+
 revoke all on function public.admin_overview() from public;
 revoke all on function public.admin_list_users() from public;
+revoke all on function public.admin_list_wallets() from public;
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.admin_overview() to authenticated;
 grant execute on function public.admin_list_users() to authenticated;
+grant execute on function public.admin_list_wallets() to authenticated;
 
 create table public.site_features (
   id text primary key,
@@ -829,6 +900,38 @@ create policy tips_select_admin on public.tips
 
 grant insert, select on public.tips to authenticated;
 
+create table public.showcase_bids (
+  id uuid primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  project_id uuid not null references public.projects (id) on delete cascade,
+  amount numeric(10, 2) not null check (amount > 0),
+  bidder_email text,
+  bidder_handle text,
+  game_title text,
+  game_slug text,
+  created_at timestamptz not null default now()
+);
+
+create index showcase_bids_project_created_at_idx on public.showcase_bids (project_id, created_at desc);
+create index showcase_bids_project_amount_idx on public.showcase_bids (project_id, amount desc);
+
+alter table public.showcase_bids enable row level security;
+
+create policy showcase_bids_select on public.showcase_bids
+  for select to anon, authenticated
+  using (true);
+
+create policy showcase_bids_insert on public.showcase_bids
+  for insert to authenticated
+  with check (user_id = (select auth.uid()));
+
+create policy showcase_bids_select_admin on public.showcase_bids
+  for select to authenticated
+  using (public.is_admin());
+
+grant insert, select on public.showcase_bids to authenticated;
+grant select on public.showcase_bids to anon;
+
 create table public.payouts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
@@ -862,8 +965,11 @@ as $$
 declare
   earned numeric;
   cashed numeric;
+  min_balance numeric;
 begin
-  if new.amount < 10 then
+  select coalesce((select value from public.site_settings where id = 'cashout_min'), 10) into min_balance;
+
+  if new.amount < min_balance then
     raise exception 'amount below cash out minimum';
   end if;
 
@@ -876,7 +982,7 @@ begin
   from public.payouts
   where user_id = new.user_id
     and id is distinct from new.id
-    and status <> 'cancelled';
+    and status in ('paid', 'requested');
 
   if new.amount > earned - cashed + 0.001 then
     raise exception 'amount exceeds available balance';
@@ -901,7 +1007,26 @@ declare
   earned numeric;
   cashed numeric;
   available numeric;
+  payout_dow numeric;
+  payout_hour numeric;
+  payout_frequency numeric;
+  min_balance numeric;
 begin
+  select coalesce((select value from public.site_settings where id = 'payout_weekday'), 4) into payout_dow;
+  select coalesce((select value from public.site_settings where id = 'payout_hour_utc'), 17) into payout_hour;
+  select coalesce((select value from public.site_settings where id = 'payout_frequency'), 0) into payout_frequency;
+
+  if payout_frequency = 0
+     and extract(dow from timezone('utc', now()))::int <> payout_dow::int then
+    return 0;
+  end if;
+
+  if extract(hour from timezone('utc', now()))::int <> payout_hour::int then
+    return 0;
+  end if;
+
+  select coalesce((select value from public.site_settings where id = 'cashout_min'), 10) into min_balance;
+
   for rec in
     select p.id, p.handle, p.wallet_address
     from public.profiles p
@@ -920,7 +1045,7 @@ begin
 
     available := round((earned - cashed)::numeric, 2);
 
-    if available >= 10 then
+    if available >= min_balance then
       begin
         insert into public.payouts (user_id, amount, status, creator_email, creator_handle)
         values (rec.id, available, 'paid', rec.wallet_address, rec.handle);
@@ -943,7 +1068,7 @@ create extension if not exists pg_cron with schema pg_catalog;
 
 select cron.schedule(
   'weekly-cashout',
-  '0 17 * * 4',
+  '0 * * * *',
   $$select private.run_weekly_cashouts()$$
 );
 
@@ -952,7 +1077,13 @@ create table public.site_settings (
   value numeric not null
 );
 
-insert into public.site_settings (id, value) values ('donation_commission_pct', 10);
+insert into public.site_settings (id, value) values
+  ('donation_commission_pct', 10),
+  ('payout_frequency', 0),
+  ('payout_weekday', 4),
+  ('payout_hour_utc', 17),
+  ('cashout_min', 10)
+on conflict (id) do nothing;
 
 alter table public.site_settings enable row level security;
 
@@ -965,5 +1096,68 @@ create policy site_settings_update_admin on public.site_settings
   using (public.is_admin())
   with check (public.is_admin());
 
+create policy site_settings_insert_admin on public.site_settings
+  for insert to authenticated
+  with check (public.is_admin());
+
 grant select on public.site_settings to anon, authenticated;
-grant update on public.site_settings to authenticated;
+grant insert, update on public.site_settings to authenticated;
+
+create or replace function public.admin_upsert_site_settings(settings jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public, private, auth
+as $$
+declare
+  entry record;
+begin
+  if not public.is_admin() then
+    raise exception 'not allowed';
+  end if;
+
+  for entry in select key, value from jsonb_each(settings)
+  loop
+    insert into public.site_settings (id, value)
+    values (entry.key, (entry.value #>> '{}')::numeric)
+    on conflict (id) do update set value = excluded.value;
+  end loop;
+end;
+$$;
+
+revoke all on function public.admin_upsert_site_settings(jsonb) from public;
+grant execute on function public.admin_upsert_site_settings(jsonb) to authenticated;
+
+create or replace function public.admin_record_payout(
+  p_user_id uuid,
+  p_amount numeric,
+  p_status text,
+  p_creator_email text,
+  p_creator_handle text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  payout_id uuid;
+begin
+  if not public.is_admin() then
+    raise exception 'not allowed';
+  end if;
+
+  if p_status not in ('requested', 'paid', 'cancelled') then
+    raise exception 'invalid payout status';
+  end if;
+
+  insert into public.payouts (user_id, amount, status, creator_email, creator_handle)
+  values (p_user_id, p_amount, p_status, p_creator_email, p_creator_handle)
+  returning id into payout_id;
+
+  return payout_id;
+end;
+$$;
+
+revoke all on function public.admin_record_payout(uuid, numeric, text, text, text) from public;
+grant execute on function public.admin_record_payout(uuid, numeric, text, text, text) to authenticated;
