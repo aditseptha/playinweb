@@ -9,6 +9,7 @@ import { useSignupDialog } from "@/components/SignupDialog";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, TextInput } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
+import { FeatureGate } from "@/components/FeatureGate";
 import { useAuth } from "@/lib/auth";
 import { money, paidOutAmount, reservedPayoutAmount } from "@/lib/cashout";
 import {
@@ -68,9 +69,11 @@ const SELECT =
 
 export default function DonationsPage() {
   return (
-    <Suspense fallback={<p className="text-ui text-text-muted">Loading account…</p>}>
-      <DonationsView />
-    </Suspense>
+    <FeatureGate id="donations">
+      <Suspense fallback={<p className="text-ui text-text-muted">Loading account…</p>}>
+        <DonationsView />
+      </Suspense>
+    </FeatureGate>
   );
 }
 

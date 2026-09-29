@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GameThumb } from "@/components/GameThumb";
+import { GameThumb, PROJECT_STAGE_IMAGE_SIZES } from "@/components/GameThumb";
 import { IconExternal, IconPlay } from "@/components/icons";
 import { projectPublicUrl } from "@/lib/host";
 import { playFrameSandbox } from "@/lib/html-game";
@@ -47,7 +47,7 @@ export function GamePlayer({
 
   return (
     <div className="relative aspect-video overflow-hidden rounded-panel bg-surface">
-      <GameThumb game={game} />
+      <GameThumb game={game} quality={90} sizes={PROJECT_STAGE_IMAGE_SIZES} />
       <div className="absolute inset-0 bg-black/35" />
       <div className="absolute inset-0 grid place-items-center p-6">
         {game.embeddable ? (

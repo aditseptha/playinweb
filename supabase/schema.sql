@@ -773,7 +773,9 @@ create table public.site_features (
 insert into public.site_features (id, label, href, description, hidden, soon, sort_order) values
   ('showcase', 'Game showcase', '/showcase', 'Paid ranking page in the public menu.', false, true, 1),
   ('top', 'Top Played', '/top', 'Play ranking in the public menu.', false, false, 2),
-  ('downloads', 'Downloads', '/downloads', 'Downloadable files in the public menu.', false, false, 3);
+  ('downloads', 'Downloads', '/downloads', 'Downloadable files in the public menu.', false, false, 3),
+  ('donations', 'Donations', '/donations', 'Creator wallet, game donations, and Polar checkout.', true, false, 4),
+  ('tip', 'Tip the developer', '/tip', 'Support link in the sidebar footer.', false, false, 5);
 
 alter table public.site_features enable row level security;
 
@@ -781,7 +783,14 @@ create policy site_features_select on public.site_features
   for select to anon, authenticated
   using (true);
 
-create or replace function public.admin_set_feature(fid text, hide boolean, is_soon boolean)
+create or replace function public.admin_set_feature(
+  fid text,
+  hide boolean,
+  is_soon boolean,
+  flabel text default null,
+  fhref text default null,
+  fdescription text default null
+)
 returns void
 language plpgsql
 security definer
@@ -791,9 +800,24 @@ begin
   if not public.is_admin() then
     raise exception 'not allowed';
   end if;
-  update public.site_features
-  set hidden = hide, soon = is_soon
-  where id = fid;
+
+  insert into public.site_features (id, label, href, description, hidden, soon, sort_order)
+  values (
+    fid,
+    coalesce(flabel, fid),
+    coalesce(fhref, '/'),
+    coalesce(fdescription, ''),
+    hide,
+    is_soon,
+    99
+  )
+  on conflict (id) do update
+  set
+    hidden = excluded.hidden,
+    soon = excluded.soon,
+    label = excluded.label,
+    href = excluded.href,
+    description = excluded.description;
 end;
 $$;
 

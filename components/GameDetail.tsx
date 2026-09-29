@@ -29,6 +29,54 @@ import { createClient } from "@/lib/supabase/client";
 
 const LOCAL_FOLLOWS_KEY = "showcase.follows.v1";
 
+function DescriptionText({ text }: { text: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [text]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || expanded) return;
+
+    const measure = () => {
+      setOverflows(el.scrollHeight > el.clientHeight + 1);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text, expanded]);
+
+  return (
+    <div className="mt-4 min-w-0">
+      <div
+        ref={ref}
+        className={cn(
+          "whitespace-pre-wrap text-body leading-relaxed text-text-muted",
+          !expanded && "line-clamp-3",
+        )}
+      >
+        {text}
+      </div>
+      {overflows ? (
+        <button
+          type="button"
+          className="mt-2 text-ui font-medium text-text hover:underline"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((open) => !open)}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function readLocalFollows(): string[] {
   if (typeof window === "undefined") return [];
   try {
@@ -378,9 +426,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
                 </div>
               </div>
               {project.tagline ? <p className="mt-3 text-body text-text-muted">{project.tagline}</p> : null}
-              <div className="mt-4 min-w-0 whitespace-pre-wrap text-body leading-relaxed text-text-muted">
-                {project.description || "No description yet."}
-              </div>
+              <DescriptionText text={project.description || "No description yet."} />
             <ProjectComments projectId={projectId} enabled={persisted && project.community !== "disabled"} />
           </div>
         </div>

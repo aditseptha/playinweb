@@ -9,6 +9,7 @@ import {
 } from "@/lib/polar";
 import { isPersistedId } from "@/lib/projects";
 import { minShowcaseClaimAmount, showcaseRangeCutoffMs, type ShowcaseRange } from "@/lib/showcase-bids";
+import { isFeaturePubliclyOpen } from "@/lib/site-feature";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -110,6 +111,9 @@ export async function POST(request: Request) {
       amount: amount.toFixed(2),
     };
   } else {
+    if (!(await isFeaturePubliclyOpen(supabase, "donations"))) {
+      return Response.json({ error: "Donations are not available yet." }, { status: 403 });
+    }
     if (!isPersistedId(projectId)) {
       return Response.json({ error: "This listing cannot take payments." }, { status: 400 });
     }

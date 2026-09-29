@@ -6,6 +6,7 @@ import { useLoginDialog } from "@/components/LoginDialog";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
+import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { CHECKOUT_MAX_AMOUNT } from "@/lib/polar";
@@ -16,6 +17,7 @@ const DONATE_PRESETS = [1, 3, 5, 10, 25];
 export function ProjectCheckout({ project }: { project: ProjectRecord }) {
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
+  const { feature: donationsFeature, loading: donationsLoading } = useFeature("donations");
   const { openLogin } = useLoginDialog();
   const paid = project.pricing_type === "paid";
   const donate = project.pricing_type === "donate";
@@ -76,6 +78,8 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
   }, [loading, polarCheckout, project.id, user]);
 
   if (project.pricing_type === "no_payments") return null;
+  if (donationsLoading) return null;
+  if (!isFeaturePubliclyEnabled(donationsFeature, "donations")) return null;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

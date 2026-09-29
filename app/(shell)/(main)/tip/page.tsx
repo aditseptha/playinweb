@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent, type PointerEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { FeatureGate } from "@/components/FeatureGate";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
@@ -14,6 +15,16 @@ import { publicMediaUrl } from "@/lib/media";
 const PRESETS = [1, 3, 5, 10, 25, 100];
 
 export default function TipPage() {
+  return (
+    <FeatureGate id="tip">
+      <Suspense fallback={<p className="text-ui text-text-muted">Loading…</p>}>
+        <TipView />
+      </Suspense>
+    </FeatureGate>
+  );
+}
+
+function TipView() {
   const searchParams = useSearchParams();
   const { user, profile, loading } = useAuth();
   const { openLogin } = useLoginDialog();

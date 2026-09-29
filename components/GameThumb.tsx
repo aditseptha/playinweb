@@ -5,15 +5,19 @@ import type { Game } from "@/lib/types";
 
 const PATTERNS = ["orbit", "grid", "wave", "blocks", "dots"] as const;
 
+export const PROJECT_STAGE_IMAGE_SIZES = "(min-width: 1280px) 1000px, (min-width: 768px) 75vw, 100vw";
+
 export function GameThumb({
   game,
   src,
   priority = false,
+  quality,
   sizes = "(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw",
 }: {
   game: Game;
   src?: string;
   priority?: boolean;
+  quality?: number;
   sizes?: string;
 }) {
   const image = src || game.thumbnailUrl;
@@ -27,6 +31,7 @@ export function GameThumb({
           alt=""
           fill
           sizes={sizes}
+          quality={quality}
           priority={priority}
           className={className}
         />

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { GameThumb } from "@/components/GameThumb";
+import { GameThumb, PROJECT_STAGE_IMAGE_SIZES } from "@/components/GameThumb";
 import { Button } from "@/components/ui/button";
 import { IconExpand, IconFullscreen, IconFullscreenExit, IconPlay, IconShrink } from "@/components/icons";
 import { cn } from "@/lib/cn";
@@ -250,7 +250,13 @@ export function ProjectHeroStage() {
           allowFullScreen
         />
       ) : (
-        <GameThumb game={game} src={current?.src} />
+        <GameThumb
+          game={game}
+          src={current?.src}
+          priority
+          quality={90}
+          sizes={PROJECT_STAGE_IMAGE_SIZES}
+        />
       )}
 
       {tags.length > 0 && !playing ? (
@@ -308,7 +314,7 @@ export function ProjectHeroStage() {
         <>
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[30%] bg-[linear-gradient(to_top,oklch(1_0_0/0.72)_0%,oklch(1_0_0/0.22)_55%,transparent_100%)]"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[30%] bg-[linear-gradient(to_top,oklch(0_0_0/0.78)_0%,oklch(0_0_0/0.38)_55%,transparent_100%)]"
           />
           <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-end gap-2 p-3 sm:p-4">
             {canPlay ? (
@@ -360,7 +366,7 @@ export function ProjectHeroThumbs() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : item.kind === "image" ? (
-            <GameThumb game={game} src={item.src} />
+            <GameThumb game={game} src={item.src} sizes="128px" />
           ) : (
             <span className="absolute inset-0 bg-surface-3" />
           )}

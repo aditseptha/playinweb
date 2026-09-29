@@ -8,6 +8,7 @@ import { useSignupDialog } from "@/components/SignupDialog";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, SelectInput, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
+import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { cn } from "@/lib/cn";
 import { slugify } from "@/lib/format";
 import { apexOrigin, isSlug, projectPublicUrl } from "@/lib/host";
@@ -111,6 +112,8 @@ function fieldLegend(title: string, hint: string) {
 export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const editing = Boolean(project);
   const { user, profile, loading } = useAuth();
+  const { feature: donationsFeature } = useFeature("donations");
+  const donationsOpen = isFeaturePubliclyEnabled(donationsFeature, "donations");
   const { openLogin } = useLoginDialog();
   const { openSignup } = useSignupDialog();
   const router = useRouter();
@@ -351,7 +354,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         classification: "game",
         kind,
         release_status: String(fd.get("releaseStatus") ?? "released"),
-        pricing_type: allowDonations ? "donate" : "no_payments",
+        pricing_type: donationsOpen && allowDonations ? "donate" : "no_payments",
         suggested_donation: null,
         min_price: null,
         cover_path: coverPath,
@@ -650,36 +653,38 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           </Field>
         ) : null}
 
-        <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-surface-2 px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-ui font-medium">Allow donations</p>
-            <p className="mt-0.5 text-meta text-text-subtle">Let players support your game with a voluntary donation.</p>
-          </div>
-          <span className="relative inline-flex h-7 w-12 shrink-0">
-            <input
-              type="checkbox"
-              role="switch"
-              checked={allowDonations}
-              onChange={(e) => setAllowDonations(e.target.checked)}
-              className="peer sr-only"
-            />
-            <span
-              aria-hidden
-              className={cn(
-                "absolute inset-0 rounded-full transition-colors duration-200 ease-out-quint",
-                "bg-surface-3 peer-checked:bg-brand-blue",
-                "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-blue",
-              )}
-            />
-            <span
-              aria-hidden
-              className={cn(
-                "pointer-events-none absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out-quint",
-                "peer-checked:translate-x-5",
-              )}
-            />
-          </span>
-        </label>
+        {donationsOpen ? (
+          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-surface-2 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-ui font-medium">Allow donations</p>
+              <p className="mt-0.5 text-meta text-text-subtle">Let players support your game with a voluntary donation.</p>
+            </div>
+            <span className="relative inline-flex h-7 w-12 shrink-0">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={allowDonations}
+                onChange={(e) => setAllowDonations(e.target.checked)}
+                className="peer sr-only"
+              />
+              <span
+                aria-hidden
+                className={cn(
+                  "absolute inset-0 rounded-full transition-colors duration-200 ease-out-quint",
+                  "bg-surface-3 peer-checked:bg-brand-blue",
+                  "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-blue",
+                )}
+              />
+              <span
+                aria-hidden
+                className={cn(
+                  "pointer-events-none absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out-quint",
+                  "peer-checked:translate-x-5",
+                )}
+              />
+            </span>
+          </label>
+        ) : null}
 
         <Field label={fieldLabel("Description", "This will make up the content of your game page.")}>
           <TextArea name="description" className="h-[150px] min-h-[150px]" defaultValue={project?.description ?? ""} />

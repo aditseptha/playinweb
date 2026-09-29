@@ -120,10 +120,14 @@ export default function HomePage() {
     const live = games.filter((g) => isPersistedId(g.id));
     const featured = homeRailGames(games);
     const more = homeMoreGames(games, featured);
+    const topGames = [...games]
+      .sort((a, b) => b.playCount + b.promotionBoost - (a.playCount + a.promotionBoost))
+      .slice(0, 3);
 
     return (
       <div className="flex min-w-0 flex-col gap-8">
         <HomeHero
+          topGames={topGames}
           stats={[
             { value: live.length, label: "Games" },
             { value: live.reduce((n, g) => n + g.playCount, 0), label: "Plays" },

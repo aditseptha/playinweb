@@ -39,7 +39,7 @@ import { TextInput } from "@/components/ui/field";
 import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
-import { publicNavFlags, useFeatures } from "@/lib/features";
+import { navItemVisible, publicNavFlags, useFeatures } from "@/lib/features";
 import { apexHref } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
 import { useGames } from "@/lib/store";
@@ -454,8 +454,13 @@ function Sidebar({
   const { user, loading } = useAuth();
   const { openLogin } = useLoginDialog();
   const { profile } = useGames();
-  const { features } = useFeatures();
+  const { features, loading: featuresLoading } = useFeatures();
   const admin = isAdminEmail(user?.email);
+
+  const visibleNavGroups = PRIMARY_NAV.map((group) => ({
+    title: group.title,
+    items: group.items.filter((item) => navItemVisible(item.href, features, admin, featuresLoading)),
+  })).filter((group) => group.items.length > 0);
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -489,8 +494,8 @@ function Sidebar({
         <BrandLink compact={collapsed} onClick={onNavigate} />
       </div>
       <div className="flex flex-col">
-        {PRIMARY_NAV.map((group, i) => (
-          <Fragment key={group.items[0].href}>
+        {visibleNavGroups.map((group, i) => (
+          <Fragment key={group.title ?? group.items[0].href}>
             {group.title ? (
               <p
                 className={cn(
@@ -513,7 +518,6 @@ function Sidebar({
               {group.items.map((item) => {
                 const feature = features.find((row) => row.href === item.href);
                 const flags = publicNavFlags(feature, admin);
-                if (!flags.show) return null;
                 const authGated = !loading && !user && AUTH_GATED_HREFS.has(item.href);
                 return (
                   <NavLink
@@ -562,17 +566,26 @@ function Sidebar({
           >
             Support
           </p>
-          {SECONDARY_NAV.map((item) => (
-            <NavLink
-              key={item.href}
-              item={item}
-              active={isActive(item.href)}
-              onNavigate={onNavigate}
-              quiet
-              collapsed={collapsed}
-              footer
-            />
-          ))}
+          {SECONDARY_NAV.filter((item) => navItemVisible(item.href, features, admin, featuresLoading)).map(
+            (item) => {
+              const feature = features.find((row) => row.href === item.href);
+              const flags = publicNavFlags(feature, admin);
+              return (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  active={isActive(item.href)}
+                  onNavigate={onNavigate}
+                  quiet
+                  collapsed={collapsed}
+                  footer
+                  soon={flags.soon}
+                  hidden={flags.hidden}
+                  locked={flags.soon && !admin}
+                />
+              );
+            },
+          )}
           <a
             href="mailto:support@playinweb.com"
             className={cn(
