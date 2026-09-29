@@ -74,16 +74,11 @@ export default function ProfilePage() {
         editable
       />
 
-      <Shelf title="Play history">
-        {recent.length > 0 ? (
+      {recent.length > 0 ? (
+        <Shelf title="Play history">
           <GameRail games={recent} maxScore={max} onRemove={removeFromHistory} />
-        ) : (
-          <EmptyShelf
-            title="Your play history lives here"
-            body="Games you play show up in this row. Use the × on a card to remove it."
-          />
-        )}
-      </Shelf>
+        </Shelf>
+      ) : null}
 
       <Shelf title="Your games" href={siteOrigin(profile.handle)} hrefLabel="See all games">
         {listed.length > 0 ? (

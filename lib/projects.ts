@@ -1,7 +1,9 @@
 import { slugify } from "@/lib/format";
+import { flashStoragePrefix, htmlStoragePrefix } from "@/lib/html-game";
 import { projectEmbedUrl } from "@/lib/host";
-import { publicMediaUrl } from "@/lib/media";
+import { MEDIA_BUCKET, publicMediaUrl } from "@/lib/media";
 import { createClient } from "@/lib/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import type { Game } from "@/lib/types";
 
@@ -199,6 +201,66 @@ export function clearCatalogueCache() {
   } catch {
     // private mode
   }
+}
+
+function isStoragePath(path: string) {
+  return !path.startsWith("http://") && !path.startsWith("https://") && !path.startsWith("/");
+}
+
+async function listStorageTree(supabase: SupabaseClient, prefix: string): Promise<string[]> {
+  const { data, error } = await supabase.storage.from(MEDIA_BUCKET).list(prefix, {
+    limit: 1000,
+    sortBy: { column: "name", order: "asc" },
+  });
+  if (error || !data) return [];
+
+  const paths: string[] = [];
+  for (const entry of data) {
+    const path = `${prefix}/${entry.name}`;
+    if (entry.metadata) paths.push(path);
+    else paths.push(...(await listStorageTree(supabase, path)));
+  }
+  return paths;
+}
+
+export async function deleteProject(project: ProjectRecord): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isPersistedId(project.id)) {
+    return { ok: false, error: "This listing cannot be deleted." };
+  }
+
+  const supabase = createClient();
+  const storagePaths = new Set<string>();
+
+  if (project.cover_path && isStoragePath(project.cover_path)) storagePaths.add(project.cover_path);
+  for (const shot of project.project_screenshots ?? []) {
+    if (isStoragePath(shot.storage_path)) storagePaths.add(shot.storage_path);
+  }
+  for (const file of project.project_files ?? []) {
+    if (file.storage_path && isStoragePath(file.storage_path)) storagePaths.add(file.storage_path);
+  }
+
+  if (project.kind === "html") {
+    for (const path of await listStorageTree(supabase, htmlStoragePrefix(project.owner_id, project.id))) {
+      storagePaths.add(path);
+    }
+  } else if (project.kind === "flash") {
+    for (const path of await listStorageTree(supabase, flashStoragePrefix(project.owner_id, project.id))) {
+      storagePaths.add(path);
+    }
+    if (project.play_url && isStoragePath(project.play_url)) storagePaths.add(project.play_url);
+  }
+
+  const { error } = await supabase.from("projects").delete().eq("id", project.id).eq("owner_id", project.owner_id);
+  if (error) return { ok: false, error: error.message };
+
+  const paths = [...storagePaths];
+  if (paths.length) {
+    const { error: storageError } = await supabase.storage.from(MEDIA_BUCKET).remove(paths);
+    if (storageError) console.error(storageError);
+  }
+
+  clearCatalogueCache();
+  return { ok: true };
 }
 
 export type StatDay = { project_id: string; day: string; views: number; plays: number };

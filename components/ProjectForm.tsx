@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { cn } from "@/lib/cn";
 import { slugify } from "@/lib/format";
-import { apexOrigin, isSlug, projectPublicUrl } from "@/lib/host";
+import { apexHref, apexOrigin, isSlug, projectPublicUrl } from "@/lib/host";
 import { fileExt, MEDIA_BUCKET, publicMediaUrl } from "@/lib/media";
 import {
   contentType,
@@ -32,10 +32,12 @@ import {
   type Community,
   type ProjectKind,
 } from "@/lib/project-fields";
+import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import { clearCatalogueCache, type ProjectRecord } from "@/lib/projects";
 import { createClient } from "@/lib/supabase/client";
 
 const MAX_FILE = 50 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_TAGS = 10;
 
 type HtmlPreview = {
@@ -307,6 +309,15 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         return;
       }
     }
+    if (cover && imageTooLarge(cover)) {
+      setError(imageSizeError("Cover image"));
+      return;
+    }
+    const oversizedShot = shots.find((file) => imageTooLarge(file));
+    if (oversizedShot) {
+      setError(imageSizeError(oversizedShot.name));
+      return;
+    }
 
     if (!user || !profile) return;
     setPending(true);
@@ -315,7 +326,16 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
     const handle = profile.handle;
 
     async function upload(folder: string, file: File) {
-      if (file.size > MAX_FILE) throw new Error(`${file.name} is over 50 MB.`);
+      const limit = folder === "covers" || folder === "screenshots" ? MAX_IMAGE_BYTES : MAX_FILE;
+      if (file.size > limit) {
+        throw new Error(
+          folder === "covers"
+            ? imageSizeError("Cover image")
+            : folder === "screenshots"
+              ? imageSizeError(file.name)
+              : `${file.name} is over 50 MB.`,
+        );
+      }
       const path = `${uid}/${folder}/${crypto.randomUUID()}.${fileExt(file.name)}`;
       const { error: upError } = await supabase.storage.from(MEDIA_BUCKET).upload(path, file);
       if (upError) throw upError;
@@ -788,6 +808,20 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         <Button type="submit" variant="primary" disabled={pending} className="w-fit">
           {pending ? "Saving…" : editing ? "Save changes" : "Save & view page"}
         </Button>
+
+        {editing && project ? (
+          <div className="mt-10 border-t border-border pt-8">
+            <p className="text-caption font-medium text-text-muted">Danger zone</p>
+            <p className="mt-1 max-w-xl text-body text-text-muted">
+              Permanently delete this game, its media, and all stats. This cannot be undone.
+            </p>
+            <DeleteProjectButton
+              project={project}
+              className="mt-3"
+              onDeleted={() => router.push(apexHref("/manage"))}
+            />
+          </div>
+        ) : null}
       </div>
 
       <aside className="flex flex-col gap-6 lg:sticky lg:top-20 lg:self-start">
@@ -810,10 +844,22 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
               type="file"
               accept="image/*"
               className="sr-only"
-              onChange={(e) => setCover(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                if (imageTooLarge(file)) {
+                  setError(imageSizeError("Cover image"));
+                  return;
+                }
+                setError("");
+                setCover(file);
+              }}
             />
           </label>
-          <p className="mt-2 text-meta text-text-subtle">Required for best results. 16:9, minimum 320×180, recommended 1280×720.</p>
+          <p className="mt-2 text-meta text-text-subtle">
+            Required for best results. 16:9, minimum 320×180, recommended 1280×720. Max {formatSize(MAX_IMAGE_BYTES)}.
+          </p>
         </div>
         <Field label="Gameplay video or trailer" hint="YouTube or Vimeo">
           <TextInput name="trailerUrl" placeholder="https://www.youtube.com/watch?v=…" defaultValue={project?.trailer_url ?? ""} />
@@ -828,13 +874,22 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
               multiple
               className="sr-only"
               onChange={(e) => {
-                const next = [...(e.target.files ?? [])];
-                if (next.length) setShots((cur) => [...cur, ...next]);
+                const picked = [...(e.target.files ?? [])];
                 e.target.value = "";
+                if (!picked.length) return;
+                const accepted = picked.filter((file) => !imageTooLarge(file));
+                if (accepted.length < picked.length) {
+                  setError(imageSizeError("Each screenshot"));
+                } else {
+                  setError("");
+                }
+                if (accepted.length) setShots((cur) => [...cur, ...accepted]);
               }}
             />
           </label>
-          <p className="mt-2 text-meta text-text-subtle">Upload 3 to 5 for best results.</p>
+          <p className="mt-2 text-meta text-text-subtle">
+            Upload 3 to 5 for best results. Max {formatSize(MAX_IMAGE_BYTES)} each.
+          </p>
           {keptShots.length || shotPreviews.length ? (
             <ul className="mt-3 grid grid-cols-2 gap-2">
               {keptShots.map((shot) => (
@@ -919,6 +974,14 @@ function formatSize(n: number) {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function imageTooLarge(file: File) {
+  return file.size > MAX_IMAGE_BYTES;
+}
+
+function imageSizeError(label: string) {
+  return `${label} must be ${formatSize(MAX_IMAGE_BYTES)} or smaller.`;
 }
 
 function SelectField({
