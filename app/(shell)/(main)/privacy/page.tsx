@@ -8,7 +8,7 @@ const doc = LEGAL_DOCS.privacy;
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "PlayInWeb Privacy Policy — how we collect, use, share, and protect your personal information when you browse, play, sign in, publish, donate, or use payments on playinweb.com.",
+    "PlayInWeb Privacy Policy — how we collect, use, share, and protect your personal information when you browse, play, sign in, publish, or tip on playinweb.com.",
 };
 
 export default function PrivacyPage() {
