@@ -2,14 +2,22 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ChannelHero } from "@/components/ChannelHero";
 import { ProfileForm } from "@/components/ProfileForm";
 import { GameRail, Shelf } from "@/components/Shelf";
 import { useAuth } from "@/lib/auth";
+import type { Game } from "@/lib/types";
 import { siteOrigin } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
 import { maxPopularity } from "@/lib/popularity";
+import { fetchProjectsForOwner, projectToGame } from "@/lib/projects";
 import { gamesForChannel, historyGames, useGames } from "@/lib/store";
+
+function mergeGames(primary: Game[], extra: Game[]) {
+  const seen = new Set(primary.map((g) => g.id));
+  return [...primary, ...extra.filter((g) => !seen.has(g.id))];
+}
 
 export default function ProfilePage() {
   const { user, profile: me, signOut } = useAuth();
@@ -18,14 +26,44 @@ export default function ProfilePage() {
   const router = useRouter();
   const editing = params.get("edit") === "1";
   const setupHandle = params.get("setup") === "handle";
+  const channelHandle = me?.handle ?? profile?.handle ?? "";
+  const [ownerGames, setOwnerGames] = useState<Game[] | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setOwnerGames(null);
+      return;
+    }
+    const uid = user.id;
+    let cancelled = false;
+    async function load() {
+      const rows = await fetchProjectsForOwner(uid);
+      if (!cancelled) setOwnerGames(rows.map(projectToGame));
+    }
+    void load();
+    function onShow() {
+      if (document.visibilityState === "visible") void load();
+    }
+    window.addEventListener("pageshow", onShow);
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("pageshow", onShow);
+      document.removeEventListener("visibilitychange", onShow);
+    };
+  }, [user]);
+
   const max = maxPopularity(games);
   const recent = historyGames(games, history);
-  const listed = profile
-    ? gamesForChannel(games, profile.handle, {
+  const catalogueListed = channelHandle
+    ? gamesForChannel(games, channelHandle, {
         myGameIds,
-        profileHandle: profile.handle,
+        profileHandle: channelHandle,
       })
     : [];
+  const listed =
+    user && ownerGames !== null ? mergeGames(ownerGames, catalogueListed) : catalogueListed;
+  const gamesLoading = Boolean(user) && ownerGames === null;
 
   if (!profile || editing) {
     return (
@@ -80,8 +118,10 @@ export default function ProfilePage() {
         </Shelf>
       ) : null}
 
-      <Shelf title="Your games" href={siteOrigin(profile.handle)} hrefLabel="See all games">
-        {listed.length > 0 ? (
+      <Shelf title="Your games" href={siteOrigin(channelHandle)} hrefLabel="See all games">
+        {gamesLoading ? (
+          <p className="text-sm text-muted">Loading your games…</p>
+        ) : listed.length > 0 ? (
           <GameRail games={listed} maxScore={max} />
         ) : (
           <EmptyShelf

@@ -82,7 +82,7 @@ export function GameRail({
       <div
         ref={scroller}
         className={cn(
-          "scrollbar-hide flex w-full min-w-0 overflow-x-auto px-2 py-6 snap-x snap-mandatory",
+          "scrollbar-hide flex w-full min-w-0 overflow-x-auto py-6 pl-0 pr-2 snap-x snap-mandatory",
           variant === "mini" ? "gap-3" : "gap-5",
         )}
       >

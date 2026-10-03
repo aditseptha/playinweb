@@ -274,7 +274,9 @@ export function ProjectHeroStage() {
           <Button
             variant="secondary"
             size="icon-sm"
-            className="bg-bg/75"
+            // Wide view only rearranges the lg grid, so below lg the button has
+            // nothing to change. Hidden rather than inert so it isn't dead UI.
+            className="bg-bg/75 max-lg:hidden"
             onClick={() => (expanded ? void collapse() : expand())}
             aria-label={expanded ? "Exit wide view" : "Wide view"}
           >
@@ -321,10 +323,12 @@ export function ProjectHeroStage() {
               <button
                 type="button"
                 onClick={startPlay}
-                className="inline-flex h-[50px] items-center gap-2 rounded-full bg-brand-blue px-6 text-sm font-bold uppercase tracking-[0.08em] text-white outline-none transition-opacity hover:opacity-90"
+                className="group relative inline-flex h-[50px] select-none items-center overflow-hidden rounded-full border border-[#005bc4] bg-brand-blue pl-6 pr-12 text-sm font-bold uppercase tracking-[0.08em] text-white outline-none [text-shadow:0_1px_0_rgb(0_0_0/0.3)] shadow-[inset_0_30px_30px_-15px_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.3),0_3px_0_#005bc4,0_3px_2px_rgb(0_0_0/0.2),0_5px_10px_rgb(0_0_0/0.1),0_10px_20px_rgb(0_0_0/0.1)] transition-all duration-150 ease-in-out focus-visible:ring-2 focus-visible:ring-white active:translate-y-[3px] active:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.15),inset_0_1px_20px_rgb(0_0_0/0.1),0_0_0_#005bc4,0_0_0_2px_rgb(255_255_255/0.5)]"
               >
-                {playLabel ?? "Play"}
-                <IconPlay className="h-4 w-4 translate-x-px" />
+                <span className="transition-all duration-500 ease-in-out group-hover:translate-x-[160px] motion-reduce:transition-none">
+                  {playLabel ?? "Play"}
+                </span>
+                <IconPlay className="absolute right-6 h-4 w-4 transition-all duration-500 ease-in-out group-hover:right-1/2 group-hover:translate-x-1/2 group-hover:scale-150 motion-reduce:transition-none" />
               </button>
             ) : null}
           </div>

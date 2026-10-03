@@ -6,6 +6,7 @@ import { FeatureGate } from "@/components/FeatureGate";
 import { GameCard } from "@/components/GameCard";
 import { IconCalendar, IconClock, IconTrophy } from "@/components/icons";
 import { RankRow } from "@/components/RankRow";
+import { MosaicGrid } from "@/components/ui/mosaic-grid";
 import { Segmented } from "@/components/ui/segmented";
 import { cn } from "@/lib/cn";
 import { maxPopularity, periodScore, type PlayRange } from "@/lib/popularity";
@@ -106,7 +107,16 @@ function Podium({ games, max }: { games: Game[]; max: number }) {
   ].filter((slot) => slot.game);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-4 pt-4 sm:gap-8 md:flex-row md:items-end md:justify-center">
+    <div className="relative isolate mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-4 pt-4 sm:gap-8 md:flex-row md:items-end md:justify-center">
+      {/* Flipped so the solid band sits behind the podium top and dissolves downward. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[528px] -scale-y-100 overflow-hidden text-text-subtle opacity-20 [mask-composite:intersect] [mask-image:linear-gradient(90deg,transparent,#000_15%,#000_85%,transparent),linear-gradient(0deg,transparent,#000_160px)]"
+      >
+        <div className="absolute inset-y-0 left-1/2 w-[1152px] -translate-x-1/2">
+          <MosaicGrid cols={72} fade={12} />
+        </div>
+      </div>
       {slots.map(({ game, rank, center }) => (
         <div
           key={game!.id}

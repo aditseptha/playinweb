@@ -1,11 +1,77 @@
+import { Silkscreen } from "next/font/google";
 import Link from "next/link";
 import { GameThumb } from "@/components/GameThumb";
 import { IconPlay } from "@/components/icons";
 import { LinkButton } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 import { channelPath, formatPlays, gamePath } from "@/lib/format";
 import type { Game } from "@/lib/types";
 
 type Variant = "grid" | "rail" | "featured" | "related" | "mini" | "thumb";
+
+const pixelFont = Silkscreen({ weight: "700", subsets: ["latin"] });
+
+/** Stepped corners, so the badge reads as a sprite rather than a pill. */
+const PIXEL_CORNERS =
+  "polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))";
+
+/** [fill, highlight, edge, ink] for gold, silver, bronze, then everyone else. */
+const RANK_COLORS = [
+  ["#ffc928", "#fff1a8", "#a86a00", "#3d2600"],
+  ["#d5dce5", "#ffffff", "#6f7a88", "#232a33"],
+  ["#e08a4c", "#ffcfa3", "#7e3f15", "#2e1404"],
+  ["#3f3f46", "#71717a", "#18181b", "#fafafa"],
+];
+
+function ordinal(n: number) {
+  const tail = n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th";
+  return `${n}${tail}`;
+}
+
+function RankBadge({ rank }: { rank: number }) {
+  const [fill, highlight, edge, ink] = RANK_COLORS[rank - 1] ?? RANK_COLORS[3];
+  return (
+    <span className="absolute left-0 top-0 z-10 -translate-x-1/4 -translate-y-1/2">
+      {/* Hops in two frames on hover, like a sprite. Drop-shadow, not box-shadow,
+          because clip-path would cut a box-shadow off. */}
+      <span
+        className="relative flex flex-col items-center transition-transform duration-200 ease-[steps(2)] group-hover:-translate-y-1.5 motion-reduce:transition-none"
+        style={{ filter: `drop-shadow(0 4px 0 ${edge}) drop-shadow(0 8px 10px rgb(0 0 0 / 0.3))` }}
+      >
+        {rank === 1 ? <PixelCrown color={fill} /> : null}
+        <span
+          className={cn(
+            pixelFont.className,
+            "flex items-center justify-center uppercase leading-none tracking-wide",
+            rank === 1 ? "h-10 px-3.5 text-lg" : "h-8 px-2.5 text-sm",
+          )}
+          style={{
+            clipPath: PIXEL_CORNERS,
+            background: fill,
+            color: ink,
+            boxShadow: `inset 0 3px 0 ${highlight}, inset 0 -3px 0 ${edge}`,
+          }}
+        >
+          {ordinal(rank)}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+function PixelCrown({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 9 6" className="-mb-px h-[18px] w-[27px]" shapeRendering="crispEdges" aria-hidden fill={color}>
+      <rect x="0" y="0" width="1" height="6" />
+      <rect x="4" y="0" width="1" height="6" />
+      <rect x="8" y="0" width="1" height="6" />
+      <rect x="1" y="2" width="1" height="4" />
+      <rect x="7" y="2" width="1" height="4" />
+      <rect x="3" y="1" width="3" height="5" />
+      <rect x="2" y="3" width="5" height="3" />
+    </svg>
+  );
+}
 
 export function GameCard({
   game,
@@ -76,15 +142,7 @@ export function GameCard({
             <Badges game={game} />
           </span>
           {rank ? (
-            <span
-              className={
-                rank === 1
-                  ? "absolute left-0 top-0 z-10 inline-flex h-9 min-w-9 -translate-x-1/3 -translate-y-1/2 items-center justify-center rounded-lg bg-warning px-2.5 text-ui font-semibold tabular text-white"
-                  : "absolute left-0 top-0 z-10 inline-flex h-9 min-w-9 -translate-x-1/3 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-surface px-2.5 text-ui font-semibold tabular text-text shadow-sm"
-              }
-            >
-              #{rank}
-            </span>
+            <RankBadge rank={rank} />
           ) : null}
         </Link>
         <div className="mt-2 flex min-w-0 items-center gap-2">

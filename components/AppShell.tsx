@@ -34,6 +34,7 @@ import {
   type NavIconProps,
 } from "@/components/NavIcon";
 import { Avatar } from "@/components/Avatar";
+import { SidebarFooterGrid } from "@/components/SidebarFooterGrid";
 import { Button, LinkButton } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/field";
 import { isAdminEmail } from "@/lib/admin";
@@ -538,23 +539,11 @@ function Sidebar({
           </Fragment>
         ))}
       </div>
-      <div className="relative -mx-3 mt-auto shrink-0 overflow-hidden rounded-b-2xl">
-        <Image
-          src="/sidebar-footer.png"
-          alt=""
-          width={741}
-          height={1024}
-          unoptimized
-          className="block h-[332px] w-full rounded-b-2xl object-cover object-left-bottom"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-52 rounded-b-2xl bg-gradient-to-t from-black/85 via-black/55 to-transparent"
-          aria-hidden
-        />
+      <div className="relative -mx-3 mt-auto h-[336px] shrink-0 overflow-hidden rounded-b-2xl">
+        <SidebarFooterGrid />
         <div
           className={cn(
-            `absolute inset-x-0 bottom-4 z-10 flex flex-col px-3 pb-1 pt-2 transition-[align-items] ${SIDEBAR_TRANSITION} [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]`,
+            `absolute inset-x-0 bottom-4 z-10 flex flex-col px-3 pb-1 pt-2 transition-[align-items] ${SIDEBAR_TRANSITION} [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]`,
             collapsed ? "items-center" : "items-stretch",
           )}
         >

@@ -17,7 +17,7 @@ export function RankRow({
   const play = game.embeddable && game.playUrl ? `${href}?play=1` : href;
 
   return (
-    <article className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-panel bg-surface-2 px-4 py-3.5 hover:bg-surface-3 sm:grid-cols-[3rem_140px_minmax(0,1fr)_auto]">
+    <article className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-panel border border-border bg-surface/90 px-4 py-3.5 shadow-panel backdrop-blur-sm hover:bg-surface sm:grid-cols-[3rem_140px_minmax(0,1fr)_auto]">
       <Link href={href} className="text-center text-body font-semibold tabular text-text-muted">
         #{rank}
       </Link>
