@@ -60,7 +60,7 @@ export default function TopPage() {
             src="/top-hero.webp"
             alt=""
             fill
-            priority
+            preload
             unoptimized
             sizes="100vw"
             className="object-cover object-center"

@@ -11,6 +11,53 @@ export function polarProductId(kind: PolarCheckoutKind) {
 }
 export const CHECKOUT_MAX_AMOUNT = 100;
 
+export type CheckoutInput = {
+  kind: PolarCheckoutKind;
+  projectId: string;
+  range: "today" | "week" | "all";
+  amount: number;
+  successUrl: string;
+  returnUrl: string;
+};
+
+/** Validates the untrusted checkout request body. Kept import-free so `node --test` can load it. */
+export function parseCheckoutInput(raw: unknown): CheckoutInput | { error: string } {
+  const body = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const kind: PolarCheckoutKind = body.kind === "tip" || body.kind === "showcase" ? body.kind : "donation";
+  const range = body.range === "today" || body.range === "week" ? body.range : "all";
+  const amount = Number(body.amount);
+  const successUrl = typeof body.successUrl === "string" ? body.successUrl : "";
+  const returnUrl = typeof body.returnUrl === "string" ? body.returnUrl : successUrl;
+  if (!Number.isFinite(amount) || amount < 1) return { error: "Minimum is $1.00." };
+  if (amount > CHECKOUT_MAX_AMOUNT) return { error: `Maximum is $${CHECKOUT_MAX_AMOUNT.toFixed(2)}.` };
+  if (!isHttpUrl(successUrl) || !isHttpUrl(returnUrl)) return { error: "Invalid return URL." };
+  const projectId = typeof body.projectId === "string" ? body.projectId : "";
+  return { kind, projectId, range, amount, successUrl, returnUrl };
+}
+
+function isHttpUrl(raw: string) {
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** Swaps any stale checkout params for Polar's {CHECKOUT_ID} placeholder. */
+export function withCheckoutPlaceholder(raw: string) {
+  const url = new URL(raw);
+  url.searchParams.delete("polar_checkout");
+  url.searchParams.delete("checkout_id");
+  const joiner = url.search ? "&" : "?";
+  return `${url.origin}${url.pathname}${url.search}${joiner}checkout_id={CHECKOUT_ID}${url.hash}`;
+}
+
+export function clampCommission(value: number) {
+  if (!Number.isFinite(value)) return 10;
+  return Math.min(100, Math.max(0, value));
+}
+
 export const POLAR_WEBHOOK_SECRET = process.env.POLAR_WEBHOOK_SECRET ?? "";
 
 export function polarConfigured() {

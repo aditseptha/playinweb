@@ -33,6 +33,9 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState(false);
   const polarCheckout = searchParams.get("polar_checkout") ?? searchParams.get("checkout_id");
+  const [confirmedCheckout, setConfirmedCheckout] = useState<string | null>(null);
+  const confirming = Boolean(polarCheckout && !loading && user) && confirmedCheckout !== polarCheckout;
+  const busy = pending || confirming;
 
   const presets = useMemo(() => {
     if (paid) return [min].filter((n) => n > 0);
@@ -42,7 +45,6 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
   useEffect(() => {
     if (!polarCheckout || loading || !user) return;
     let cancelled = false;
-    setPending(true);
     fetch("/api/polar/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -70,7 +72,7 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
         if (!cancelled) setNotice("Could not confirm this payment.");
       })
       .finally(() => {
-        if (!cancelled) setPending(false);
+        if (!cancelled) setConfirmedCheckout(polarCheckout);
       });
     return () => {
       cancelled = true;
@@ -83,7 +85,7 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (loading || pending) return;
+    if (loading || busy) return;
     const value = Number(amount);
     if (!Number.isFinite(value) || value < min) {
       setNotice(paid ? `Minimum is $${min.toFixed(2)}.` : "Minimum is $1.00.");
@@ -165,8 +167,8 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
             className="pl-7"
           />
         </div>
-        <Button type="submit" variant="primary" className="active:translate-y-px" disabled={pending}>
-          {pending ? "Redirecting…" : paid ? "Buy" : "Donate"}
+        <Button type="submit" variant="primary" className="active:translate-y-px" disabled={busy}>
+          {busy ? "Redirecting…" : paid ? "Buy" : "Donate"}
         </Button>
       </div>
       <p className="mt-2 text-meta text-text-subtle">

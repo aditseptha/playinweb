@@ -75,7 +75,6 @@ function PixelCrown({ color }: { color: string }) {
 
 export function GameCard({
   game,
-  maxScore: _maxScore,
   variant = "grid",
   priority = false,
   rank,

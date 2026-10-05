@@ -279,6 +279,8 @@ export function GamesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     const cached = readCatalogueCache();
+    // sessionStorage is client-only; seeding state from it during render would break hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (cached?.games.length) setRemote(cached.games);
     if (cached?.fresh) return;
     fetchCatalogueGames({ force: true })

@@ -32,7 +32,7 @@ export function GameThumb({
           fill
           sizes={sizes}
           quality={quality}
-          priority={priority}
+          preload={priority}
           className={className}
         />
       );

@@ -59,7 +59,8 @@ export function safeReturnTo(raw: string | null | undefined) {
   } catch {
     /* ignore */
   }
-  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  // Browsers read "/\\" as "//" and drop tabs/newlines, so "/\\evil.com" or "/\t/evil.com" would leave the site.
+  if (/^\/(?![/\\])[^\\\x00-\x1f]*$/.test(raw)) return raw;
   return "/";
 }
 

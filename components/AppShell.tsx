@@ -3,11 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Fragment, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { Notices } from "@/components/Notices";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { LegalProvider } from "@/components/LegalModal";
-import { SignupProvider, useSignupDialog } from "@/components/SignupDialog";
+import { SignupProvider } from "@/components/SignupDialog";
 import {
   IconChevron,
   IconClose,
@@ -43,6 +43,7 @@ import { cn } from "@/lib/cn";
 import { navItemVisible, publicNavFlags, useFeatures } from "@/lib/features";
 import { apexHref } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
+import { usePrefersReducedMotion } from "@/lib/reduced-motion";
 import { useGames } from "@/lib/store";
 import { applyTheme, THEME_KEY, type Theme } from "@/lib/theme";
 
@@ -82,9 +83,18 @@ const AUTH_GATED_HREFS = new Set(["/profile", "/manage", "/library", "/donations
 const SIDEBAR_KEY = "playinweb.sidebar.collapsed";
 const SIDEBAR_TRANSITION = "duration-300 ease-out-quint";
 
+function subscribeStorage(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useSyncExternalStore(
+    subscribeStorage,
+    () => localStorage.getItem(SIDEBAR_KEY) === "1",
+    () => false,
+  );
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -95,16 +105,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => {
-    setCollapsed(localStorage.getItem(SIDEBAR_KEY) === "1");
-  }, []);
-
   function toggleCollapsed() {
-    setCollapsed((value) => {
-      const next = !value;
-      localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
-      return next;
-    });
+    localStorage.setItem(SIDEBAR_KEY, collapsed ? "0" : "1");
+    window.dispatchEvent(new StorageEvent("storage", { key: SIDEBAR_KEY }));
   }
 
   return (
@@ -337,11 +340,7 @@ const BRAND_MARKS = ["/playinweb-icon.png", "/playinweb-mark.png"];
 
 function BrandMark() {
   const [index, setIndex] = useState(0);
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    setReduceMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  }, []);
+  const reduceMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -358,9 +357,8 @@ function BrandMark() {
           key={src}
           src={src}
           alt=""
-          width={88}
-          height={88}
-          unoptimized
+          width={44}
+          height={44}
           className={cn(
             "absolute inset-0 size-11 rounded-xl transition-opacity duration-500 ease-out motion-reduce:transition-none",
             i === index ? "opacity-100" : "opacity-0",
@@ -424,6 +422,7 @@ function BrandLink({
           alt="PlayInWeb"
           width={109}
           height={20}
+          // ~1KB files: resized variants wouldn't be any smaller.
           unoptimized
           className="hidden h-5 w-auto dark:block"
         />
@@ -432,6 +431,7 @@ function BrandLink({
           alt="PlayInWeb"
           width={109}
           height={20}
+          // ~1KB files: resized variants wouldn't be any smaller.
           unoptimized
           className="h-5 w-auto dark:hidden"
         />

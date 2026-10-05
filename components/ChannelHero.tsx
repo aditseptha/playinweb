@@ -401,7 +401,7 @@ function BannerImage({ src, position }: { src?: string; position: { x: number; y
         alt=""
         fill
         sizes="100vw"
-        priority
+        preload
         className="object-cover"
         style={{ objectPosition }}
       />

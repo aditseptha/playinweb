@@ -22,7 +22,7 @@ export function hostedPlayPath(slug: string) {
   return `/${slug}/index.html`;
 }
 
-export function playFrameSandbox(_playUrl?: string) {
+export function playFrameSandbox() {
   return "allow-scripts allow-same-origin allow-pointer-lock allow-popups allow-forms";
 }
 

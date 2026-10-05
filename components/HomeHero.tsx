@@ -6,6 +6,7 @@ import { HomeHeroTopStrip, type HomeHeroSlide } from "@/components/HomeHeroTopSt
 import { cn } from "@/lib/cn";
 import { formatPlays } from "@/lib/format";
 import { canOptimizeImage } from "@/lib/optimize-image";
+import { usePrefersReducedMotion } from "@/lib/reduced-motion";
 import type { Game } from "@/lib/types";
 
 const PHRASES = ["Free Online", "Instant", "Indie Web", "Anywhere"];
@@ -21,11 +22,11 @@ function TypedPhrase() {
   const [index, setIndex] = useState(0);
   const [text, setText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const reduceMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const phrase = PHRASES[index];
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setText(phrase);
+    if (reduceMotion) {
       const t = window.setTimeout(() => setIndex((i) => (i + 1) % PHRASES.length), 2800);
       return () => window.clearTimeout(t);
     }
@@ -34,27 +35,30 @@ function TypedPhrase() {
       const t = window.setTimeout(() => setDeleting(true), 1700);
       return () => window.clearTimeout(t);
     }
-    if (deleting && text.length === 0) {
-      setDeleting(false);
-      setIndex((i) => (i + 1) % PHRASES.length);
-      return;
-    }
 
     const t = window.setTimeout(
       () => {
-        setText((prev) => (deleting ? prev.slice(0, -1) : phrase.slice(0, prev.length + 1)));
+        if (!deleting) {
+          setText(phrase.slice(0, text.length + 1));
+          return;
+        }
+        setText(text.slice(0, -1));
+        if (text.length <= 1) {
+          setDeleting(false);
+          setIndex((i) => (i + 1) % PHRASES.length);
+        }
       },
       deleting ? 32 : 68,
     );
     return () => window.clearTimeout(t);
-  }, [deleting, index, text]);
+  }, [deleting, index, reduceMotion, text]);
 
   return (
     <span
       className="inline-flex min-w-[11.5ch] items-baseline whitespace-nowrap text-[oklch(0.86_0.15_85)] [text-shadow:0_1px_2px_oklch(0_0_0_/_0.4),0_8px_20px_oklch(0.7_0.12_85_/_0.35)]"
       aria-hidden
     >
-      {text}
+      {reduceMotion ? PHRASES[index] : text}
       <span className="ml-[0.06em] inline-block h-[0.82em] w-[0.08em] translate-y-[0.08em] bg-current motion-reduce:hidden animate-[pulse_0.9s_steps(1)_infinite]" />
     </span>
   );
@@ -62,17 +66,16 @@ function TypedPhrase() {
 
 function RollingValue({ n }: { n: number }) {
   const text = formatPlays(n);
-  const [on, setOn] = useState(false);
+  const reduceMotion = usePrefersReducedMotion();
+  const [started, setStarted] = useState(false);
+  const on = started || reduceMotion;
 
+  // The parent keys this component by value, so a new `n` remounts it and replays the roll.
   useEffect(() => {
-    setOn(false);
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setOn(true);
-      return;
-    }
-    const id = window.setTimeout(() => setOn(true), 30);
+    if (reduceMotion) return;
+    const id = window.setTimeout(() => setStarted(true), 30);
     return () => window.clearTimeout(id);
-  }, [n]);
+  }, [reduceMotion]);
 
   return (
     <span className="inline-flex h-[1em] items-start overflow-hidden tabular-nums" aria-label={text}>
@@ -181,7 +184,8 @@ function HeroBackground({ slides, activeIndex }: { slides: HomeHeroSlide[]; acti
             src={src}
             alt=""
             fill
-            priority={index === 0}
+            preload={index === 0}
+            // The GlassStat frost paints this same file as a raw CSS background; serving it raw keeps it one download.
             unoptimized={src === HERO_FALLBACK}
             sizes="100vw"
             className={className}
@@ -225,14 +229,12 @@ export function HomeHero({
     [topGames],
   );
 
-  useEffect(() => {
-    setActiveIndex((current) => Math.min(current, slides.length - 1));
-  }, [slides.length]);
+  const index = Math.min(activeIndex, slides.length - 1);
 
   const advance = useCallback(
     (step: number) => {
       if (slides.length <= 1) return;
-      setActiveIndex((current) => (current + step + slides.length) % slides.length);
+      setActiveIndex((current) => (Math.min(current, slides.length - 1) + step + slides.length) % slides.length);
     },
     [slides.length],
   );
@@ -242,9 +244,9 @@ export function HomeHero({
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const id = window.setInterval(() => advance(1), AUTO_MS);
     return () => window.clearInterval(id);
-  }, [activeIndex, advance, paused, slides.length]);
+  }, [index, advance, paused, slides.length]);
 
-  const activeGame = slides[activeIndex]?.game;
+  const activeGame = slides[index]?.game;
 
   return (
     <section
@@ -257,7 +259,7 @@ export function HomeHero({
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPaused(false);
       }}
     >
-      <HeroBackground slides={slides} activeIndex={activeIndex} />
+      <HeroBackground slides={slides} activeIndex={index} />
 
       <div className="relative z-10 grid h-[320px] grid-cols-1 gap-8 overflow-hidden px-5 py-8 sm:h-[380px] sm:px-8 sm:py-10 lg:h-[456px] lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch lg:gap-6 lg:px-12 lg:py-12">
         <div className="flex h-full min-w-0 flex-col justify-between gap-10">
@@ -296,7 +298,7 @@ export function HomeHero({
 
         <HomeHeroTopStrip
           slides={slides}
-          activeIndex={activeIndex}
+          activeIndex={index}
           onSelect={setActiveIndex}
           onKeyNavigate={advance}
         />

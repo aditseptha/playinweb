@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { notFound, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Avatar } from "@/components/Avatar";
 import { ProjectAside } from "@/components/ProjectAside";
 import { ProjectComments } from "@/components/ProjectComments";
@@ -15,7 +15,7 @@ import {
   ProjectHeroTitle,
 } from "@/components/ProjectHero";
 import { IconBookmark, IconShare, IconThumbDown, IconThumbUp } from "@/components/icons";
-import { Button, LinkButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatPlays } from "@/lib/format";
@@ -33,10 +33,11 @@ function DescriptionText({ text }: { text: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
-
-  useEffect(() => {
+  const [prevText, setPrevText] = useState(text);
+  if (text !== prevText) {
+    setPrevText(text);
     setExpanded(false);
-  }, [text]);
+  }
 
   useEffect(() => {
     const el = ref.current;
@@ -90,6 +91,12 @@ function readLocalFollows(): string[] {
 
 function writeLocalFollows(ids: string[]) {
   window.localStorage.setItem(LOCAL_FOLLOWS_KEY, JSON.stringify(ids));
+  window.dispatchEvent(new StorageEvent("storage", { key: LOCAL_FOLLOWS_KEY }));
+}
+
+function subscribeStorage(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
 }
 
 function playReturnUrl() {
@@ -105,6 +112,17 @@ function guestPlayLimitLabel() {
   }
   const seconds = Math.round(GUEST_PLAY_LIMIT_MS / 1000);
   return `${seconds} second${seconds === 1 ? "" : "s"}`;
+}
+
+async function bumpPlayCount(projectId: string, viewBump: Promise<void>) {
+  if (!claimSessionStat("played", projectId)) return false;
+  await viewBump;
+  const { error } = await createClient().rpc("bump_play_count", { pid: projectId });
+  if (error) {
+    releaseSessionStat("played", projectId);
+    return false;
+  }
+  return true;
 }
 
 function guestLoginOptions() {
@@ -129,7 +147,13 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   const views = project.view_count ?? 0;
   const [plays, setPlays] = useState(Math.min(project.play_count, views));
   const [followers, setFollowers] = useState(project.profiles?.follower_count ?? 0);
-  const [following, setFollowing] = useState(false);
+  const [remoteFollowing, setRemoteFollowing] = useState(false);
+  const localFollowing = useSyncExternalStore(
+    subscribeStorage,
+    () => readLocalFollows().includes(project.owner_id),
+    () => false,
+  );
+  const following = persisted && (user ? remoteFollowing : localFollowing);
   const [isPlaying, setIsPlaying] = useState(
     autoPlay && game.embeddable && (Boolean(user) || !guestPlayExpired()),
   );
@@ -137,19 +161,20 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
     autoPlay && game.embeddable && (Boolean(user) || !guestPlayExpired()),
   );
   const layoutWide = isPlaying && playerExpanded;
-  const [guestExpired, setGuestExpired] = useState(false);
+  const guestExpired = useSyncExternalStore(subscribeStorage, guestPlayExpired, () => false);
   const [guestTimedOut, setGuestTimedOut] = useState(false);
+  const [prevUser, setPrevUser] = useState(user);
+  if (user !== prevUser) {
+    setPrevUser(user);
+    if (user) setGuestTimedOut(false);
+  }
   const [disliked, setDisliked] = useState(false);
   const [copied, setCopied] = useState(false);
   const autoPlayed = useRef(false);
   const viewBump = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
-    if (!persisted) return;
-    if (!user) {
-      setFollowing(readLocalFollows().includes(project.owner_id));
-      return;
-    }
+    if (!persisted || !user) return;
     const supabase = createClient();
     supabase
       .from("project_likes")
@@ -164,7 +189,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
       .eq("creator_id", project.owner_id)
       .eq("follower_id", user.id)
       .maybeSingle()
-      .then(({ data }) => setFollowing(!!data));
+      .then(({ data }) => setRemoteFollowing(!!data));
   }, [persisted, user, projectId, project.owner_id]);
 
   useEffect(() => {
@@ -177,15 +202,6 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   }, [persisted, projectId]);
 
   useEffect(() => {
-    if (user) {
-      setGuestExpired(false);
-      setGuestTimedOut(false);
-      return;
-    }
-    setGuestExpired(guestPlayExpired());
-  }, [user]);
-
-  useEffect(() => {
     if (user || !isPlaying) return;
     const id = window.setInterval(() => {
       addGuestPlayMs(1000);
@@ -195,7 +211,7 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
       }
     }, 1000);
     return () => window.clearInterval(id);
-  }, [isPlaying, user]);
+  }, [isPlaying, user, openLogin]);
 
   useEffect(() => {
     if (!autoPlay || loading) return;
@@ -206,10 +222,16 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
     if (autoPlayed.current) return;
     autoPlayed.current = true;
     recordPlay(projectId);
-    if (persisted) void countPersistedPlay();
-    else setPlays((n) => n + 1);
+    if (persisted) {
+      void bumpPlayCount(projectId, viewBump.current).then((counted) => {
+        if (counted) setPlays((n) => n + 1);
+      });
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot ?play=1 autoplay after auth resolves; there is no user event to hang this on
+      setPlays((n) => n + 1);
+    }
     window.history.replaceState(null, "", window.location.pathname);
-  }, [autoPlay, guestExpired, loading, persisted, projectId, recordPlay, user]);
+  }, [autoPlay, guestExpired, loading, openLogin, persisted, projectId, recordPlay, user]);
 
   if (!creator) notFound();
 
@@ -219,23 +241,12 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
   ].filter(Boolean);
   const moreGames = useMemo(() => relatedGames(games, game, games.length), [games, game]);
 
-  async function countPersistedPlay() {
-    if (!claimSessionStat("played", projectId)) return;
-    await viewBump.current;
-    const { error } = await createClient().rpc("bump_play_count", { pid: projectId });
-    if (error) {
-      releaseSessionStat("played", projectId);
-      return;
-    }
-    setPlays((n) => n + 1);
-  }
-
   async function onPlay() {
     if (loading) return;
     if (!user && guestExpired) return;
     recordPlay(game.id);
     if (persisted) {
-      await countPersistedPlay();
+      if (await bumpPlayCount(projectId, viewBump.current)) setPlays((n) => n + 1);
       return;
     }
     setPlays((n) => n + 1);
@@ -278,7 +289,6 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
       const ids = readLocalFollows();
       const next = following ? ids.filter((id) => id !== project.owner_id) : [...ids, project.owner_id];
       writeLocalFollows(next);
-      setFollowing(!following);
       setFollowers((n) => (following ? Math.max(0, n - 1) : n + 1));
       return;
     }
@@ -286,11 +296,11 @@ export function GameDetail({ project }: { project: ProjectRecord }) {
     const supabase = createClient();
     if (following) {
       await supabase.from("profile_follows").delete().eq("creator_id", project.owner_id).eq("follower_id", user.id);
-      setFollowing(false);
+      setRemoteFollowing(false);
       setFollowers((n) => Math.max(0, n - 1));
     } else {
       await supabase.from("profile_follows").insert({ creator_id: project.owner_id, follower_id: user.id });
-      setFollowing(true);
+      setRemoteFollowing(true);
       setFollowers((n) => n + 1);
     }
   }

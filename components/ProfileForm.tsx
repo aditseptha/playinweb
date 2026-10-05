@@ -31,26 +31,27 @@ export function ProfileForm({
   const [pending, setPending] = useState(false);
   const currentHandle = account?.handle ?? initial?.handle ?? "";
   const [handle, setHandle] = useState(currentHandle);
-  const [handleStatus, setHandleStatus] = useState<HandleStatus>("idle");
+  const [checked, setChecked] = useState<{ handle: string; status: "ok" | "taken" } | null>(null);
+  const trimmedHandle = handle.trim().toLowerCase();
+  const needsCheck = Boolean(trimmedHandle) && trimmedHandle !== currentHandle && isHandle(trimmedHandle);
+  const handleStatus: HandleStatus =
+    !trimmedHandle || trimmedHandle === currentHandle
+      ? "idle"
+      : !needsCheck
+        ? "invalid"
+        : checked?.handle === trimmedHandle
+          ? checked.status
+          : "checking";
 
   useEffect(() => {
-    const next = handle.trim().toLowerCase();
-    if (!next || next === currentHandle) {
-      setHandleStatus("idle");
-      return;
-    }
-    if (!isHandle(next)) {
-      setHandleStatus("invalid");
-      return;
-    }
-    setHandleStatus("checking");
+    if (!needsCheck) return;
     const timer = window.setTimeout(() => {
-      void handleOwnerId(next).then((id) => {
-        setHandleStatus(id && id !== user?.id ? "taken" : "ok");
+      void handleOwnerId(trimmedHandle).then((id) => {
+        setChecked({ handle: trimmedHandle, status: id && id !== user?.id ? "taken" : "ok" });
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [handle, currentHandle, user?.id]);
+  }, [needsCheck, trimmedHandle, user?.id]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -72,7 +73,7 @@ export function ProfileForm({
       const owner = await handleOwnerId(nextHandle);
       if (owner && owner !== user?.id) {
         setPending(false);
-        setHandleStatus("taken");
+        setChecked({ handle: nextHandle, status: "taken" });
         setError("That handle is already taken.");
         return;
       }
@@ -87,7 +88,7 @@ export function ProfileForm({
       if (saveError) {
         setPending(false);
         setError(saveError.code === "23505" ? "That handle is already taken." : saveError.message);
-        if (saveError.code === "23505") setHandleStatus("taken");
+        if (saveError.code === "23505") setChecked({ handle: nextHandle, status: "taken" });
         return;
       }
       await refresh();

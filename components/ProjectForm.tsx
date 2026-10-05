@@ -1,18 +1,35 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { IconClose } from "@/components/icons";
+import { useMemo, useState, type FormEvent } from "react";
+import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import { useLoginDialog } from "@/components/LoginDialog";
+import { BuildFields } from "@/components/project-form/BuildFields";
+import { MediaAside } from "@/components/project-form/MediaAside";
+import {
+  asCommunity,
+  asKind,
+  fieldLabel,
+  fieldLegend,
+  imageSizeError,
+  imageTooLarge,
+  isHttpUrl,
+  MAX_FILE,
+  MAX_IMAGE_BYTES,
+  MAX_TAGS,
+  minCoverSize,
+  saveErrorMessage,
+  sectionLabel,
+  SelectField,
+} from "@/components/project-form/shared";
 import { useSignupDialog } from "@/components/SignupDialog";
-import { Button, LinkButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Field, SelectInput, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { cn } from "@/lib/cn";
 import { slugify } from "@/lib/format";
 import { apexHref, apexOrigin, isSlug, projectPublicUrl } from "@/lib/host";
-import { fileExt, MEDIA_BUCKET, publicMediaUrl } from "@/lib/media";
 import {
   contentType,
   filesFromHtmlUpload,
@@ -22,6 +39,7 @@ import {
   htmlStoragePrefix,
   MAX_HTML_BYTES,
 } from "@/lib/html-game";
+import { fileExt, MEDIA_BUCKET } from "@/lib/media";
 import {
   COMMUNITIES,
   GENRES,
@@ -32,84 +50,8 @@ import {
   type Community,
   type ProjectKind,
 } from "@/lib/project-fields";
-import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import { clearCatalogueCache, type ProjectRecord } from "@/lib/projects";
 import { createClient } from "@/lib/supabase/client";
-
-const MAX_FILE = 50 * 1024 * 1024;
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const MAX_TAGS = 10;
-
-type HtmlPreview = {
-  name: string;
-  size: number;
-  files: string[];
-  error: string;
-};
-
-function asKind(value: string | undefined): ProjectKind {
-  if (!value) return "html";
-  if (PROJECT_KINDS.some((item) => item.id === value)) return value as ProjectKind;
-  if (LEGACY_PROJECT_KINDS.includes(value as (typeof LEGACY_PROJECT_KINDS)[number])) return value as ProjectKind;
-  return "html";
-}
-
-function isHttpUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function saveErrorMessage(err: unknown) {
-  const raw =
-    err instanceof Error
-      ? err.message
-      : typeof err === "object" && err && "message" in err && typeof err.message === "string"
-        ? err.message
-        : "";
-  if (!raw) return "Could not save the game.";
-  if (raw.includes("projects_kind_check")) {
-    return "That game type is not enabled in the database yet. Update projects_kind_check in Supabase to allow this kind.";
-  }
-  if (raw.includes("html_build_name")) {
-    return "Missing html_build_name column. Run: alter table public.projects add column if not exists html_build_name text;";
-  }
-  return raw;
-}
-
-function asCommunity(value: string | undefined): Community {
-  return COMMUNITIES.some((item) => item.id === value) ? (value as Community) : "comments";
-}
-
-function fieldLabel(title: string, hint: string) {
-  return (
-    <>
-      {title}{" "}
-      <span className="font-normal text-text-subtle">({hint})</span>
-    </>
-  );
-}
-
-function sectionLabel(title: string, hint: string) {
-  return (
-    <p className="text-caption font-medium text-text-muted">
-      {title}{" "}
-      <span className="font-normal text-text-subtle">({hint})</span>
-    </p>
-  );
-}
-
-function fieldLegend(title: string, hint: string) {
-  return (
-    <legend className="text-caption font-medium text-text-muted">
-      {title}{" "}
-      <span className="font-normal text-text-subtle">({hint})</span>
-    </legend>
-  );
-}
 
 export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const editing = Boolean(project);
@@ -138,18 +80,12 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const [keptShots, setKeptShots] = useState(
     [...(project?.project_screenshots ?? [])].sort((a, b) => a.sort_order - b.sort_order),
   );
-  const [uploads, setUploads] = useState<File[]>([]);
   const [htmlBuild, setHtmlBuild] = useState<File | null>(null);
-  const [htmlPreview, setHtmlPreview] = useState<HtmlPreview | null>(null);
   const [flashBuild, setFlashBuild] = useState<File | null>(null);
-  const [storedBuildName, setStoredBuildName] = useState(project?.html_build_name ?? "");
   const [playLink, setPlayLink] = useState(
     project?.kind === "external" && project.play_url.startsWith("http") ? project.play_url : "",
   );
   const [visibility, setVisibility] = useState<"public" | "private">(project?.published === false ? "private" : "public");
-  const [externalName, setExternalName] = useState("");
-  const [externalUrl, setExternalUrl] = useState("");
-  const [showExternal, setShowExternal] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -157,76 +93,6 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
     if (!profile || !slug) return "";
     return projectPublicUrl(profile.handle, slug);
   }, [profile, slug]);
-
-  const coverPreview = useMemo(() => (cover ? URL.createObjectURL(cover) : ""), [cover]);
-  const shotPreviews = useMemo(() => shots.map((file) => ({ name: file.name, url: URL.createObjectURL(file) })), [shots]);
-  const coverSrc = coverPreview || publicMediaUrl(project?.cover_path);
-
-  useEffect(() => () => {
-    if (coverPreview) URL.revokeObjectURL(coverPreview);
-  }, [coverPreview]);
-
-  useEffect(() => () => {
-    for (const shot of shotPreviews) URL.revokeObjectURL(shot.url);
-  }, [shotPreviews]);
-
-  useEffect(() => {
-    if (!htmlBuild) {
-      setHtmlPreview(null);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const packed = await filesFromHtmlUpload(htmlBuild.name, await htmlBuild.arrayBuffer());
-        if (cancelled) return;
-        setHtmlPreview({
-          name: htmlBuild.name,
-          size: htmlBuild.size,
-          files: packed.map((file) => file.path),
-          error: "",
-        });
-      } catch (err) {
-        if (!cancelled) {
-          setHtmlPreview({
-            name: htmlBuild.name,
-            size: htmlBuild.size,
-            files: [],
-            error: err instanceof Error ? err.message : "Could not read this file.",
-          });
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [htmlBuild]);
-
-  useEffect(() => {
-    if (!editing || !project || (project.kind !== "html" && project.kind !== "flash")) return;
-    if (project.html_build_name) {
-      setStoredBuildName(project.html_build_name);
-      return;
-    }
-    let cancelled = false;
-    const supabase = createClient();
-    const prefix =
-      project.kind === "flash"
-        ? flashStoragePrefix(project.owner_id, project.id)
-        : htmlStoragePrefix(project.owner_id, project.id);
-    const sourcePath = htmlBuildSourcePath(prefix);
-    void supabase.storage
-      .from(MEDIA_BUCKET)
-      .download(sourcePath)
-      .then(async ({ data, error }) => {
-        if (cancelled || error || !data) return;
-        const name = (await data.text()).trim();
-        if (name) setStoredBuildName(name);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [editing, project]);
 
   const kindOptions = useMemo(() => {
     const options: { id: string; label: string }[] = [...PROJECT_KINDS];
@@ -352,20 +218,6 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
 
       const shotPaths: string[] = [];
       for (const file of shots) shotPaths.push(await upload("screenshots", file));
-
-      const fileRows: { file_name: string; storage_path: string | null; external_url: string | null; size_bytes: number | null }[] = [];
-      for (const file of uploads) {
-        const path = await upload("files", file);
-        fileRows.push({ file_name: file.name, storage_path: path, external_url: null, size_bytes: file.size });
-      }
-      if (externalUrl.trim()) {
-        fileRows.push({
-          file_name: externalName.trim() || "External file",
-          storage_path: null,
-          external_url: externalUrl.trim(),
-          size_bytes: null,
-        });
-      }
 
       const fields = {
         title: nextTitle,
@@ -500,12 +352,6 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         );
         if (shotError) throw shotError;
       }
-      if (fileRows.length) {
-        const { error: fileError } = await supabase.from("project_files").insert(
-          fileRows.map((row) => ({ ...row, project_id: projectId })),
-        );
-        if (fileError) throw fileError;
-      }
       const links = STORES.map((s) => ({ store: s.id, url: storeUrls[s.id]?.trim() ?? "" })).filter((l) => l.url);
       if (links.length) {
         const { error: linkError } = await supabase.from("project_store_links").insert(
@@ -586,92 +432,18 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           </SelectInput>
         </Field>
 
-        {kind === "html" ? (
-          <Field
-            label="HTML5 game"
-            hint={
-              editing
-                ? "Leave empty to keep the current build. Upload a new .zip to replace it. Max 100 MB."
-                : "A .zip with index.html, like itch.io. Max 100 MB. Players run it here — the original host is never shown."
-            }
-          >
-            <input
-              type="file"
-              accept=".zip,.html,.htm,application/zip"
-              className="block w-full text-ui text-text-muted file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:text-body file:text-text"
-              onChange={(e) => {
-                const file = e.target.files?.[0] ?? null;
-                if (file && file.size > MAX_HTML_BYTES) {
-                  e.target.value = "";
-                  setHtmlBuild(null);
-                  setHtmlPreview({
-                    name: file.name,
-                    size: file.size,
-                    files: [],
-                    error: "HTML5 game must be 100 MB or smaller.",
-                  });
-                  return;
-                }
-                setHtmlBuild(file);
-              }}
-            />
-            {htmlPreview ? (
-              <HtmlBuildPreview preview={htmlPreview} />
-            ) : htmlBuild ? (
-              <p className="text-meta text-text-subtle">Selected file: {htmlBuild.name}</p>
-            ) : storedBuildName ? (
-              <p className="text-meta text-text-subtle">Current file: {storedBuildName}</p>
-            ) : editing && project?.play_url ? (
-              <p className="text-meta text-text-subtle">
-                Current file: Name not saved — re-upload your .zip to show the file name here.
-              </p>
-            ) : null}
-          </Field>
-        ) : null}
-
-        {kind === "flash" ? (
-          <Field
-            label={fieldLabel("Flash game", "Upload a .swf file. Max 50 MB.")}
-          >
-            <input
-              type="file"
-              accept=".swf,application/x-shockwave-flash"
-              className="block w-full text-ui text-text-muted file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:text-body file:text-text"
-              onChange={(e) => {
-                const file = e.target.files?.[0] ?? null;
-                if (file && file.size > MAX_FILE) {
-                  e.target.value = "";
-                  setFlashBuild(null);
-                  setError("Flash game must be 50 MB or smaller.");
-                  return;
-                }
-                setFlashBuild(file);
-                setError("");
-              }}
-            />
-            {flashBuild ? (
-              <p className="text-meta text-text-subtle">Selected file: {flashBuild.name}</p>
-            ) : storedBuildName ? (
-              <p className="text-meta text-text-subtle">Current file: {storedBuildName}</p>
-            ) : editing && project?.play_url ? (
-              <p className="text-meta text-text-subtle">
-                Current file: Name not saved — re-upload your .swf to show the file name here.
-              </p>
-            ) : null}
-          </Field>
-        ) : null}
-
-        {kind === "external" ? (
-          <Field label={fieldLabel("Play URL", "Link to itch.io, Steam, your site, or anywhere players can play.")}>
-            <TextInput
-              type="url"
-              value={playLink}
-              onChange={(e) => setPlayLink(e.target.value)}
-              placeholder="https://…"
-              required
-            />
-          </Field>
-        ) : null}
+        <BuildFields
+          kind={kind}
+          editing={editing}
+          project={project}
+          htmlBuild={htmlBuild}
+          setHtmlBuild={setHtmlBuild}
+          flashBuild={flashBuild}
+          setFlashBuild={setFlashBuild}
+          playLink={playLink}
+          setPlayLink={setPlayLink}
+          setError={setError}
+        />
 
         {donationsOpen ? (
           <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-surface-2 px-4 py-3">
@@ -824,198 +596,16 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         ) : null}
       </div>
 
-      <aside className="flex flex-col gap-6 lg:sticky lg:top-20 lg:self-start">
-        <div>
-          <p className="text-caption font-medium text-text-muted">Cover image</p>
-          <label className="relative mt-2 grid aspect-video cursor-pointer place-items-center overflow-hidden rounded-panel bg-bg-inset text-center text-ui text-text-muted">
-            {coverSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={coverSrc} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            ) : null}
-            <span
-              className={cn(
-                "relative z-10 rounded-md px-2 py-1",
-                coverSrc ? "bg-black/60 text-white" : "",
-              )}
-            >
-              {cover ? "Replace cover image" : project?.cover_path ? "Replace cover image" : "Upload cover image"}
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                if (!file) return;
-                if (imageTooLarge(file)) {
-                  setError(imageSizeError("Cover image"));
-                  return;
-                }
-                setError("");
-                setCover(file);
-              }}
-            />
-          </label>
-          <p className="mt-2 text-meta text-text-subtle">
-            Required for best results. 16:9, minimum 320×180, recommended 1280×720. Max {formatSize(MAX_IMAGE_BYTES)}.
-          </p>
-        </div>
-        <Field label="Gameplay video or trailer" hint="YouTube or Vimeo">
-          <TextInput name="trailerUrl" placeholder="https://www.youtube.com/watch?v=…" defaultValue={project?.trailer_url ?? ""} />
-        </Field>
-        <div>
-          <p className="text-caption font-medium text-text-muted">Screenshots</p>
-          <label className="mt-2 inline-flex h-10 cursor-pointer items-center rounded-lg bg-surface-2 px-3.5 text-body sm:h-9">
-            Add screenshots
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="sr-only"
-              onChange={(e) => {
-                const picked = [...(e.target.files ?? [])];
-                e.target.value = "";
-                if (!picked.length) return;
-                const accepted = picked.filter((file) => !imageTooLarge(file));
-                if (accepted.length < picked.length) {
-                  setError(imageSizeError("Each screenshot"));
-                } else {
-                  setError("");
-                }
-                if (accepted.length) setShots((cur) => [...cur, ...accepted]);
-              }}
-            />
-          </label>
-          <p className="mt-2 text-meta text-text-subtle">
-            Upload 3 to 5 for best results. Max {formatSize(MAX_IMAGE_BYTES)} each.
-          </p>
-          {keptShots.length || shotPreviews.length ? (
-            <ul className="mt-3 grid grid-cols-2 gap-2">
-              {keptShots.map((shot) => (
-                <li key={shot.storage_path} className="relative aspect-video overflow-hidden rounded-lg bg-surface-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={publicMediaUrl(shot.storage_path)} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                  <RemoveShotButton
-                    label="Remove screenshot"
-                    onClick={() => setKeptShots((cur) => cur.filter((item) => item.storage_path !== shot.storage_path))}
-                  />
-                </li>
-              ))}
-              {shotPreviews.map((shot, i) => (
-                <li key={shot.url} className="relative aspect-video overflow-hidden rounded-lg bg-surface-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={shot.url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                  <RemoveShotButton
-                    label="Remove screenshot"
-                    onClick={() => setShots((cur) => cur.filter((_, index) => index !== i))}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {shotPreviews.length && keptShots.length ? (
-            <p className="mt-2 text-meta text-text-subtle">
-              {keptShots.length} uploaded, {shotPreviews.length} new ready to save
-            </p>
-          ) : shotPreviews.length ? (
-            <p className="mt-2 text-meta text-text-subtle">{shotPreviews.length} new screenshot{shotPreviews.length === 1 ? "" : "s"} ready to save</p>
-          ) : keptShots.length ? (
-            <p className="mt-2 text-meta text-text-subtle">{keptShots.length} already uploaded</p>
-          ) : null}
-        </div>
-      </aside>
+      <MediaAside
+        project={project}
+        cover={cover}
+        setCover={setCover}
+        shots={shots}
+        setShots={setShots}
+        keptShots={keptShots}
+        setKeptShots={setKeptShots}
+        setError={setError}
+      />
     </form>
   );
-}
-
-function RemoveShotButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="absolute right-1.5 top-1.5 z-10 grid size-7 place-items-center rounded-full bg-black/70 text-white hover:bg-black"
-    >
-      <IconClose className="h-3.5 w-3.5" />
-    </button>
-  );
-}
-
-function HtmlBuildPreview({ preview }: { preview: HtmlPreview }) {
-  return (
-    <div className="mt-3 overflow-hidden rounded-lg bg-bg-inset">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 px-3 py-2">
-        <p className="min-w-0 truncate text-ui font-medium">{preview.name}</p>
-        <p className="text-meta text-text-subtle">{formatSize(preview.size)}</p>
-      </div>
-      {preview.error ? (
-        <p className="px-3 pb-3 text-ui text-danger">{preview.error}</p>
-      ) : (
-        <>
-          <p className="px-3 text-meta text-text-subtle">
-            {preview.files.length} file{preview.files.length === 1 ? "" : "s"}
-          </p>
-          <ul className="max-h-32 overflow-y-auto px-3 pb-3 text-meta text-text-subtle">
-            {preview.files.slice(0, 20).map((path) => (
-              <li key={path} className="truncate">
-                {path}
-              </li>
-            ))}
-            {preview.files.length > 20 ? <li>+{preview.files.length - 20} more</li> : null}
-          </ul>
-        </>
-      )}
-    </div>
-  );
-}
-
-function formatSize(n: number) {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function imageTooLarge(file: File) {
-  return file.size > MAX_IMAGE_BYTES;
-}
-
-function imageSizeError(label: string) {
-  return `${label} must be ${formatSize(MAX_IMAGE_BYTES)} or smaller.`;
-}
-
-function SelectField({
-  label,
-  name,
-  defaultValue,
-  children,
-}: {
-  label: React.ReactNode;
-  name: string;
-  defaultValue?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Field label={label}>
-      <SelectInput name={name} defaultValue={defaultValue}>
-        {children}
-      </SelectInput>
-    </Field>
-  );
-}
-
-function minCoverSize(file: File, minW: number, minH: number) {
-  return new Promise<boolean>((resolve) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img.width >= minW && img.height >= minH);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(false);
-    };
-    img.src = url;
-  });
 }

@@ -13,18 +13,18 @@ export function Notices() {
   const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notice[] | null>(null);
-  const [seen, setSeen] = useState("");
+  // Lazy read is hydration-safe: nothing renders until auth finishes loading on the client.
+  const [seen, setSeen] = useState(noticesSeenAt);
   const root = useRef<HTMLDivElement>(null);
+  const [prevUser, setPrevUser] = useState(user);
+
+  if (user !== prevUser) {
+    setPrevUser(user);
+    if (!user) setItems(null);
+  }
 
   useEffect(() => {
-    setSeen(noticesSeenAt());
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
-      setItems(null);
-      return;
-    }
+    if (!user) return;
     let cancelled = false;
     loadNotices(user.id, isAdminEmail(user.email))
       .then((rows) => {

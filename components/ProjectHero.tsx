@@ -78,15 +78,38 @@ export function ProjectHeroRoot({
   onLike: () => void;
   children: ReactNode;
 }) {
-  const trailer = parseTrailer(trailerUrl);
-  const shots = unique([game.thumbnailUrl, ...game.screenshots].filter(Boolean));
-  const slides: Slide[] = [
-    ...(trailer ? [{ id: "trailer", kind: "trailer" as const, src: trailer.thumbUrl }] : []),
-    ...shots.map((src) => ({ id: src, kind: "image" as const, src })),
-  ];
+  const trailer = useMemo(() => parseTrailer(trailerUrl), [trailerUrl]);
+  const slides = useMemo<Slide[]>(
+    () => [
+      ...(trailer ? [{ id: "trailer", kind: "trailer" as const, src: trailer.thumbUrl }] : []),
+      ...unique([game.thumbnailUrl, ...game.screenshots].filter(Boolean)).map((src) => ({
+        id: src,
+        kind: "image" as const,
+        src,
+      })),
+    ],
+    [trailer, game.thumbnailUrl, game.screenshots],
+  );
   const [slide, setSlide] = useState(slides.find((s) => s.kind === "image")?.id ?? slides[0]?.id ?? "");
-  const [playing, setPlaying] = useState(autoPlay && game.embeddable);
-  const [expanded, setExpanded] = useState(false);
+  const autoStart = autoPlay && game.embeddable && allowPlay;
+  const [playing, setPlaying] = useState(!playLocked && autoPlay && game.embeddable);
+  const [expanded, setExpanded] = useState(!playLocked && autoStart);
+  const [prevAutoStart, setPrevAutoStart] = useState(autoStart);
+  const [prevPlayLocked, setPrevPlayLocked] = useState(playLocked);
+  if (autoStart !== prevAutoStart) {
+    setPrevAutoStart(autoStart);
+    if (autoStart) {
+      setPlaying(true);
+      setExpanded(true);
+    }
+  }
+  if (playLocked !== prevPlayLocked) {
+    setPrevPlayLocked(playLocked);
+    if (playLocked) {
+      setPlaying(false);
+      setExpanded(false);
+    }
+  }
   const current = slides.find((s) => s.id === slide) ?? slides[0];
   const canPlay = Boolean(game.playUrl);
   const listingUrl =
@@ -97,20 +120,8 @@ export function ProjectHeroRoot({
   }, [expanded, onExpandedChange]);
 
   useEffect(() => {
-    if (!autoPlay || !game.embeddable || !allowPlay) return;
-    setPlaying(true);
-    setExpanded(true);
-  }, [allowPlay, autoPlay, game.embeddable]);
-
-  useEffect(() => {
     onPlayingChange?.(playing);
   }, [onPlayingChange, playing]);
-
-  useEffect(() => {
-    if (!playLocked) return;
-    setPlaying(false);
-    setExpanded(false);
-  }, [playLocked]);
 
   const value = useMemo<HeroCtx>(
     () => ({
@@ -138,7 +149,10 @@ export function ProjectHeroRoot({
           const here = `${window.location.origin}${window.location.pathname}`.replace(/\/$/, "");
           const canonical = listingUrl.replace(/\/$/, "");
           if (canonical && here !== canonical) {
-            window.location.assign(`${listingUrl}?play=1`);
+            // Hard navigation: the canonical listing lives on the apex origin, which may differ from this host.
+            const url = new URL(listingUrl);
+            url.searchParams.set("play", "1");
+            window.location.assign(url.href);
             return;
           }
           setPlaying(true);
@@ -367,6 +381,7 @@ export function ProjectHeroThumbs() {
           aria-label={item.kind === "trailer" ? "Trailer" : "Screenshot"}
         >
           {item.kind === "trailer" && item.src ? (
+            // YouTube thumbnail host isn't in images.remotePatterns, so it stays a plain <img>.
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
           ) : item.kind === "image" ? (

@@ -293,7 +293,8 @@ export async function fetchProjectsForOwner(ownerId: string) {
   return ((data ?? []) as unknown as (ProjectRecord & { project_comments?: { count: number }[] })[]).map(
     (row) => {
       const count = row.project_comments?.[0]?.count ?? 0;
-      const { project_comments: _comments, ...rest } = row;
+      const rest = { ...row };
+      delete rest.project_comments;
       return { ...rest, comment_count: count };
     },
   );

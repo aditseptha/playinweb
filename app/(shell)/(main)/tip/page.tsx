@@ -31,17 +31,22 @@ function TipView() {
   const [amount, setAmount] = useState("5.00");
   const [custom, setCustom] = useState(false);
   const [notice, setNotice] = useState("");
-  const [pending, setPending] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const selected = Number(amount);
   const parts = amountParts(amount);
   const stamp = new Date().toLocaleString("en", { month: "long", year: "numeric" });
   const supporter = profile?.display_name || (profile?.handle ? `@${profile.handle}` : "Supporter");
   const polarCheckout = searchParams.get("polar_checkout") ?? searchParams.get("checkout_id");
+  // The checkout confirm (and the user it ran for) that has finished; anything else is still in flight.
+  const [confirmed, setConfirmed] = useState<{ checkout: string; user: typeof user } | null>(null);
+  const confirming =
+    Boolean(polarCheckout && !loading && user) &&
+    !(confirmed?.checkout === polarCheckout && confirmed.user === user);
+  const pending = submitting || confirming;
 
   useEffect(() => {
     if (!polarCheckout || loading || !user) return;
     let cancelled = false;
-    setPending(true);
     fetch("/api/polar/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -69,7 +74,7 @@ function TipView() {
         if (!cancelled) setNotice("Could not confirm this payment.");
       })
       .finally(() => {
-        if (!cancelled) setPending(false);
+        if (!cancelled) setConfirmed({ checkout: polarCheckout, user });
       });
     return () => {
       cancelled = true;
@@ -88,7 +93,7 @@ function TipView() {
       openLogin();
       return;
     }
-    setPending(true);
+    setSubmitting(true);
     setNotice("");
     const here = window.location.href;
     const res = await fetch("/api/polar/checkout", {
@@ -103,7 +108,7 @@ function TipView() {
     });
     const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
     if (!res.ok || !data?.url) {
-      setPending(false);
+      setSubmitting(false);
       setNotice(data?.error || "Could not start Polar checkout.");
       return;
     }

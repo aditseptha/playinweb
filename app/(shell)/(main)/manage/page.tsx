@@ -21,23 +21,19 @@ export default function ManageGamesPage() {
   const { user, profile, loading } = useAuth();
   const { openLogin } = useLoginDialog();
   const { openSignup } = useSignupDialog();
-  const [projects, setProjects] = useState<ProjectRecord[] | null>(null);
-  const [days, setDays] = useState<StatDay[]>([]);
+  const [loaded, setLoaded] = useState<{ uid: string; projects: ProjectRecord[]; days: StatDay[] } | null>(null);
+  // Data fetched for a different (or no) user counts as not loaded yet.
+  const current = user && loaded?.uid === user.id ? loaded : null;
+  const projects = current?.projects ?? null;
+  const days = current?.days ?? [];
 
   useEffect(() => {
-    if (!user) {
-      setProjects(user === null && !loading ? [] : null);
-      setDays([]);
-      return;
-    }
+    if (!user) return;
     const uid = user.id;
     let cancelled = false;
     async function load() {
       const [rows, stats] = await Promise.all([fetchProjectsForOwner(uid), fetchOwnerStatDays(sinceDay(56))]);
-      if (!cancelled) {
-        setProjects(rows);
-        setDays(stats);
-      }
+      if (!cancelled) setLoaded({ uid, projects: rows, days: stats });
     }
     void load();
     function onShow() {
@@ -50,7 +46,7 @@ export default function ManageGamesPage() {
       window.removeEventListener("pageshow", onShow);
       document.removeEventListener("visibilitychange", onShow);
     };
-  }, [loading, user]);
+  }, [user]);
 
   if (loading) return <p className="text-ui text-text-muted">Loading account…</p>;
 

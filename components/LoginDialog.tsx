@@ -78,11 +78,12 @@ export function LoginDialog({
   const { openSignup, closeSignup } = useSignupDialog();
   const { closeLogin } = useLoginDialog();
   const [formMode, setFormMode] = useState<"sign-in" | "forgot">("sign-in");
-  const dialogTitle = formMode === "forgot" ? "Reset password" : title;
-
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (!open) setFormMode("sign-in");
-  }, [open]);
+  }
+  const dialogTitle = formMode === "forgot" ? "Reset password" : title;
 
   return (
     <AuthModalShell

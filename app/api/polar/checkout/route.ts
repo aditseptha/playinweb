@@ -1,9 +1,11 @@
 import {
-  CHECKOUT_MAX_AMOUNT,
+  clampCommission,
   clientIp,
+  parseCheckoutInput,
   polarConfigured,
   polarProductId,
   polarRequest,
+  withCheckoutPlaceholder,
   type PolarCheckout,
   type PolarCheckoutKind,
 } from "@/lib/polar";
@@ -23,30 +25,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "Sign in first." }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => null)) as {
-    kind?: unknown;
-    projectId?: unknown;
-    amount?: unknown;
-    range?: unknown;
-    successUrl?: unknown;
-    returnUrl?: unknown;
-  } | null;
-
-  const kind = parseKind(body?.kind);
-  const projectId = typeof body?.projectId === "string" ? body.projectId : "";
-  const range = parseRange(body?.range);
-  const amount = Number(body?.amount);
-  const successUrl = typeof body?.successUrl === "string" ? body.successUrl : "";
-  const returnUrl = typeof body?.returnUrl === "string" ? body.returnUrl : successUrl;
-  if (!Number.isFinite(amount) || amount < 1) {
-    return Response.json({ error: "Minimum is $1.00." }, { status: 400 });
+  const input = parseCheckoutInput(await request.json().catch(() => null));
+  if ("error" in input) {
+    return Response.json({ error: input.error }, { status: 400 });
   }
-  if (amount > CHECKOUT_MAX_AMOUNT) {
-    return Response.json({ error: `Maximum is $${CHECKOUT_MAX_AMOUNT.toFixed(2)}.` }, { status: 400 });
-  }
-  if (!safeAppUrl(successUrl) || !safeAppUrl(returnUrl)) {
-    return Response.json({ error: "Invalid return URL." }, { status: 400 });
-  }
+  const { kind, projectId, range, amount, successUrl, returnUrl } = input;
 
   const productId = polarProductId(kind);
   if (!productId) {
@@ -164,17 +147,6 @@ export async function POST(request: Request) {
   }
 }
 
-function parseKind(value: unknown): PolarCheckoutKind {
-  if (value === "tip") return "tip";
-  if (value === "showcase") return "showcase";
-  return "donation";
-}
-
-function parseRange(value: unknown): ShowcaseRange {
-  if (value === "today" || value === "week") return value;
-  return "all";
-}
-
 function polarProductError(kind: PolarCheckoutKind) {
   if (kind === "tip") return "Polar tip product is not configured.";
   if (kind === "showcase") return "Polar showcase product is not configured.";
@@ -193,26 +165,4 @@ async function minShowcaseBid(
   const { data } = await query;
   const top = (data ?? []).reduce((max, row) => Math.max(max, Number(row.amount) || 0), 0);
   return minShowcaseClaimAmount(top);
-}
-
-function clampCommission(value: number) {
-  if (!Number.isFinite(value)) return 10;
-  return Math.min(100, Math.max(0, value));
-}
-
-function safeAppUrl(raw: string) {
-  try {
-    const url = new URL(raw);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function withCheckoutPlaceholder(raw: string) {
-  const url = new URL(raw);
-  url.searchParams.delete("polar_checkout");
-  url.searchParams.delete("checkout_id");
-  const joiner = url.search ? "&" : "?";
-  return `${url.origin}${url.pathname}${url.search}${joiner}checkout_id={CHECKOUT_ID}${url.hash}`;
 }

@@ -14,11 +14,12 @@ export function continueAfterAuth(session: Session | null, rawNext: string | nul
   }
   const handoff = new URL("/auth/handoff", dest.origin);
   handoff.searchParams.set("next", `${dest.pathname}${dest.search}`);
-  const payload = encodeURIComponent(
+  // Hard navigation to another origin; tokens ride in the hash so they never hit server logs.
+  handoff.hash = encodeURIComponent(
     JSON.stringify({
       access_token: session.access_token,
       refresh_token: session.refresh_token,
     }),
   );
-  window.location.assign(`${handoff.href}#${payload}`);
+  window.location.assign(handoff.href);
 }

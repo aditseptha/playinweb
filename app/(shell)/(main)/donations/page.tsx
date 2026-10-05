@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { GameThumb } from "@/components/GameThumb";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { useSignupDialog } from "@/components/SignupDialog";
-import { Button, LinkButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Field, TextInput } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { FeatureGate } from "@/components/FeatureGate";
@@ -26,7 +26,7 @@ import {
 } from "@/lib/site-settings";
 import { isPaypalEmail, maskEmail } from "@/lib/paypal-email";
 import { formatJoined, formatMoney, gamePath } from "@/lib/format";
-import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
+import { projectPublicUrl, siteOrigin } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
 import { isDummyDonation, isDummyPayout } from "@/lib/dummy-seed";
 import { createClient } from "@/lib/supabase/client";
@@ -82,9 +82,15 @@ function DonationsView() {
   const { openLogin } = useLoginDialog();
   const { openSignup } = useSignupDialog();
   const tab = useSearchParams().get("tab") === "cashout" ? "cashout" : "donations";
-  const [give, setGive] = useState<DonationRow[] | null>(null);
-  const [earn, setEarn] = useState<DonationRow[] | null>(null);
-  const [payouts, setPayouts] = useState<Payout[] | null>(null);
+  const [loadedGive, setGive] = useState<DonationRow[] | null>(null);
+  const [loadedEarn, setEarn] = useState<DonationRow[] | null>(null);
+  const [loadedPayouts, setPayouts] = useState<Payout[] | null>(null);
+  // Which user the rows above belong to; rows for anyone else count as not loaded yet.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const fresh = Boolean(user) && loadedFor === user?.id;
+  const give = fresh ? loadedGive : null;
+  const earn = fresh ? loadedEarn : null;
+  const payouts = fresh ? loadedPayouts : null;
   const [walletSettings, setWalletSettings] = useState(DEFAULT_WALLET_SETTINGS);
   const [error, setError] = useState("");
   const { commission, frequency: payoutFrequency, weekday: payoutWeekday, hourUtc: payoutHourUtc, cashoutMin } =
@@ -107,13 +113,8 @@ function DonationsView() {
   }, [loading]);
 
   useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      setGive([]);
-      setEarn([]);
-      setPayouts([]);
-      return;
-    }
+    if (loading || !user) return;
+    const uid = user.id;
     let cancelled = false;
     const supabase = createClient();
     Promise.all([
@@ -123,6 +124,7 @@ function DonationsView() {
     ]).then(async ([givenRes, ownedRes, payoutRes]) => {
       if (cancelled) return;
       if (givenRes.error || ownedRes.error || payoutRes.error) {
+        setLoadedFor(uid);
         setError("Could not load donations.");
         setGive([]);
         setEarn([]);
@@ -135,6 +137,7 @@ function DonationsView() {
           ? { data: [], error: null }
           : await supabase.from("donations").select(SELECT).in("project_id", ids).order("created_at", { ascending: false });
       if (cancelled) return;
+      setLoadedFor(uid);
       if (received.error) {
         setError("Could not load donations.");
         setGive(groupDonations(givenRes.data, "give"));
@@ -426,9 +429,11 @@ function PaypalConnect({
     [onPaypal],
   );
 
-  useEffect(() => {
+  const [prevPaypal, setPrevPaypal] = useState(paypal);
+  if (prevPaypal !== paypal) {
+    setPrevPaypal(paypal);
     setDraft(paypal ?? "");
-  }, [paypal]);
+  }
 
   useEffect(() => {
     if (!fromEmail || emailSaveTried.current) return;

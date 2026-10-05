@@ -18,7 +18,10 @@ export function GamePlayer({
 
   function startEmbed() {
     if (game.channelHandle && game.projectSlug) {
-      window.location.assign(`${projectPublicUrl(game.channelHandle, game.projectSlug)}?play=1`);
+      // Hard navigation: the project page lives on the apex origin, which may differ from this host.
+      const url = new URL(projectPublicUrl(game.channelHandle, game.projectSlug));
+      url.searchParams.set("play", "1");
+      window.location.assign(url.href);
       return;
     }
     setStarted(true);

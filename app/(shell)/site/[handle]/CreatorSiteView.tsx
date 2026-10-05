@@ -23,10 +23,11 @@ export function CreatorSiteView({
   const { user, profile: me, refresh } = useAuth();
   const { profile: local } = useGames();
   const [profile, setProfile] = useState(initialProfile);
-
-  useEffect(() => {
+  const [prevInitial, setPrevInitial] = useState(initialProfile);
+  if (prevInitial !== initialProfile) {
+    setPrevInitial(initialProfile);
     setProfile(initialProfile);
-  }, [initialProfile]);
+  }
 
   useEffect(() => {
     if (!user || me?.handle !== profile.handle) return;

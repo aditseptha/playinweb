@@ -27,18 +27,17 @@ export default function ProfilePage() {
   const editing = params.get("edit") === "1";
   const setupHandle = params.get("setup") === "handle";
   const channelHandle = me?.handle ?? profile?.handle ?? "";
-  const [ownerGames, setOwnerGames] = useState<Game[] | null>(null);
+  const [loaded, setLoaded] = useState<{ uid: string; games: Game[] } | null>(null);
+  // Games fetched for a different (or no) user count as not loaded yet.
+  const ownerGames = user && loaded?.uid === user.id ? loaded.games : null;
 
   useEffect(() => {
-    if (!user) {
-      setOwnerGames(null);
-      return;
-    }
+    if (!user) return;
     const uid = user.id;
     let cancelled = false;
     async function load() {
       const rows = await fetchProjectsForOwner(uid);
-      if (!cancelled) setOwnerGames(rows.map(projectToGame));
+      if (!cancelled) setLoaded({ uid, games: rows.map(projectToGame) });
     }
     void load();
     function onShow() {

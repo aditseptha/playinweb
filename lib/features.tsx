@@ -79,20 +79,27 @@ function mergeRows(rows: Partial<SiteFeature>[] | null) {
   });
 }
 
+async function loadFeatures() {
+  const supabase = createClient();
+  const { data } = await supabase.from("site_features").select("id, label, href, description, hidden, soon");
+  return mergeRows((data ?? []) as SiteFeature[]);
+}
+
 export function FeaturesProvider({ children }: { children: ReactNode }) {
   const [features, setFeatures] = useState(FEATURE_CATALOG);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const supabase = createClient();
-    const { data } = await supabase.from("site_features").select("id, label, href, description, hidden, soon");
-    setFeatures(mergeRows((data ?? []) as SiteFeature[]));
+    setFeatures(await loadFeatures());
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void loadFeatures().then((rows) => {
+      setFeatures(rows);
+      setLoading(false);
+    });
+  }, []);
 
   const setFlags = useCallback(async (id: string, flags: { hidden?: boolean; soon?: boolean }) => {
     const current = features.find((item) => item.id === id);

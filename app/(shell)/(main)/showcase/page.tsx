@@ -36,6 +36,17 @@ function bidOf(game: Game, bids: Record<string, ShowcaseBid>) {
   return bids[game.id]?.amount ?? game.promotionBoost ?? 0;
 }
 
+type BidRow = { project_id: string; amount: number; created_at: string };
+
+async function fetchBidRows(): Promise<BidRow[] | null> {
+  const { data, error } = await createClient()
+    .from("showcase_bids")
+    .select("project_id, amount, created_at")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  return error ? null : (data ?? []);
+}
+
 function resolveGame(input: string, games: Game[]): Game | null {
   const raw = input.trim();
   if (!raw) return null;
@@ -77,29 +88,36 @@ export default function ShowcasePage() {
   const { games } = useGames();
   const { user, loading } = useAuth();
   const { openLogin } = useLoginDialog();
-  const [bidRows, setBidRows] = useState<{ project_id: string; amount: number; created_at: string }[]>([]);
-  const [filter, setFilter] = useState("");
+  const [bidRows, setBidRows] = useState<BidRow[]>([]);
+  const [pickedFilter, setFilter] = useState("");
   const [range, setRange] = useState<ShowcaseRange>("all");
   const [url, setUrl] = useState("");
   const [amount, setAmount] = useState(1);
   const [notice, setNotice] = useState("");
-  const [pending, setPending] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const polarCheckout = searchParams.get("polar_checkout") ?? searchParams.get("checkout_id");
+  // The checkout confirm (and the user it ran for) that has finished; anything else is still in flight.
+  const [confirmed, setConfirmed] = useState<{ checkout: string; user: typeof user } | null>(null);
+  const confirming =
+    Boolean(polarCheckout && !loading && user) &&
+    !(confirmed?.checkout === polarCheckout && confirmed.user === user);
+  const pending = submitting || confirming;
   const max = maxPopularity(games);
 
   const loadBids = useCallback(async () => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("showcase_bids")
-      .select("project_id, amount, created_at")
-      .order("created_at", { ascending: false })
-      .limit(500);
-    if (!error) setBidRows(data ?? []);
+    const rows = await fetchBidRows();
+    if (rows) setBidRows(rows);
   }, []);
 
   useEffect(() => {
-    void loadBids();
-  }, [loadBids]);
+    let cancelled = false;
+    void fetchBidRows().then((rows) => {
+      if (!cancelled && rows) setBidRows(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const bids = useMemo(() => aggregateShowcaseBids(bidRows, range), [bidRows, range]);
 
@@ -114,6 +132,8 @@ export default function ShowcasePage() {
       .slice(0, 8)
       .map(([name]) => name);
   }, [games]);
+  // A picked category that dropped out of the top list falls back to "All".
+  const filter = pickedFilter && categories.includes(pickedFilter) ? pickedFilter : "";
 
   const ranked = useMemo(() => {
     const pool = filter ? games.filter((g) => categoryOf(g) === filter) : games;
@@ -129,18 +149,15 @@ export default function ShowcasePage() {
   const topBid = ranked[0] ? bidOf(ranked[0], bids) : 0;
   const minClaim = minShowcaseClaimAmount(topBid);
 
-  useEffect(() => {
+  const [amountFloor, setAmountFloor] = useState<number | null>(null);
+  if (amountFloor !== minClaim) {
+    setAmountFloor(minClaim);
     setAmount(minClaim);
-  }, [minClaim]);
-
-  useEffect(() => {
-    if (filter && !categories.includes(filter)) setFilter("");
-  }, [categories, filter]);
+  }
 
   useEffect(() => {
     if (!polarCheckout || loading || !user) return;
     let cancelled = false;
-    setPending(true);
     fetch("/api/polar/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -169,7 +186,7 @@ export default function ShowcasePage() {
         if (!cancelled) setNotice("Could not confirm this showcase bid.");
       })
       .finally(() => {
-        if (!cancelled) setPending(false);
+        if (!cancelled) setConfirmed({ checkout: polarCheckout, user });
       });
     return () => {
       cancelled = true;
@@ -191,7 +208,7 @@ export default function ShowcasePage() {
       setNotice(`Bid at least $${minClaim} to claim #1 in this view.`);
       return;
     }
-    setPending(true);
+    setSubmitting(true);
     setNotice("");
     const here = window.location.href;
     const res = await fetch("/api/polar/checkout", {
@@ -208,7 +225,7 @@ export default function ShowcasePage() {
     });
     const data = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
     if (!res.ok || !data?.url) {
-      setPending(false);
+      setSubmitting(false);
       setNotice(data?.error || "Could not start Polar checkout.");
       return;
     }
@@ -225,7 +242,7 @@ export default function ShowcasePage() {
               src="/home-hero.webp"
               alt=""
               fill
-              priority
+              preload
               unoptimized
               sizes="100vw"
               className="object-cover object-[68%_48%]"
@@ -405,10 +422,11 @@ function prettyCategory(name: string) {
 function CompactStats({ fallbackVisitors }: { fallbackVisitors: number }) {
   const [online, setOnline] = useState(1);
   const [visitors, setVisitors] = useState(fallbackVisitors);
-
-  useEffect(() => {
+  const [prevFallback, setPrevFallback] = useState(fallbackVisitors);
+  if (prevFallback !== fallbackVisitors) {
+    setPrevFallback(fallbackVisitors);
     setVisitors(fallbackVisitors);
-  }, [fallbackVisitors]);
+  }
 
   useEffect(() => {
     let cancelled = false;

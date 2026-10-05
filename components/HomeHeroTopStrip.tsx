@@ -86,7 +86,7 @@ function SlideThumb({ slide, priority }: { slide: HomeHeroSlide; priority: boole
 
   const className = "absolute inset-0 h-full w-full object-cover object-[68%_48%]";
   if (canOptimizeImage(slide.src)) {
-    return <Image src={slide.src} alt="" fill priority={priority} sizes={`${THUMB_WIDTH}px`} className={className} />;
+    return <Image src={slide.src} alt="" fill preload={priority} sizes={`${THUMB_WIDTH}px`} className={className} />;
   }
 
   return (
