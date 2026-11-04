@@ -239,7 +239,7 @@ export function GameCard({
   );
 }
 
-function playHref(game: Game) {
+export function playHref(game: Game) {
   const base = gamePath(game);
   if (game.embeddable && game.playUrl) return `${base}?play=1`;
   return base;
