@@ -31,17 +31,11 @@ import { TabBar } from "@/components/home/TabBar";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatPlays, initials } from "@/lib/format";
-import { catalogueTags, useGames } from "@/lib/store";
+import { catalogueTags, useGames, withInitialGames } from "@/lib/store";
 import type { Game } from "@/lib/types";
 
 /** Below this many games the page uses the compact layout ("From the community" + slot card). */
 const SPARSE_LIMIT = 8;
-
-/** Server-fetched games fill in until the client catalogue loads; client copies win on overlap. */
-function withInitial(games: Game[], initial: Game[]) {
-  const seen = new Set(games.map((g) => g.id));
-  return [...games, ...initial.filter((g) => !seen.has(g.id))];
-}
 
 export function HomeView({ initialGames }: { initialGames: Game[] }) {
   const store = useGames();
@@ -51,7 +45,7 @@ export function HomeView({ initialGames }: { initialGames: Game[] }) {
   const filters = useMemo(() => parseFilters(params), [params]);
   const [filterSheet, setFilterSheet] = useState(false);
 
-  const games = useMemo(() => withInitial(store.games, initialGames), [store.games, initialGames]);
+  const games = useMemo(() => withInitialGames(store.games, initialGames), [store.games, initialGames]);
   const tags = useMemo(() => catalogueTags(games), [games]);
   const creators = useMemo(() => creatorsOf(games), [games]);
   const popular = useMemo(() => byPopularity(games), [games]);
