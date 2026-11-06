@@ -495,31 +495,8 @@ export function catalogueTags(games: Game[]): string[] {
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([tag]) => tag);
 }
 
-export type BrowseSort = "popular" | "new" | "rated";
-
-export function sortGames(games: Game[], sort: BrowseSort): Game[] {
-  const copy = [...games];
-  if (sort === "new") return copy.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  if (sort === "rated") return copy.sort((a, b) => b.likeCount - a.likeCount || b.playCount - a.playCount);
-  return copy.sort((a, b) => b.playCount + b.promotionBoost - (a.playCount + a.promotionBoost));
-}
-
 /** Server-fetched games fill in until the client catalogue loads; client copies win on overlap. */
 export function withInitialGames(games: Game[], initial: Game[]) {
   const seen = new Set(games.map((g) => g.id));
   return [...games, ...initial.filter((g) => !seen.has(g.id))];
-}
-
-export function homeRailGames(games: Game[], limit = 10, newestCount = 3): Game[] {
-  const newest = [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, newestCount);
-  const taken = new Set(newest.map((g) => g.id));
-  const popular = [...games]
-    .filter((g) => !taken.has(g.id))
-    .sort(
-      (a, b) =>
-        b.playCount + b.promotionBoost - (a.playCount + a.promotionBoost) ||
-        b.createdAt.localeCompare(a.createdAt),
-    )
-    .slice(0, Math.max(0, limit - newest.length));
-  return [...newest, ...popular];
 }

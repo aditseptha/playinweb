@@ -338,7 +338,7 @@ function SearchForm({ initialQuery, autoFocus }: { initialQuery: string; autoFoc
 
 const BRAND_MARKS = ["/playinweb-icon.png", "/playinweb-mark.png"];
 
-export function BrandMark() {
+function BrandMark() {
   const [index, setIndex] = useState(0);
   const reduceMotion = usePrefersReducedMotion();
 
