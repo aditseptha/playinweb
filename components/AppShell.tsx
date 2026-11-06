@@ -220,13 +220,12 @@ function Header({
   );
 }
 
-export function ThemeToggle({ className }: { className?: string }) {
+function ThemeToggle() {
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon"
-      className={className}
       aria-label="Toggle light and dark mode"
       onClick={() => {
         const next: Theme = document.documentElement.classList.contains("dark") ? "light" : "dark";

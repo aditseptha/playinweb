@@ -159,41 +159,6 @@ export async function fetchProfileByHandle(handle: string) {
   return data;
 }
 
-export type SearchProfile = {
-  id: string;
-  handle: string;
-  display_name: string;
-  avatar_path: string | null;
-  follower_count: number;
-};
-
-export async function searchProfiles(query: string): Promise<SearchProfile[]> {
-  const q = query.trim().replace(/^@+/, "").toLowerCase().replace(/[%_,()]/g, "").slice(0, 48);
-  if (!q) return [];
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, handle, display_name, avatar_path, follower_count")
-    .or(`handle.ilike.%${q}%,display_name.ilike.%${q}%`)
-    .order("follower_count", { ascending: false })
-    .limit(8);
-  if (error) {
-    console.error(error);
-    return [];
-  }
-  return (data ?? []) as SearchProfile[];
-}
-
-export async function countProfiles(): Promise<number> {
-  const supabase = createClient();
-  const { count, error } = await supabase.from("profiles").select("id", { count: "exact", head: true });
-  if (error) {
-    console.error(error);
-    return 0;
-  }
-  return count ?? 0;
-}
-
 export function clearCatalogueCache() {
   if (typeof window === "undefined") return;
   try {

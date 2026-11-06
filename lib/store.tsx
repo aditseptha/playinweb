@@ -457,38 +457,6 @@ export function relatedGames(games: Game[], current: Game, limit = 8): Game[] {
   return scored.slice(0, limit).map((s) => s.g);
 }
 
-export function normalizeSearchQuery(query: string) {
-  return query.trim().replace(/^@+/, "").toLowerCase();
-}
-
-export function filterGames(games: Game[], query: string): Game[] {
-  const q = normalizeSearchQuery(query);
-  if (!q) return games;
-  return games.filter((g) => {
-    return (
-      g.title.toLowerCase().includes(q) ||
-      g.developer.toLowerCase().includes(q) ||
-      g.channelHandle?.toLowerCase().includes(q) ||
-      g.projectSlug?.toLowerCase().includes(q) ||
-      g.tags.some((t) => t.toLowerCase().includes(q)) ||
-      g.description.toLowerCase().includes(q)
-    );
-  });
-}
-
-export function creatorsFromGames(games: Game[], query: string) {
-  const q = normalizeSearchQuery(query);
-  if (!q) return [];
-  const map = new Map<string, { handle: string; name: string }>();
-  for (const game of games) {
-    const handle = game.channelHandle?.toLowerCase();
-    if (!handle) continue;
-    if (!handle.includes(q) && !game.developer.toLowerCase().includes(q)) continue;
-    if (!map.has(handle)) map.set(handle, { handle, name: game.developer });
-  }
-  return [...map.values()];
-}
-
 export function gamesForChannel(
   games: Game[],
   slug: string,
@@ -525,35 +493,4 @@ export function catalogueTags(games: Game[]): string[] {
     for (const tag of game.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([tag]) => tag);
-}
-
-export type BrowseSort = "popular" | "new" | "rated";
-
-export function sortGames(games: Game[], sort: BrowseSort): Game[] {
-  const copy = [...games];
-  if (sort === "new") return copy.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  if (sort === "rated") return copy.sort((a, b) => b.likeCount - a.likeCount || b.playCount - a.playCount);
-  return copy.sort((a, b) => b.playCount + b.promotionBoost - (a.playCount + a.promotionBoost));
-}
-
-export function homeRailGames(games: Game[], limit = 10, newestCount = 3): Game[] {
-  const newest = [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, newestCount);
-  const taken = new Set(newest.map((g) => g.id));
-  const popular = [...games]
-    .filter((g) => !taken.has(g.id))
-    .sort(
-      (a, b) =>
-        b.playCount + b.promotionBoost - (a.playCount + a.promotionBoost) ||
-        b.createdAt.localeCompare(a.createdAt),
-    )
-    .slice(0, Math.max(0, limit - newest.length));
-  return [...newest, ...popular];
-}
-
-export function homeMoreGames(games: Game[], exclude: Game[], limit = 10): Game[] {
-  const taken = new Set(exclude.map((g) => g.id));
-  return [...games]
-    .filter((g) => !taken.has(g.id))
-    .sort((a, b) => b.likeCount - a.likeCount || b.playCount - a.playCount)
-    .slice(0, limit);
 }

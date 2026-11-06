@@ -1,33 +1,32 @@
 "use client";
 
+import { LogOut, Menu, Moon, Plus, Sun, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ThemeToggle } from "@/components/AppShell";
 import { Avatar } from "@/components/Avatar";
 import { LegalProvider } from "@/components/LegalModal";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { Notices } from "@/components/Notices";
 import { SignupProvider, useSignupDialog } from "@/components/SignupDialog";
-import { isBrowsing, parseFilters } from "@/components/home/filters";
-import { HomeFooter } from "@/components/home/HomeFooter";
-import { IconMenu, IconPlus } from "@/components/icons";
+import { homeFontVars } from "@/components/home/fonts";
+import s from "@/components/home/home.module.css";
 import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { navItemVisible, useFeatures } from "@/lib/features";
 import { apexHref } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
+import { applyTheme, THEME_KEY } from "@/lib/theme";
 
-/** Top-level links. Only pages that exist; feature-flagged ones follow the admin flags. */
+/** Top-level links: only pages that exist; feature-flagged ones follow the admin flags. */
 const NAV = [
   { href: "/#creators", label: "Creators" },
   { href: "/top", label: "Rankings" },
   { href: "/showcase", label: "Showcase" },
 ];
 
-/** Everything the sidebar offers on other pages, so it stays one click away from the homepage. */
+/** What the sidebar offers on other pages, so it stays one click away from the homepage. */
 const ACCOUNT_LINKS = [
   { href: "/profile", label: "Your channel" },
   { href: "/manage", label: "Manage games" },
@@ -37,166 +36,115 @@ const ACCOUNT_LINKS = [
 ];
 
 const SITE_LINKS = [
-  { href: "/top", label: "Top played" },
-  { href: "/showcase", label: "Showcase" },
   { href: "/tip", label: "Tip the developer" },
   { href: "/report", label: "Report an issue" },
 ];
 
-export function HomeShell({ children }: { children: ReactNode }) {
-  const [scrolled, setScrolled] = useState(false);
+const FOOTER = [
+  {
+    title: "Explore",
+    links: [
+      { href: "/?view=popular", label: "All games" },
+      { href: "/?view=new", label: "New releases" },
+      { href: "/top", label: "Rankings" },
+      { href: "/showcase", label: "Showcase" },
+    ],
+  },
+  {
+    title: "Creators",
+    links: [
+      { href: "/register", label: "Add a game" },
+      { href: "/manage", label: "Manage games" },
+      { href: "/donations", label: "Wallet" },
+    ],
+  },
+  {
+    title: "PlayInWeb",
+    links: [
+      { href: "/library", label: "Library" },
+      { href: "/downloads", label: "Downloads" },
+      { href: "/tip", label: "Tip the developer" },
+      { href: "mailto:support@playinweb.com", label: "Contact" },
+    ],
+  },
+  {
+    title: "Help",
+    links: [
+      { href: "/report", label: "Report an issue" },
+      { href: "/privacy", label: "Privacy" },
+      { href: "/terms", label: "Terms" },
+    ],
+  },
+];
 
+function useVisible() {
+  const { user } = useAuth();
+  const { features, loading } = useFeatures();
+  const admin = isAdminEmail(user?.email);
+  return (href: string) => href.startsWith("mailto:") || navItemVisible(href, features, admin, loading);
+}
+
+/** Internal links that live on the apex domain; homepage query links stay relative. */
+function hrefFor(href: string) {
+  return href.startsWith("mailto:") || href.startsWith("/?") || href.startsWith("/#") ? href : apexHref(href);
+}
+
+export function HomeShell({ children }: { children: ReactNode }) {
   return (
     <LegalProvider>
       <SignupProvider>
-        <div
-          data-scroll-root
-          className="home-theme scrollbar-hide h-dvh overflow-x-hidden overflow-y-auto overscroll-contain bg-bg text-text"
-          onScroll={(e) => {
-            const next = e.currentTarget.scrollTop > 24;
-            setScrolled((was) => (was === next ? was : next));
-          }}
-        >
+        <div data-scroll-root className={cn(s.root, homeFontVars)}>
           <a
             href="#content"
-            className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-fg"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-black"
           >
             Skip to content
           </a>
-          <TopNav scrolled={scrolled} />
+          <Nav />
           <main id="content">{children}</main>
-          <HomeFooter />
+          <Footer />
         </div>
       </SignupProvider>
     </LegalProvider>
   );
 }
 
-function TopNav({ scrolled }: { scrolled: boolean }) {
-  // Results views have no hero art behind the bar, so it is solid there from the start.
-  const params = useSearchParams();
-  const solid = scrolled || isBrowsing(parseFilters(params));
-  const { user, loading } = useAuth();
-  const { features, loading: featuresLoading } = useFeatures();
-  const admin = isAdminEmail(user?.email);
-  const nav = NAV.filter((item) => navItemVisible(item.href, features, admin, featuresLoading));
-
+function Logo() {
   return (
-    // Negative margin lets the hero art run underneath the bar, as in the comp.
-    <header
-      className={cn(
-        "sticky top-0 z-40 -mb-[72px] h-[72px] transition-[background-color,box-shadow,border-color] duration-300 ease-out-quint",
-        solid
-          ? "border-b border-border/70 bg-bg/85 shadow-[0_8px_24px_-12px_oklch(0%_0_0/0.35)] backdrop-blur-xl"
-          : "home-force-dark bg-gradient-to-b from-black/45 to-transparent",
-      )}
+    <span className={s.logo}>
+      <Image src="/playinweb-icon.png" alt="" width={40} height={40} className={s.logoMark} />
+      PlayInWeb
+    </span>
+  );
+}
+
+function ThemeButton() {
+  return (
+    <button
+      type="button"
+      className={s.moon}
+      aria-label="Toggle light and dark mode"
+      onClick={() => {
+        const next = document.documentElement.classList.contains("dark") ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next);
+        applyTheme(next);
+      }}
     >
-      <div className="mx-auto flex h-full max-w-[1600px] items-center gap-4 px-4 sm:px-6 lg:gap-10 lg:px-8">
-        <Brand onDark={!solid} />
-        <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-full px-3.5 py-2 text-[15px] font-medium text-text-muted transition-colors hover:bg-surface-2/70 hover:text-text"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
-          <ThemeToggle className="rounded-full" />
-          <Notices />
-          {loading ? (
-            <span className="size-9 rounded-full bg-surface-2" aria-hidden />
-          ) : user ? (
-            <>
-              <Link
-                href={apexHref("/register")}
-                className="hidden h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-[15px] font-semibold text-accent-fg shadow-[0_0_0_1px_oklch(100%_0_0/0.18)_inset,0_8px_24px_-8px_var(--accent)] transition-colors hover:bg-accent-hover sm:inline-flex"
-              >
-                Add game
-                <IconPlus className="h-4 w-4" />
-              </Link>
-              <HomeMenu signedIn admin={admin} />
-            </>
-          ) : (
-            <>
-              <SignedOutButtons />
-              <HomeMenu signedIn={false} admin={admin} />
-            </>
-          )}
-        </div>
-      </div>
-    </header>
+      <Moon className={cn(s.ic, "dark:hidden")} />
+      <Sun className={cn(s.ic, "hidden dark:block")} />
+    </button>
   );
 }
 
-function Brand({ onDark }: { onDark: boolean }) {
-  return (
-    <Link href="/" className="flex shrink-0 items-center gap-2.5 rounded-lg" aria-label="PlayInWeb home">
-      <Image src="/playinweb-icon.png" alt="" width={40} height={40} className="size-10 rounded-xl" />
-      <span className="hidden sm:block">
-        <Image
-          src="/playinweb-lettermark-white.webp"
-          alt="PlayInWeb"
-          width={109}
-          height={20}
-          unoptimized
-          className={cn("h-5 w-auto", onDark ? "block" : "hidden dark:block")}
-        />
-        <Image
-          src="/playinweb-lettermark-black.webp"
-          alt="PlayInWeb"
-          width={109}
-          height={20}
-          unoptimized
-          className={cn("h-5 w-auto", onDark ? "hidden" : "dark:hidden")}
-        />
-      </span>
-    </Link>
-  );
-}
-
-function SignedOutButtons() {
-  const { openLogin } = useLoginDialog();
-  const { openSignup } = useSignupDialog();
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => openLogin()}
-        className="hidden h-10 items-center rounded-full bg-surface-2 px-4 text-[15px] font-semibold text-text transition-colors hover:bg-surface-3 sm:inline-flex"
-      >
-        Sign in
-      </button>
-      <button
-        type="button"
-        onClick={() => openSignup()}
-        className="inline-flex h-10 items-center rounded-full bg-accent px-4 text-[15px] font-semibold text-accent-fg shadow-[0_8px_24px_-8px_var(--accent)] transition-colors hover:bg-accent-hover"
-      >
-        Sign up free
-      </button>
-    </>
-  );
-}
-
-function HomeMenu({ signedIn, admin }: { signedIn: boolean; admin: boolean }) {
-  const { profile, signOut } = useAuth();
-  const { openLogin } = useLoginDialog();
-  const { features, loading: featuresLoading } = useFeatures();
+function usePopover() {
   const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const visible = (href: string) => navItemVisible(href, features, admin, featuresLoading);
-
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("mousedown", onDoc);
     window.addEventListener("keydown", onKey);
     return () => {
@@ -204,124 +152,209 @@ function HomeMenu({ signedIn, admin }: { signedIn: boolean; admin: boolean }) {
       window.removeEventListener("keydown", onKey);
     };
   }, [open]);
+  return { open, setOpen, ref };
+}
 
-  const close = () => setOpen(false);
+function Nav() {
+  const { user, profile, loading, signOut } = useAuth();
+  const { openLogin } = useLoginDialog();
+  const { openSignup } = useSignupDialog();
+  const visible = useVisible();
+  const { open: accountOpen, setOpen: setAccountOpen, ref: accountRef } = usePopover();
+  const [sheet, setSheet] = useState(false);
 
   return (
-    <div ref={root} className={cn("relative", !signedIn && "md:hidden")}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={signedIn ? "Account menu" : "Open menu"}
-        className={cn(
-          "grid place-items-center rounded-full transition-[box-shadow]",
-          signedIn
-            ? "size-10 ring-2 ring-transparent hover:ring-border-strong"
-            : "size-10 text-text-muted hover:bg-surface-2 hover:text-text",
-        )}
-      >
-        {signedIn ? (
-          <Avatar
-            name={profile?.display_name ?? ""}
-            src={publicMediaUrl(profile?.avatar_path) || undefined}
-            size={38}
-          />
-        ) : (
-          <IconMenu className="h-5 w-5" />
-        )}
-      </button>
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 top-full z-50 mt-2 w-64 origin-top-right rounded-2xl border border-border bg-surface p-2 text-text shadow-panel"
-        >
-          {signedIn && profile ? (
-            <div className="px-3 pb-2 pt-1.5">
-              <p className="truncate text-body font-semibold">{profile.display_name || profile.handle}</p>
-              {profile.handle ? <p className="truncate text-caption text-text-subtle">@{profile.handle}</p> : null}
-            </div>
-          ) : null}
-          <MenuGroup>
-            {NAV.filter((item) => visible(item.href)).map((item) => (
-              <MenuLink key={item.href} href={item.href} label={item.label} onClick={close} className="md:hidden" />
+    <>
+      <header className={cn(s.nav, s.frame, s.onDark)}>
+        <div className={s.wrap}>
+          <Link href="/" aria-label="PlayInWeb home">
+            <Logo />
+          </Link>
+          <nav className={s.navlinks} aria-label="Primary">
+            {NAV.filter((l) => visible(l.href)).map((l) => (
+              <Link key={l.href} href={hrefFor(l.href)}>
+                {l.label}
+              </Link>
             ))}
-            {signedIn ? (
+          </nav>
+          <ThemeButton />
+          <div className={s.navRight}>
+            {loading ? null : user ? (
               <>
-                <MenuLink href={apexHref("/register")} label="Add game" onClick={close} className="sm:hidden" />
-                {ACCOUNT_LINKS.filter((item) => visible(item.href)).map((item) => (
-                  <MenuLink key={item.href} href={apexHref(item.href)} label={item.label} onClick={close} />
-                ))}
+                <span className={s.bell}>
+                  <Notices />
+                </span>
+                <Link href={apexHref("/register")} className={cn(s.btn, s.btnOutline, s.hideSm)}>
+                  Add game <Plus className={cn(s.ic, s.sm)} />
+                </Link>
+                <div className={s.popWrap} ref={accountRef}>
+                  <button
+                    type="button"
+                    className={s.avatarBtn}
+                    aria-label="Account menu"
+                    aria-haspopup="menu"
+                    aria-expanded={accountOpen}
+                    onClick={() => setAccountOpen((v) => !v)}
+                  >
+                    <Avatar
+                      name={profile?.display_name ?? ""}
+                      src={publicMediaUrl(profile?.avatar_path) || undefined}
+                      size={42}
+                    />
+                  </button>
+                  {accountOpen ? (
+                    <div className={s.pop} role="menu">
+                      {profile ? (
+                        <div className={s.popHead}>
+                          <b>{profile.display_name || profile.handle}</b>
+                          {profile.handle ? <small>@{profile.handle}</small> : null}
+                        </div>
+                      ) : null}
+                      {ACCOUNT_LINKS.filter((l) => visible(l.href)).map((l) => (
+                        <Link key={l.href} href={apexHref(l.href)} role="menuitem" className={s.popItem} onClick={() => setAccountOpen(false)}>
+                          {l.label}
+                        </Link>
+                      ))}
+                      <div className={s.popSep} />
+                      {SITE_LINKS.filter((l) => visible(l.href)).map((l) => (
+                        <Link key={l.href} href={apexHref(l.href)} role="menuitem" className={s.popItem} onClick={() => setAccountOpen(false)}>
+                          {l.label}
+                        </Link>
+                      ))}
+                      <div className={s.popSep} />
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className={s.popItem}
+                        onClick={() => {
+                          setAccountOpen(false);
+                          void signOut();
+                        }}
+                      >
+                        <LogOut className={cn(s.ic, s.sm)} />
+                        Sign out
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </>
-            ) : null}
-          </MenuGroup>
-          {signedIn ? (
-            <MenuGroup>
-              {SITE_LINKS.filter((item) => visible(item.href)).map((item) => (
-                <MenuLink key={item.href} href={apexHref(item.href)} label={item.label} onClick={close} />
-              ))}
-            </MenuGroup>
-          ) : null}
-          <MenuGroup>
-            {signedIn ? (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  close();
-                  void signOut();
-                }}
-                className="flex h-9 w-full items-center rounded-lg px-3 text-left text-body text-text-muted hover:bg-surface-2 hover:text-text"
-              >
-                Sign out
-              </button>
             ) : (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  close();
-                  openLogin();
-                }}
-                className="flex h-9 w-full items-center rounded-lg px-3 text-left text-body font-medium hover:bg-surface-2"
-              >
-                Sign in
-              </button>
+              <>
+                <button type="button" className={cn(s.btn, s.btnDark, s.hideSm)} onClick={() => openLogin()}>
+                  Sign in
+                </button>
+                <button type="button" className={cn(s.btn, s.btnPrimary)} onClick={() => openSignup()}>
+                  Sign up free
+                </button>
+              </>
             )}
-          </MenuGroup>
+            <button type="button" className={cn(s.iconBtn, s.menuBtn)} aria-label="Open menu" onClick={() => setSheet(true)}>
+              <Menu className={s.ic} />
+            </button>
+          </div>
         </div>
+      </header>
+      {sheet ? (
+        <MenuSheet
+          signedIn={Boolean(user)}
+          onClose={() => setSheet(false)}
+          onSignIn={() => openLogin()}
+          onSignOut={() => void signOut()}
+        />
       ) : null}
-    </div>
+    </>
   );
 }
 
-function MenuGroup({ children }: { children: ReactNode }) {
-  return <div className="border-t border-border py-1 first:border-t-0 first:pt-0 empty:hidden">{children}</div>;
+function MenuSheet({
+  signedIn,
+  onClose,
+  onSignIn,
+  onSignOut,
+}: {
+  signedIn: boolean;
+  onClose: () => void;
+  onSignIn: () => void;
+  onSignOut: () => void;
+}) {
+  const visible = useVisible();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const links = [...NAV, ...(signedIn ? [{ href: "/register", label: "Add game" }, ...ACCOUNT_LINKS] : [])];
+
+  return (
+    <>
+      <div className={s.scrim} onClick={onClose} aria-hidden />
+      <div className={s.sheet} role="dialog" aria-modal="true" aria-label="Menu">
+        <div className={s.grab} />
+        <div className={cn(s.sheetBody, s.menuSheet)}>
+          {links
+            .filter((l) => visible(l.href))
+            .map((l) => (
+              <Link key={l.href} href={hrefFor(l.href)} onClick={onClose}>
+                {l.label}
+              </Link>
+            ))}
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              if (signedIn) onSignOut();
+              else onSignIn();
+            }}
+          >
+            {signedIn ? <LogOut className={s.ic} /> : <User className={s.ic} />}
+            {signedIn ? "Sign out" : "Sign in"}
+          </button>
+        </div>
+        <div className={s.sheetFoot}>
+          <button type="button" className={cn(s.btn, s.btnGhost)} onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </>
+  );
 }
 
-function MenuLink({
-  href,
-  label,
-  onClick,
-  className,
-}: {
-  href: string;
-  label: string;
-  onClick: () => void;
-  className?: string;
-}) {
+function Footer() {
+  const visible = useVisible();
   return (
-    <Link
-      href={href}
-      role="menuitem"
-      onClick={onClick}
-      className={cn(
-        "flex h-9 items-center rounded-lg px-3 text-body text-text-muted hover:bg-surface-2 hover:text-text",
-        className,
-      )}
-    >
-      {label}
-    </Link>
+    <footer className={cn(s.footer, s.frame)}>
+      <div className={s.wrap}>
+        <div className={s.fTop}>
+          <div className={s.fBrand}>
+            <Link href="/" aria-label="PlayInWeb home">
+              <Logo />
+            </Link>
+            <p>Story and adventure games from indie creators. Play them right in the browser, nothing to download.</p>
+          </div>
+          <div className={s.fCols}>
+            {FOOTER.map((col) => {
+              const links = col.links.filter((l) => visible(l.href));
+              if (links.length === 0) return null;
+              return (
+                <div key={col.title}>
+                  <h5>{col.title}</h5>
+                  {links.map((l) => (
+                    <Link key={l.href} href={hrefFor(l.href)}>
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className={s.fBot}>
+          <span>© 2026 PlayInWeb</span>
+          <span className={s.made}>MADE FOR INDIE STORYTELLERS</span>
+        </div>
+      </div>
+    </footer>
   );
 }

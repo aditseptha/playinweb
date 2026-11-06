@@ -1,181 +1,152 @@
 "use client";
 
+import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { IconChevron } from "@/components/icons";
+import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
 
-/** Item widths per row size; the gap is 16px (gap-4). */
-const ITEM_WIDTH = {
-  feature: "w-[85%] sm:w-[calc((100%-16px)/2)] lg:w-[calc((100%-32px)/3)]",
-  poster: "w-[44%] sm:w-[calc((100%-32px)/3)] md:w-[calc((100%-48px)/4)] xl:w-[calc((100%-80px)/6)]",
-  wide: "w-[85%] sm:w-[calc((100%-16px)/2)] lg:w-[calc((100%-32px)/3)]",
-} as const;
-
-export type RowSize = keyof typeof ITEM_WIDTH;
-
-function useScroller(count: number) {
+export function useScroller() {
   const ref = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ start: true, end: true });
+  const [edge, setEdge] = useState({ l: true, r: true });
+
+  const update = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    setEdge({ l: el.scrollLeft <= 2, r: el.scrollLeft + el.clientWidth >= el.scrollWidth - 2 });
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const update = () => {
-      const max = el.scrollWidth - el.clientWidth;
-      setEdges({ start: el.scrollLeft <= 4, end: el.scrollLeft >= max - 4 });
-    };
     update();
-    el.addEventListener("scroll", update, { passive: true });
     const ro = new ResizeObserver(update);
     ro.observe(el);
+    el.addEventListener("scroll", update, { passive: true });
     return () => {
-      el.removeEventListener("scroll", update);
       ro.disconnect();
+      el.removeEventListener("scroll", update);
     };
-  }, [count]);
+  }, [update]);
 
-  const page = useCallback((dir: -1 | 1) => {
+  const go = (dir: -1 | 1) => {
     const el = ref.current;
     if (!el) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: reduce ? "auto" : "smooth" });
-  }, []);
+  };
 
-  return { ref, edges, page };
+  return { ref, edge, go };
 }
 
-function ArrowButton({
-  dir,
-  disabled,
-  onClick,
-  label,
-  floating,
-}: {
-  dir: -1 | 1;
-  disabled: boolean;
-  onClick: () => void;
-  label: string;
-  floating?: boolean;
-}) {
+type Edge = { l: boolean; r: boolean };
+
+function Arrow({ dir, edge, go, className }: { dir: -1 | 1; edge: Edge; go: (dir: -1 | 1) => void; className?: string }) {
   return (
     <button
       type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      className={cn(
-        "grid place-items-center rounded-full border text-text transition-[opacity,background-color,transform] duration-200 disabled:pointer-events-none",
-        floating
-          ? "size-10 border-border bg-surface shadow-panel hover:bg-surface-2 disabled:opacity-0"
-          : "size-9 border-border bg-surface-2 hover:bg-surface-3 disabled:opacity-35",
-      )}
+      className={cn(s.arrow, className)}
+      disabled={dir === -1 ? edge.l : edge.r}
+      onClick={() => go(dir)}
+      aria-label={dir === -1 ? "Previous" : "Next"}
     >
-      <IconChevron className={cn("h-4 w-4", dir === -1 && "rotate-180")} />
+      {dir === -1 ? <ChevronLeft className={cn(s.ic, s.sm)} /> : <ChevronRight className={cn(s.ic, s.sm)} />}
     </button>
   );
 }
 
-export function SectionHeading({
-  icon,
+export function Arrows({ edge, go }: { edge: Edge; go: (dir: -1 | 1) => void }) {
+  return (
+    <>
+      <Arrow dir={-1} edge={edge} go={go} />
+      <Arrow dir={1} edge={edge} go={go} />
+    </>
+  );
+}
+
+export function SectionHead({
+  icon: Icon,
   title,
-  action,
-  id,
+  count,
+  tools,
 }: {
-  icon: ReactNode;
+  icon: LucideIcon;
   title: string;
-  action?: ReactNode;
-  id?: string;
+  count?: number;
+  tools?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-center gap-3">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-border bg-surface-2 text-home-amber-ink">
-        {icon}
+    <div className={s.secHead}>
+      <span className={s.secIcon}>
+        <Icon className={cn(s.ic, s.sm)} />
       </span>
-      <h2 id={id} className="min-w-0 truncate text-[20px] font-semibold tracking-tight sm:text-[22px]">
+      <h2 className={s.secTitle}>
         {title}
+        {count !== undefined ? (
+          <span className={cn(s.secCount, s.tnum)}>
+            {" "}
+            · {count} {count === 1 ? "game" : "games"}
+          </span>
+        ) : null}
       </h2>
-      {action ? <div className="ml-auto flex shrink-0 items-center gap-2">{action}</div> : null}
+      {tools ? <div className={s.secTools}>{tools}</div> : null}
     </div>
   );
 }
 
-export function SeeAll({ href }: { href: string }) {
+export function SeeAll({ href, label = "See all" }: { href: string; label?: string }) {
   return (
-    <Link
-      href={href}
-      className="inline-flex h-9 items-center rounded-full border border-border bg-surface-2 px-4 text-ui font-semibold transition-colors hover:bg-surface-3"
-    >
-      See all
+    <Link href={href} scroll={false} className={s.seeAll}>
+      {label}
     </Link>
   );
 }
 
-/**
- * A titled horizontal row. `arrows="header"` puts paging buttons next to the title;
- * `arrows="sides"` floats them over the row edges, as the featured row does in the comp.
- */
-export function Section({
-  id,
+/** A titled carousel row: paging arrows next to the title (or over the edges for the featured row). */
+export function Row({
   icon,
   title,
   href,
-  size,
-  arrows = "header",
-  items,
+  kind,
+  sideArrows = false,
+  children,
 }: {
-  id?: string;
-  icon: ReactNode;
+  icon: LucideIcon;
   title: string;
   href?: string;
-  size: RowSize;
-  arrows?: "header" | "sides";
-  items: ReactNode[];
+  kind: "tall" | "wide";
+  sideArrows?: boolean;
+  children: ReactNode;
 }) {
-  const { ref, edges, page } = useScroller(items.length);
-  const scrollable = !(edges.start && edges.end);
-  const headingId = id ? `${id}-title` : undefined;
+  const { ref, edge, go } = useScroller();
+  const scrollable = !(edge.l && edge.r);
+  const track = (
+    <div ref={ref} className={cn(s.track, kind === "tall" ? s.trackTall : s.trackWide)}>
+      {children}
+    </div>
+  );
 
   return (
-    <section id={id} aria-labelledby={headingId} className="scroll-mt-24">
-      <SectionHeading
-        id={headingId}
+    <section className={s.reveal}>
+      <SectionHead
         icon={icon}
         title={title}
-        action={
+        tools={
           <>
-            {arrows === "header" && scrollable ? (
-              <>
-                <ArrowButton dir={-1} disabled={edges.start} onClick={() => page(-1)} label={`Previous ${title}`} />
-                <ArrowButton dir={1} disabled={edges.end} onClick={() => page(1)} label={`More ${title}`} />
-              </>
-            ) : null}
+            {!sideArrows && scrollable ? <Arrows edge={edge} go={go} /> : null}
             {href ? <SeeAll href={href} /> : null}
           </>
         }
       />
-      <div className="relative">
-        <div
-          ref={ref}
-          className="scrollbar-hide -mx-1 -my-3 flex snap-x snap-mandatory gap-4 overflow-x-auto px-1 py-3"
-        >
-          {items.map((item, i) => (
-            <div key={i} className={cn("shrink-0 snap-start", ITEM_WIDTH[size])}>
-              {item}
-            </div>
-          ))}
+      {sideArrows ? (
+        <div className={s.carousel}>
+          {scrollable ? <Arrow dir={-1} edge={edge} go={go} className={cn(s.side, s.sideL)} /> : null}
+          {track}
+          {scrollable ? <Arrow dir={1} edge={edge} go={go} className={cn(s.side, s.sideR)} /> : null}
         </div>
-        {arrows === "sides" && scrollable ? (
-          <>
-            <div className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 sm:block">
-              <ArrowButton dir={-1} disabled={edges.start} onClick={() => page(-1)} label={`Previous ${title}`} floating />
-            </div>
-            <div className="absolute right-0 top-1/2 z-10 hidden -translate-y-1/2 translate-x-1/2 sm:block">
-              <ArrowButton dir={1} disabled={edges.end} onClick={() => page(1)} label={`More ${title}`} floating />
-            </div>
-          </>
-        ) : null}
-      </div>
+      ) : (
+        track
+      )}
     </section>
   );
 }

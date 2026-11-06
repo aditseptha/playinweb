@@ -1,10 +1,22 @@
-import { Barlow_Condensed, Pixelify_Sans, Silkscreen } from "next/font/google";
+import { Barlow_Condensed, Pixelify_Sans, Plus_Jakarta_Sans, Silkscreen } from "next/font/google";
+
+/** Body copy. */
+const body = Plus_Jakarta_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--f-body", display: "swap" });
+
+/** Poster titles printed over game art, and the italic hero title. */
+const display = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  style: ["normal", "italic"],
+  variable: "--f-display",
+  display: "swap",
+});
+
+/** The PlayInWeb wordmark. */
+const logo = Pixelify_Sans({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--f-logo", display: "swap" });
 
 /** Small pixel caps for eyebrows and labels. */
-export const pixelFont = Silkscreen({ weight: ["400", "700"], subsets: ["latin"], display: "swap" });
+const pixel = Silkscreen({ subsets: ["latin"], weight: ["400"], variable: "--f-pixel", display: "swap" });
 
-/** Narrower, heavier pixel face for the hero title. */
-export const pixelDisplayFont = Pixelify_Sans({ weight: ["700"], subsets: ["latin"], display: "swap" });
-
-/** Condensed poster face for titles printed over game art. */
-export const posterFont = Barlow_Condensed({ weight: ["700", "800"], subsets: ["latin"], display: "swap" });
+/** Put on the homepage root so home.module.css can use var(--f-body) and friends. */
+export const homeFontVars = [body.variable, display.variable, logo.variable, pixel.variable].join(" ");
