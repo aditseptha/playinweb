@@ -33,6 +33,7 @@ export const RESERVED_HANDLES = new Set([
   "terms",
   "tip",
   "donations",
+  "home-v2",
 ]);
 
 const HANDLE_RE = /^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$/;

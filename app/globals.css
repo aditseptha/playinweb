@@ -281,6 +281,12 @@
   box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.1);
 }
 
+@keyframes console-fade {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes hero-drift {
   0%,
   100% {

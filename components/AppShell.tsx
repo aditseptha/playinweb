@@ -338,7 +338,7 @@ function SearchForm({ initialQuery, autoFocus }: { initialQuery: string; autoFoc
 
 const BRAND_MARKS = ["/playinweb-icon.png", "/playinweb-mark.png"];
 
-function BrandMark() {
+export function BrandMark() {
   const [index, setIndex] = useState(0);
   const reduceMotion = usePrefersReducedMotion();
 
@@ -424,7 +424,7 @@ function BrandLink({
           height={20}
           // ~1KB files: resized variants wouldn't be any smaller.
           unoptimized
-          className="hidden h-5 w-auto dark:block"
+          className="hidden h-5 w-auto translate-y-[2.5px] dark:block"
         />
         <Image
           src="/playinweb-lettermark-black.webp"
@@ -433,7 +433,7 @@ function BrandLink({
           height={20}
           // ~1KB files: resized variants wouldn't be any smaller.
           unoptimized
-          className="h-5 w-auto dark:hidden"
+          className="h-5 w-auto translate-y-[2.5px] dark:hidden"
         />
       </span>
     </Link>

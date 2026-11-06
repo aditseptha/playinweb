@@ -536,6 +536,12 @@ export function sortGames(games: Game[], sort: BrowseSort): Game[] {
   return copy.sort((a, b) => b.playCount + b.promotionBoost - (a.playCount + a.promotionBoost));
 }
 
+/** Server-fetched games fill in until the client catalogue loads; client copies win on overlap. */
+export function withInitialGames(games: Game[], initial: Game[]) {
+  const seen = new Set(games.map((g) => g.id));
+  return [...games, ...initial.filter((g) => !seen.has(g.id))];
+}
+
 export function homeRailGames(games: Game[], limit = 10, newestCount = 3): Game[] {
   const newest = [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, newestCount);
   const taken = new Set(newest.map((g) => g.id));

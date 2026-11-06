@@ -21,6 +21,7 @@ import {
   homeRailGames,
   sortGames,
   useGames,
+  withInitialGames,
   type BrowseSort,
 } from "@/lib/store";
 import type { Game } from "@/lib/types";
@@ -32,15 +33,9 @@ function asSort(value: string | null): BrowseSort {
 
 const NO_PROFILES: SearchProfile[] = [];
 
-/** Server-fetched games fill in until the client catalogue loads; client copies win on overlap. */
-function withInitial(games: Game[], initial: Game[]) {
-  const seen = new Set(games.map((g) => g.id));
-  return [...games, ...initial.filter((g) => !seen.has(g.id))];
-}
-
 export function HomeView({ initialGames, players }: { initialGames: Game[]; players: number }) {
   const store = useGames();
-  const games = useMemo(() => withInitial(store.games, initialGames), [store.games, initialGames]);
+  const games = useMemo(() => withInitialGames(store.games, initialGames), [store.games, initialGames]);
   const { history } = store;
   const params = useSearchParams();
   const q = params.get("q") ?? "";
