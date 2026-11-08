@@ -305,6 +305,7 @@ export function projectToGame(project: ProjectRecord): Game {
     likeCount: project.like_count,
     promotionBoost: 0,
     channelHandle: project.profiles?.handle,
+    creatorAvatarUrl: publicMediaUrl(project.profiles?.avatar_path) || undefined,
     projectSlug: project.slug,
   };
 }

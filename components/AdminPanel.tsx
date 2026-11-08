@@ -299,6 +299,7 @@ export function AdminPanel() {
             { value: "wallet", label: "Wallet", href: "/admin?tab=wallet" },
             { value: "reports", label: "Reported issue", href: "/admin?tab=reports" },
             { value: "features", label: "Feature list", href: "/admin?tab=features" },
+            { value: "design", label: "Design system", href: "/admin/design" },
           ]}
         />
       </div>

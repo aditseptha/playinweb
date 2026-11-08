@@ -1,0 +1,49 @@
+/* Effect layers only (DS rule: layout, colour and type live in Tailwind). Tokens only, no hex. */
+
+/* Light sweep across the art on hover. */
+.shine {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    color-mix(in srgb, var(--pw-white) 22%, transparent) 50%,
+    transparent 70%
+  );
+  translate: -130% 0;
+  transition: translate 0.7s var(--pw-ease-out);
+}
+@media (hover: hover) {
+  :global(.group):hover .shine {
+    translate: 130% 0;
+  }
+}
+
+/* The gold "Your turn" invite breathes slowly. */
+.slotGlow {
+  animation: slotGlow 3.2s ease-in-out infinite;
+}
+@keyframes slotGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--pw-gold) 8%, transparent),
+      0 0 24px color-mix(in srgb, var(--pw-gold) 18%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--pw-gold) 14%, transparent),
+      0 0 36px color-mix(in srgb, var(--pw-gold) 32%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shine {
+    display: none;
+  }
+  .slotGlow {
+    animation: none;
+  }
+}

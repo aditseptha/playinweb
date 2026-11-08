@@ -4,12 +4,12 @@ import { LogOut, Menu, Moon, Plus, Sun, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { dsFontVars } from "@/app/fonts";
 import { Avatar } from "@/components/Avatar";
 import { LegalProvider } from "@/components/LegalModal";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { Notices } from "@/components/Notices";
 import { SignupProvider, useSignupDialog } from "@/components/SignupDialog";
-import { homeFontVars } from "@/components/home/fonts";
 import s from "@/components/home/home.module.css";
 import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/auth";
@@ -93,7 +93,7 @@ export function HomeShell({ children }: { children: ReactNode }) {
   return (
     <LegalProvider>
       <SignupProvider>
-        <div data-scroll-root className={cn(s.root, homeFontVars)}>
+        <div data-scroll-root className={cn(s.root, dsFontVars)}>
           <a
             href="#content"
             className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-black"
@@ -109,11 +109,14 @@ export function HomeShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** Brand mark plus the official lettermark. The nav sits on art, so it always uses the white file. */
 function Logo() {
   return (
     <span className={s.logo}>
       <Image src="/playinweb-icon.png" alt="" width={40} height={40} className={s.logoMark} />
-      PlayInWeb
+      {/* ~1KB files: resized variants wouldn't be any smaller. */}
+      <Image src="/playinweb-lettermark-white.webp" alt="PlayInWeb" width={109} height={20} unoptimized className={cn(s.word, s.wordDark)} />
+      <Image src="/playinweb-lettermark-black.webp" alt="PlayInWeb" width={109} height={20} unoptimized className={cn(s.word, s.wordLight)} />
     </span>
   );
 }

@@ -17,7 +17,7 @@ const indexStyle = (i: number) => ({ "--i": i }) as CSSProperties;
 
 function canTilt() {
   return (
-    window.matchMedia("(min-width: 761px) and (hover: hover) and (pointer: fine)").matches &&
+    window.matchMedia("(min-width: 768px) and (hover: hover) and (pointer: fine)").matches &&
     !window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
 }
@@ -43,7 +43,7 @@ export function FeatureCard({ game, i = 0, priority = false }: { game: Game; i?:
   const peek = usePeek(game);
   return (
     <article className={cn(s.card, s.cOrig, s.rv)} style={indexStyle(i)} {...peek}>
-      <Art game={game} priority={priority} sizes="(min-width: 1025px) 30vw, (min-width: 761px) 48vw, 92vw" />
+      <Art game={game} priority={priority} sizes="(min-width: 1024px) 30vw, (min-width: 768px) 48vw, 92vw" />
       <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
       {game.embeddable ? <span className={s.pill}>Instant play</span> : null}
       <div className={s.glass}>
@@ -112,7 +112,7 @@ export function TallCard({
       onPointerMove={onMove}
       onPointerLeave={onLeave}
     >
-      <Art game={game} priority={priority} sizes="(min-width: 1181px) 15vw, (min-width: 761px) 24vw, 46vw" />
+      <Art game={game} priority={priority} sizes="(min-width: 1181px) 15vw, (min-width: 768px) 24vw, 46vw" />
       <span className={s.shine} />
       <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
       {label ? <span className={cn(s.badge, label === "top" && s.badgeTop)}>{label === "top" ? "TOP" : "NEW"}</span> : null}
@@ -134,7 +134,7 @@ export function WideCard({ game, i = 0 }: { game: Game; i?: number }) {
   const peek = usePeek(game);
   return (
     <article className={cn(s.card, s.cFolk, s.rv)} style={indexStyle(i)} {...peek}>
-      <Art game={game} sizes="(min-width: 1025px) 30vw, (min-width: 761px) 48vw, 92vw" />
+      <Art game={game} sizes="(min-width: 1024px) 30vw, (min-width: 768px) 48vw, 92vw" />
       <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
       <div className={s.fText}>
         <div className={s.fTitle}>{game.title}</div>
