@@ -1,36 +1,5 @@
 "use client";
 
-import {
-  Bell,
-  Bookmark,
-  ChartLine,
-  ChevronDown,
-  Coins,
-  Download,
-  FileText,
-  Flag,
-  Gamepad2,
-  Heart,
-  Home,
-  LayoutGrid,
-  LogOut,
-  Megaphone,
-  Menu,
-  Moon,
-  Play,
-  Plus,
-  Search,
-  Settings,
-  Shield,
-  SlidersHorizontal,
-  Sun,
-  Trophy,
-  User,
-  Users,
-  Wallet,
-  X,
-  type LucideIcon,
-} from "lucide-react";
 import Image from "next/image";
 import { ICON_GALLERY, ICON_SIZES, IconBookmark, IconHeart } from "@/components/icons";
 import { useState } from "react";
@@ -470,51 +439,13 @@ function Formatting() {
 
 // ---------- Icons ----------
 
-const ICONS: Array<[string, LucideIcon]> = [
-  ["Home", Home],
-  ["Search", Search],
-  ["SlidersHorizontal", SlidersHorizontal],
-  ["Play", Play],
-  ["Plus", Plus],
-  ["Heart", Heart],
-  ["Users", Users],
-  ["Trophy", Trophy],
-  ["Gamepad2", Gamepad2],
-  ["Bell", Bell],
-  ["User", User],
-  ["Settings", Settings],
-  ["Wallet", Wallet],
-  ["Download", Download],
-  ["Moon", Moon],
-  ["Sun", Sun],
-  ["Menu", Menu],
-  ["X", X],
-  ["ChevronDown", ChevronDown],
-  ["LogOut", LogOut],
-];
-
-const NAV_MAP: Array<[string, string, LucideIcon]> = [
-  ["IconHomeNav", "Home", Home],
-  ["IconUserNav", "User", User],
-  ["IconGridNav", "LayoutGrid", LayoutGrid],
-  ["IconBookmarkNav", "Bookmark", Bookmark],
-  ["IconWalletNav", "Wallet", Wallet],
-  ["IconLineGraphNav", "ChartLine", ChartLine],
-  ["IconMegaphoneNav", "Megaphone", Megaphone],
-  ["IconDownloadNav", "Download", Download],
-  ["IconCoin", "Coins", Coins],
-  ["IconFlag", "Flag", Flag],
-  ["IconShield", "Shield", Shield],
-  ["IconDoc", "FileText", FileText],
-];
-
 function Icons() {
   return (
     <DocSection
       id="icons"
       eyebrow="Language"
       title="Icons"
-      description="lucide-react at 16, 20 or 24px with the default 2px stroke. Custom icons only for the brand. Decorative icons get aria-hidden; icon-only buttons get an aria-label."
+      description="One set everywhere: Icons8 iOS Filled, drawn for 16, 20 and 24px, in components/icons.tsx. Icons are decorative (aria-hidden); icon-only buttons need an aria-label. Need a new glyph? Add it from the same set (ios-filled, 100px PNG) to public/assets/icons/ios-filled and components/icons.tsx. The free Icons8 licence asks for a link to icons8.com."
     >
       <Demo
         title="App icon set: Icons8 iOS Filled"
@@ -555,36 +486,6 @@ function Icons() {
             </span>
           </div>
         </div>
-      </Demo>
-      <Demo title="Sizes" code={`import { Heart } from "lucide-react";\n<Heart aria-hidden className="size-5" />`}>
-        <ul className="grid grid-cols-4 gap-4 sm:grid-cols-5 lg:grid-cols-10">
-          {ICONS.map(([name, I]) => (
-            <li key={name} className="flex flex-col items-center gap-2 rounded-pw-md bg-pw-surface-1 p-3">
-              <span className="flex items-end gap-2 text-pw-text">
-                <I aria-hidden className="size-4" />
-                <I aria-hidden className="size-5" />
-                <I aria-hidden className="size-6" />
-              </span>
-              <span className="max-w-full truncate text-pw-caption text-pw-muted">{name}</span>
-            </li>
-          ))}
-        </ul>
-      </Demo>
-      <Demo
-        title="Nav icon mapping"
-        note="Old custom icons (NavIcon.tsx, icons.tsx) → lucide. Applied page by page in #4."
-      >
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {NAV_MAP.map(([old, name, I]) => (
-            <li key={old} className="flex items-center gap-3 rounded-pw-md bg-pw-surface-1 px-3 py-2">
-              <I aria-hidden className="size-5 text-pw-text" />
-              <span className="min-w-0 text-pw-caption">
-                <span className="text-pw-muted">{old} → </span>
-                <span className="font-semibold text-pw-text">{name}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
       </Demo>
     </DocSection>
   );

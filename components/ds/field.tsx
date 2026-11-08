@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, Search, X } from "lucide-react";
+import { IconCheck, IconChevronDown, IconClose, IconSearch } from "@/components/icons";
 import { Checkbox as RCheckbox, RadioGroup as RRadioGroup, Switch as RSwitch } from "radix-ui";
 import { createContext, useContext, useId, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -119,7 +119,7 @@ export function Select({ className, children, ...props }: React.ComponentProps<"
       <select className={cn(control, "h-11 appearance-none pr-10", className)} {...fieldProps(field, props)} {...props}>
         {children}
       </select>
-      <ChevronDown
+      <IconChevronDown
         aria-hidden
         className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-pw-muted"
       />
@@ -141,7 +141,7 @@ export function SearchInput({
 }) {
   return (
     <span className={cn("relative block", className)}>
-      <Search
+      <IconSearch
         aria-hidden
         className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-pw-muted"
       />
@@ -164,7 +164,7 @@ export function SearchInput({
             hitArea,
           )}
         >
-          <X className="size-4" />
+          <IconClose className="size-4" />
         </button>
       ) : null}
     </span>
@@ -193,7 +193,7 @@ export function Checkbox({
         {...props}
       >
         <RCheckbox.Indicator>
-          <Check className="size-3.5" strokeWidth={3} />
+          <IconCheck className="size-3.5" />
         </RCheckbox.Indicator>
       </RCheckbox.Root>
       <div className="min-w-0">

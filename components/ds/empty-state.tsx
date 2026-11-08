@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { AppIcon } from "@/components/icons";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Illustration, type IllustrationName } from "./illustration";
@@ -27,7 +27,7 @@ export function EmptyState({
   /** Page-level kinds only. */
   illustration?: IllustrationName;
   /** Inline kind only. */
-  icon?: LucideIcon;
+  icon?: AppIcon;
   title: ReactNode;
   body?: ReactNode;
   /** One primary next step (a Button). Optionally a secondary one after it. */

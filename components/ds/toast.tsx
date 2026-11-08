@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, CircleCheck, Info, X } from "lucide-react";
+import { IconAlertCircle, IconCheckCircle, IconClose, IconInfo } from "@/components/icons";
 import { Toast as RToast } from "radix-ui";
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -29,7 +29,7 @@ export function useToast() {
   return push;
 }
 
-const ICONS = { info: Info, success: CircleCheck, danger: CircleAlert } as const;
+const ICONS = { info: IconInfo, success: IconCheckCircle, danger: IconAlertCircle } as const;
 const ICON_TONE = { info: "text-pw-link", success: "text-pw-success", danger: "text-pw-danger" } as const;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -104,7 +104,7 @@ function ToastItem({ item, onClose }: { item: Item; onClose: () => void }) {
           focusRing,
         )}
       >
-        <X className="size-4" />
+        <IconClose className="size-4" />
       </RToast.Close>
     </RToast.Root>
   );

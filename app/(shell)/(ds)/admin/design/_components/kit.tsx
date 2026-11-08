@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { IconCheck, IconCopy } from "@/components/icons";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { focusRing } from "@/components/ds/styles";
 import { useToast } from "@/components/ds/toast";
@@ -104,9 +104,9 @@ export function CopyToken({ name, className }: { name: string; className?: strin
     >
       <span className="truncate">{name}</span>
       {done ? (
-        <Check aria-hidden className="size-3.5 shrink-0 text-pw-success" />
+        <IconCheck aria-hidden className="size-3.5 shrink-0 text-pw-success" />
       ) : (
-        <Copy aria-hidden className="size-3.5 shrink-0 text-pw-muted" />
+        <IconCopy aria-hidden className="size-3.5 shrink-0 text-pw-muted" />
       )}
       <span className="sr-only">Copy</span>
     </button>

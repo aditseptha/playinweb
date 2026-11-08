@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, CircleCheck, Info, TriangleAlert, WifiOff, X } from "lucide-react";
+import { IconAlertCircle, IconCheckCircle, IconClose, IconCloudOff, IconInfo, IconWarning } from "@/components/icons";
 import type { ReactNode } from "react";
 import { formatCompact } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -61,10 +61,10 @@ export function ProgressBar({
 // ---------- InlineAlert ----------
 
 const ALERT = {
-  info: { icon: Info, box: "border-pw-link/30 bg-pw-link/10", ic: "text-pw-link" },
-  success: { icon: CircleCheck, box: "border-pw-success/30 bg-pw-success/10", ic: "text-pw-success" },
-  warning: { icon: TriangleAlert, box: "border-pw-warning/30 bg-pw-warning/10", ic: "text-pw-warning" },
-  danger: { icon: CircleAlert, box: "border-pw-danger/40 bg-pw-danger/10", ic: "text-pw-danger" },
+  info: { icon: IconInfo, box: "border-pw-link/30 bg-pw-link/10", ic: "text-pw-link" },
+  success: { icon: IconCheckCircle, box: "border-pw-success/30 bg-pw-success/10", ic: "text-pw-success" },
+  warning: { icon: IconWarning, box: "border-pw-warning/30 bg-pw-warning/10", ic: "text-pw-warning" },
+  danger: { icon: IconAlertCircle, box: "border-pw-danger/40 bg-pw-danger/10", ic: "text-pw-danger" },
 } as const;
 
 /** A message inside a section: a card that failed to load, a warning above a form. */
@@ -98,7 +98,7 @@ export function InlineAlert({
       </div>
       {onDismiss ? (
         <Button variant="ghost" size="icon-sm" aria-label="Dismiss" onClick={onDismiss} className="-m-1">
-          <X />
+          <IconClose />
         </Button>
       ) : null}
     </div>
@@ -147,7 +147,7 @@ export function OfflineBanner({ forceOffline = false }: { forceOffline?: boolean
       role="status"
       className="flex items-center justify-center gap-2 bg-pw-yellow-300 px-4 py-2 text-pw-body-sm font-semibold text-pw-navy"
     >
-      <WifiOff aria-hidden className="size-4" />
+      <IconCloudOff aria-hidden className="size-4" />
       You’re offline. We’ll reconnect when the network is back.
     </div>
   );

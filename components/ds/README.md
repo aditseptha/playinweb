@@ -17,6 +17,7 @@ Plan and decisions: GitHub issue #3. Page redesigns that use it: #4. Game media 
   `font-pw-display`) or `var(--pw-*)`. Never a raw hex or rgba in DS code (`npm run check:hex` enforces it).
 - **Fonts**: put `dsFontVars` from `app/fonts.ts` on the page root.
 - **Components** are imported one file at a time: `import { Button } from "@/components/ds/button"`.
+- **Icons** come from `components/icons.tsx` (Icons8 iOS Filled, 16/20/24). Add missing glyphs from the same set.
 - **Formatting**: numbers, money and dates always go through `@/lib/format` (fixed en-US, UTC).
 
 ## Rules
