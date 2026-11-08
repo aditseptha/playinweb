@@ -46,6 +46,7 @@ import {
   formatNumber,
   formatRelative,
 } from "@/lib/format";
+import { EMAIL_TEMPLATES } from "@/lib/email-templates";
 import { contrast, contrastPairs, motion, pastels, primitives, radius, themes, typeScale, zIndex } from "@/lib/tokens";
 import { cn } from "@/lib/cn";
 import { CopyToken, Demo, DocSection, Rule } from "./kit";
@@ -588,7 +589,7 @@ function Brand() {
       id="brand"
       eyebrow="Language"
       title="Brand"
-      description="Use the official files; never retype the wordmark in a font. The SVG master replaces these WebP files when it’s ready. Favicon, OG image and auth email templates come in the next phase (D3)."
+      description="Use the official files; never retype the wordmark in a font. The SVG master replaces these WebP files when it’s ready. Link previews and auth emails are drawn from the same tokens."
     >
       <div className="grid gap-4 lg:grid-cols-3">
         <Demo title="Mark" note="playinweb-icon.png">
@@ -601,6 +602,62 @@ function Brand() {
           <Image src="/playinweb-lettermark-black.webp" alt="PlayInWeb" width={164} height={30} unoptimized />
         </Demo>
       </div>
+      <Demo
+        title="Favicon and app icon"
+        note="app/favicon.ico, app/icon.png, app/apple-icon.png: the mark on its blue tile."
+      >
+        <div className="flex items-end gap-4">
+          {[16, 32, 48, 64].map((n) => (
+            <Image key={n} src="/playinweb-icon.png" alt="" width={n} height={n} className="rounded-[22%]" />
+          ))}
+        </div>
+      </Demo>
+      <Demo
+        title="Link previews (Open Graph)"
+        note="lib/og.tsx. Site-wide in app/opengraph-image.tsx; each game page gets its own. Covers must be PNG or JPEG; others fall back to the branded background."
+        code={`// app/(shell)/game/[id]/opengraph-image.tsx\nreturn gameOgImage({ title, creator, plays, coverUrl });`}
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          {[
+            ["site", "Site-wide"],
+            ["game", "Game"],
+            ["game&long=1", "Game, worst case"],
+          ].map(([q, label]) => (
+            <figure key={q} className="flex flex-col gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/admin/design/og?kind=${q}`}
+                alt={`${label} link preview`}
+                width={1200}
+                height={630}
+                loading="lazy"
+                className="h-auto w-full rounded-pw-md border border-pw-line"
+              />
+              <figcaption className="text-pw-caption text-pw-muted">{label}</figcaption>
+            </figure>
+          ))}
+        </div>
+      </Demo>
+      <Demo
+        title="Auth emails"
+        note="lib/email-templates.ts → supabase/templates (npm run emails). Light card, because mail apps force-invert dark emails. Installed by Adit in Supabase."
+      >
+        <div className="grid gap-4 xl:grid-cols-3">
+          {EMAIL_TEMPLATES.map((t) => (
+            <figure key={t.file} className="flex flex-col gap-2">
+              <figcaption className="text-pw-caption text-pw-muted">
+                <span className="font-semibold text-pw-text">{t.dashboardName}</span> · “{t.subject}”
+              </figcaption>
+              <iframe
+                title={`${t.dashboardName} email preview`}
+                src={`/admin/design/email/${t.file.replace(/\.html$/, "")}`}
+                loading="lazy"
+                className="h-[520px] w-full rounded-pw-md border border-pw-line bg-pw-day-50"
+              />
+            </figure>
+          ))}
+        </div>
+      </Demo>
       <Demo title="Rules">
         <ul className="flex flex-col gap-2.5">
           <Rule kind="do">

@@ -1,21 +1,35 @@
 "use client";
 
 import {
+  Bell,
+  BookmarkIcon,
+  ChartLine,
   Download,
+  Flag,
   Heart,
+  Home,
   Inbox,
+  LayoutGrid,
   LogOut,
   MoreHorizontal,
   Play,
   Plus,
   Settings,
+  Share2,
   SlidersHorizontal,
   Trash2,
   User,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Avatar } from "@/components/ds/avatar";
+import { Breadcrumb } from "@/components/ds/breadcrumb";
+import { FileUpload, type UploadStatus } from "@/components/ds/file-upload";
+import { List, ListItem } from "@/components/ds/list";
+import { MenuSheet, Sidebar, TopNav, type NavGroup } from "@/components/ds/nav";
+import { LoadMore, Pagination } from "@/components/ds/pagination";
+import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ds/popover";
 import { Badge, Chip } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
 import { ConfirmDialog, Dialog, DialogClose, DialogContent, DialogTrigger } from "@/components/ds/dialog";
@@ -57,7 +71,12 @@ export function ComponentSections() {
       <Avatars />
       <Cards />
       <Overlays />
+      <PopoverDemo />
+      <Navigation />
+      <Wayfinding />
+      <Lists />
       <Tables />
+      <Uploads />
       <Feedback />
     </DocSection>
   );
@@ -557,6 +576,225 @@ function Feedback() {
           <OfflineBanner forceOffline />
         </div>
       </div>
+    </Demo>
+  );
+}
+
+function PopoverDemo() {
+  return (
+    <Demo
+      title="Popover"
+      note="Small anchored panels: share, quick info. Not for actions (Menu) or long tasks (Dialog)."
+      code={`import { Popover, PopoverTrigger, PopoverContent } from "@/components/ds/popover";`}
+    >
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button data-testid="open-popover">
+            <Share2 aria-hidden /> Share
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent aria-label="Share Ayam Kabur">
+          <p className="font-semibold text-pw-text">Share Ayam Kabur</p>
+          <p className="mt-1 text-pw-muted">Anyone with the link can play it in their browser.</p>
+          <div className="mt-3 flex items-center gap-2">
+            <TextInput readOnly value="playinweb.com/kikiew/ayam-kabur" aria-label="Game link" />
+            <PopoverClose asChild>
+              <Button size="sm" variant="primary">
+                Copy
+              </Button>
+            </PopoverClose>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </Demo>
+  );
+}
+
+const NAV_LINKS = [
+  { href: "/", label: "Home" },
+  { href: "/creators", label: "Creators" },
+  { href: "/top", label: "Rankings" },
+];
+
+const CREATOR_NAV: NavGroup[] = [
+  { items: [{ href: "/", label: "Home", icon: Home }] },
+  {
+    title: "Create",
+    items: [
+      { href: "/profile", label: "Channel", icon: User },
+      { href: "/manage", label: "Manage games", icon: LayoutGrid },
+      { href: "/library", label: "Library", icon: BookmarkIcon },
+      { href: "/donations", label: "Wallet", icon: Wallet },
+    ],
+  },
+  { title: "Explore", items: [{ href: "/top", label: "Top played", icon: ChartLine }] },
+  { title: "Help", items: [{ href: "/report", label: "Report an issue", icon: Flag }] },
+];
+
+function Navigation() {
+  return (
+    <Demo
+      title="Navigation"
+      note="TopNav (solid, or over art), Sidebar for creator and admin areas, MenuSheet on phones. Which shell each page uses is decided in #4."
+      code={`import { TopNav, Sidebar, MenuSheet } from "@/components/ds/nav";`}
+      bodyClassName="flex flex-col gap-6"
+    >
+      <div className="overflow-hidden rounded-pw-lg border border-pw-line">
+        <TopNav
+          links={NAV_LINKS}
+          current="/top"
+          menu={CREATOR_NAV}
+          actions={
+            <>
+              <Button variant="ghost" size="icon" aria-label="Notifications">
+                <Bell />
+              </Button>
+              <Button variant="primary" size="sm" className="hidden sm:inline-flex">
+                <Plus aria-hidden /> Add game
+              </Button>
+            </>
+          }
+        />
+      </div>
+      <div className="relative h-56 overflow-hidden rounded-pw-lg border border-pw-line bg-[url(/home-hero.webp)] bg-cover bg-center">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-linear-to-b from-[color-mix(in_srgb,var(--pw-night-950)_70%,transparent)] to-transparent"
+        />
+        <TopNav
+          onArt
+          links={NAV_LINKS}
+          current="/"
+          actions={
+            <Button variant="primary" size="sm">
+              Sign up free
+            </Button>
+          }
+        />
+      </div>
+      <div className="flex h-[440px] overflow-hidden rounded-pw-lg border border-pw-line">
+        <Sidebar groups={CREATOR_NAV} current="/manage" className="hidden sm:flex" />
+        <div className="flex flex-1 flex-col gap-3 p-5">
+          <p className="text-pw-body-sm text-pw-muted">
+            On phones the same groups open in a sheet. The menu button shows below 768px:
+          </p>
+          <div>
+            <MenuSheet groups={CREATOR_NAV} current="/manage" />
+          </div>
+        </div>
+      </div>
+    </Demo>
+  );
+}
+
+function Wayfinding() {
+  const [page, setPage] = useState(3);
+  const [shown, setShown] = useState(24);
+  const [loading, setLoading] = useState(false);
+  return (
+    <Demo
+      title="Breadcrumb, Pagination, Load more"
+      note="Catalogue grids load more in place; creator and admin tables use numbered pages with shareable links."
+      code={`import { Breadcrumb } from "@/components/ds/breadcrumb";\nimport { Pagination, LoadMore } from "@/components/ds/pagination";`}
+    >
+      <div className="flex flex-col gap-8">
+        <Breadcrumb
+          items={[
+            { label: "Manage games", href: "#components" },
+            { label: "The Extraordinarily Long and Winding Adventures of Si Kancil", href: "#components" },
+            { label: "Edit" },
+          ]}
+        />
+        {/* The demo stays on this page: page links update local state instead of navigating. */}
+        <div
+          onClickCapture={(e) => {
+            const a = (e.target as HTMLElement).closest("a");
+            if (!a) return;
+            e.preventDefault();
+            const n = Number(new URL(a.href).searchParams.get("page"));
+            if (n) setPage(n);
+          }}
+        >
+          <Pagination page={page} pages={12} hrefFor={(n) => `?page=${n}`} />
+        </div>
+        <LoadMore
+          shown={shown}
+          total={120}
+          loading={loading}
+          onLoadMore={() => {
+            setLoading(true);
+            window.setTimeout(() => {
+              setShown((n) => Math.min(120, n + 24));
+              setLoading(false);
+            }, 700);
+          }}
+        />
+      </div>
+    </Demo>
+  );
+}
+
+function Lists() {
+  return (
+    <Demo
+      title="List"
+      note="Mixed rows: notifications, settings. Data columns use Table."
+      code={`import { List, ListItem } from "@/components/ds/list";`}
+    >
+      <List label="Notifications" className="max-w-xl">
+        <ListItem
+          unread
+          leading={<Avatar name="laras.dev" size="md" />}
+          title="laras.dev followed your channel"
+          description={formatRelative(DEMO_NOW - 20 * 60_000, DEMO_NOW)}
+        />
+        <ListItem
+          leading={<Avatar name="Dimas Game" size="md" />}
+          title={`Dimas Game tipped ${formatMoney(5)} on Night Bus 9`}
+          description={formatRelative(DEMO_NOW - 2 * 86_400_000, DEMO_NOW)}
+        />
+        <ListItem
+          leading={<Settings aria-hidden className="size-5 text-pw-muted" />}
+          title="Account settings"
+          href="#components"
+        />
+      </List>
+    </Demo>
+  );
+}
+
+function Uploads() {
+  const [uploads, setUploads] = useState<UploadStatus[]>([
+    { id: "a", name: "ayam-kabur-build.zip", size: 82 * 1024 * 1024, progress: 42, state: "uploading" },
+    { id: "b", name: "cover.png", size: 3.4 * 1024 * 1024, state: "done" },
+    {
+      id: "c",
+      name: "trailer.mov",
+      size: 240 * 1024 * 1024,
+      state: "error",
+      error: "Couldn’t upload: the connection dropped. Try again.",
+    },
+  ]);
+  return (
+    <Demo
+      title="FileUpload"
+      note="Checks type and size before uploading; progress per file. Cover cropping is part of the media flow (#5)."
+      code={`import { FileUpload } from "@/components/ds/file-upload";\n<FileUpload label="Game build" accept=".zip,.html" maxBytes={100 * 1024 * 1024} onFiles={upload} uploads={uploads} />`}
+    >
+      <FileUpload
+        label="Game build"
+        hint="A .zip with index.html at the top level, or a single .html file."
+        accept=".zip,.html,application/zip"
+        maxBytes={100 * 1024 * 1024}
+        onFiles={(files) =>
+          setUploads((cur) => [
+            ...files.map((f) => ({ id: `${f.name}-${f.size}`, name: f.name, size: f.size, state: "done" as const })),
+            ...cur,
+          ])
+        }
+        uploads={uploads}
+        onCancel={(id) => setUploads((cur) => cur.filter((u) => u.id !== id))}
+      />
     </Demo>
   );
 }

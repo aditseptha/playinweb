@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -127,6 +127,18 @@ test.describe("keyboard", () => {
     await expect(trigger).toBeFocused();
   });
 
+  test("popover closes on Esc and returns focus", async ({ page }) => {
+    await open(page);
+    const trigger = page.getByTestId("open-popover");
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    const panel = page.getByRole("dialog", { name: "Share Ayam Kabur" });
+    await expect(panel).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
   test("tabs move with arrow keys", async ({ page }) => {
     await open(page);
     const tabs = page.getByRole("tablist", { name: "Game categories" });
@@ -153,10 +165,11 @@ test.describe("screenshots", () => {
       if (existsSync(baseline)) {
         await expect(section).toHaveScreenshot(name);
       } else {
-        await info.attach(name, {
-          body: await section.screenshot({ animations: "disabled" }),
-          contentType: "image/png",
-        });
+        // Saved under test-results/baselines/<browser>/ so CI can upload them ready to commit.
+        const body = await section.screenshot({ animations: "disabled" });
+        mkdirSync(join("test-results", "baselines", info.project.name), { recursive: true });
+        writeFileSync(join("test-results", "baselines", info.project.name, name), body);
+        await info.attach(name, { body, contentType: "image/png" });
         info.annotations.push({ type: "baseline missing", description: name });
       }
     });

@@ -45,3 +45,14 @@ Plan and decisions: GitHub issue #3. Page redesigns that use it: #4. Game media 
 
 Safari/iOS 16.4+, Chrome/Edge 111+, Firefox 128+ (Tailwind v4's floor). Newer CSS such as scroll-driven animation and
 `backdrop-filter` is an extra behind `@supports`; the page must still work without it.
+
+## Brand outputs
+
+- **Link previews**: `lib/og.tsx` draws the site-wide (`app/opengraph-image.tsx`) and per-game Open Graph images.
+  Satori reads PNG and JPEG covers only; other formats fall back to the branded background.
+- **Auth emails**: edit `lib/email-templates.ts`, run `npm run emails`, commit `supabase/templates/*.html`
+  (CI checks they match). Installing them in Supabase is described in `supabase/templates/README.md`.
+- **Performance**: the Lighthouse baseline and per-template targets are in `docs/lighthouse-baseline.md`.
+
+Files in a `public/` subfolder are served under a path that the proxy could read as a creator handle. Reserve the
+folder name in `RESERVED_HANDLES` (`lib/host.ts`) first, as done for `illustrations`, or keep the file at the top level.
