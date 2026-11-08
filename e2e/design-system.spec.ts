@@ -181,8 +181,10 @@ test.describe("screenshots", () => {
         if (existsSync(baseline)) {
           await expect(target).toHaveScreenshot(name, { stylePath: SHOT_STYLE_PATH });
         } else {
+          // scale "css" matches what toHaveScreenshot compares against (WebKit runs at 2× pixel density).
           const body = await target.screenshot({
             animations: "disabled",
+            scale: "css",
             style: readFileSync(SHOT_STYLE_PATH, "utf8"),
           });
           mkdirSync(join("test-results", "baselines", info.project.name), { recursive: true });
