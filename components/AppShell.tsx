@@ -46,7 +46,7 @@ import { apexHref } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
 import { usePrefersReducedMotion } from "@/lib/reduced-motion";
 import { useGames } from "@/lib/store";
-import { applyTheme, THEME_KEY, type Theme } from "@/lib/theme";
+import { switchTheme } from "@/lib/theme";
 
 const PRIMARY_NAV = [
   { title: "Browse", items: [{ href: "/", label: "Home", icon: IconHomeNav }] },
@@ -228,15 +228,11 @@ function ThemeToggle() {
       variant="ghost"
       size="icon"
       aria-label="Toggle light and dark mode"
-      onClick={() => {
-        const next: Theme = document.documentElement.classList.contains("dark") ? "light" : "dark";
-        localStorage.setItem(THEME_KEY, next);
-        applyTheme(next);
-      }}
+      onClick={(e) => switchTheme(e.currentTarget)}
     >
       <span className="relative grid size-5 place-items-center">
-        <IconSun className="col-start-1 row-start-1 hidden h-5 w-5 dark:block" />
-        <IconMoon className="col-start-1 row-start-1 h-5 w-5 dark:hidden" />
+        <IconSun className="theme-icon col-start-1 row-start-1 hidden h-5 w-5 dark:block" />
+        <IconMoon className="theme-icon col-start-1 row-start-1 h-5 w-5 dark:hidden" />
       </span>
     </Button>
   );
