@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { GameThumb, PROJECT_STAGE_IMAGE_SIZES } from "@/components/GameThumb";
+import { PreviewClip } from "@/components/PreviewClip";
 import { Button } from "@/components/ui/button";
 import { IconExpand, IconFullscreen, IconFullscreenExit, IconPlay, IconShrink } from "@/components/icons";
 import { cn } from "@/lib/cn";
@@ -9,9 +10,9 @@ import { projectPublicUrl } from "@/lib/host";
 import { GUEST_PLAY_LIMIT_MS } from "@/lib/guest-play";
 import { playFrameSandbox } from "@/lib/html-game";
 import type { Game } from "@/lib/types";
-import { parseTrailer, type Trailer } from "@/lib/trailer";
+import { vimeoThumbUrl, parseTrailer, type Trailer } from "@/lib/trailer";
 
-type Slide = { id: string; kind: "trailer" | "image"; src?: string };
+type Slide = { id: string; kind: "trailer" | "cover" | "shot" | "clip"; src?: string };
 
 type HeroCtx = {
   game: Game;
@@ -79,18 +80,31 @@ export function ProjectHeroRoot({
   children: ReactNode;
 }) {
   const trailer = useMemo(() => parseTrailer(trailerUrl), [trailerUrl]);
+  const [vimeoThumb, setVimeoThumb] = useState("");
+  useEffect(() => {
+    if (trailer?.provider !== "vimeo") return;
+    let cancel = false;
+    vimeoThumbUrl(trailer.id).then((url) => {
+      if (!cancel && url) setVimeoThumb(url);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [trailer]);
   const slides = useMemo<Slide[]>(
     () => [
-      ...(trailer ? [{ id: "trailer", kind: "trailer" as const, src: trailer.thumbUrl }] : []),
-      ...unique([game.thumbnailUrl, ...game.screenshots].filter(Boolean)).map((src) => ({
-        id: src,
-        kind: "image" as const,
+      ...(game.previewClipUrl ? [{ id: "clip", kind: "clip" as const, src: game.thumbnailUrl }] : []),
+      ...(trailer ? [{ id: "trailer", kind: "trailer" as const, src: vimeoThumb || trailer.thumbUrl }] : []),
+      ...(game.thumbnailUrl ? [{ id: "cover", kind: "cover" as const, src: game.thumbnailUrl }] : []),
+      ...game.screenshots.filter(Boolean).map((src, index) => ({
+        id: `shot-${index}`,
+        kind: "shot" as const,
         src,
       })),
     ],
-    [trailer, game.thumbnailUrl, game.screenshots],
+    [trailer, vimeoThumb, game.thumbnailUrl, game.previewClipUrl, game.screenshots],
   );
-  const [slide, setSlide] = useState(slides.find((s) => s.kind === "image")?.id ?? slides[0]?.id ?? "");
+  const [slide, setSlide] = useState(slides[0]?.id ?? "");
   const autoStart = autoPlay && game.embeddable && allowPlay;
   const [playing, setPlaying] = useState(!playLocked && autoPlay && game.embeddable);
   const [expanded, setExpanded] = useState(!playLocked && autoStart);
@@ -255,6 +269,8 @@ export function ProjectHeroStage() {
           allowFullScreen
           sandbox={playFrameSandbox()}
         />
+      ) : current?.kind === "clip" && game.previewClipUrl ? (
+        <ClipStage url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} poster={game.thumbnailUrl} game={game} />
       ) : current?.kind === "trailer" && trailer ? (
         <iframe
           src={trailer.embedUrl}
@@ -270,6 +286,7 @@ export function ProjectHeroStage() {
           priority
           quality={90}
           sizes={PROJECT_STAGE_IMAGE_SIZES}
+          fit={current?.kind === "shot" ? "contain" : "cover"}
         />
       )}
 
@@ -380,12 +397,14 @@ export function ProjectHeroThumbs() {
           )}
           aria-label={item.kind === "trailer" ? "Trailer" : "Screenshot"}
         >
-          {item.kind === "trailer" && item.src ? (
+          {item.kind === "clip" ? (
+            <GameThumb game={game} src={item.src} sizes="128px" />
+          ) : item.kind === "trailer" && item.src ? (
             // YouTube thumbnail host isn't in images.remotePatterns, so it stays a plain <img>.
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          ) : item.kind === "image" ? (
-            <GameThumb game={game} src={item.src} sizes="128px" />
+          ) : item.kind === "shot" || item.kind === "cover" ? (
+            <GameThumb game={game} src={item.src} sizes="128px" fit={item.kind === "shot" ? "contain" : "cover"} />
           ) : (
             <span className="absolute inset-0 bg-surface-3" />
           )}
@@ -400,6 +419,36 @@ export function ProjectHeroThumbs() {
   );
 }
 
-function unique(items: string[]) {
-  return [...new Set(items)];
+function ClipStage({
+  url,
+  kind,
+  poster,
+  game,
+}: {
+  url: string;
+  kind: "video" | "gif";
+  poster: string;
+  game: Parameters<typeof GameThumb>[0]["game"];
+}) {
+  const [on, setOn] = useState(false);
+  if (!on) {
+    return (
+      <button type="button" className="absolute inset-0" onClick={() => setOn(true)} aria-label="Play preview">
+        <GameThumb game={game} src={poster} sizes={PROJECT_STAGE_IMAGE_SIZES} />
+        <span className="absolute inset-0 grid place-items-center">
+          <span className="grid size-12 place-items-center rounded-full bg-black/70 text-white">
+            <IconPlay className="h-5 w-5" />
+          </span>
+        </span>
+      </button>
+    );
+  }
+  return (
+    <div className="absolute inset-0">
+      <PreviewClip url={url} kind={kind} />
+      <button type="button" className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-caption text-white" onClick={() => setOn(false)}>
+        Pause
+      </button>
+    </div>
+  );
 }

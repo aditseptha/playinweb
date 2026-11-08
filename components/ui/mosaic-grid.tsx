@@ -40,20 +40,20 @@ const EDGE_ZONE_SHADE = [-0.1, 0.2];
 type Cell = { x: number; y: number; shade: number };
 
 /** Deterministic so server and client markup match. */
-function buildCells(cols: number, fade: number) {
-  const rows = ROWS + fade;
+function buildCells(cols: number, fade: number, rowCount = ROWS, solidRows = SOLID_ROWS) {
+  const rows = rowCount + fade;
   const random = mulberry32(0x5eed);
   const cells: Cell[] = [];
 
   for (let col = 0; col < cols; col++) {
     const slope = Math.round(SLOPE_ROWS * (1 - col / (cols - 1)));
-    const edge = SOLID_ROWS + slope + Math.floor(random() * (STEP_ROWS + 1));
+    const edge = solidRows + slope + Math.floor(random() * (STEP_ROWS + 1));
     const filled = new Set<number>();
     for (let row = 0; row < edge; row++) filled.add(row);
 
     // Punching a cell out of the top step and floating one above it keeps the
-    // boundary from reading as a staircase. Both stay clear of SOLID_ROWS.
-    if (random() < 0.4 && edge > SOLID_ROWS) filled.delete(edge - 1);
+    // boundary from reading as a staircase. Both stay clear of the solid rows.
+    if (random() < 0.4 && edge > solidRows) filled.delete(edge - 1);
     if (random() < 0.45) filled.add(edge + 1 + Math.floor(random() * 2));
 
     // Optional longer dissolve: stray cells above the edge, thinning out with height.
@@ -63,7 +63,7 @@ function buildCells(cols: number, fade: number) {
 
     for (const row of filled) {
       if (row >= rows) continue;
-      const [min, max] = row < SOLID_ROWS ? TEXT_ZONE_SHADE : EDGE_ZONE_SHADE;
+      const [min, max] = row < solidRows ? TEXT_ZONE_SHADE : EDGE_ZONE_SHADE;
       cells.push({
         x: col * CELL,
         y: (rows - 1 - row) * CELL,
@@ -79,14 +79,29 @@ export function MosaicGrid({
   className,
   cols = COLS,
   fade = 0,
+  rows = ROWS,
+  solidRows = SOLID_ROWS,
+  omitBefore = 0,
+  omitFrom = Number.POSITIVE_INFINITY,
 }: {
   className?: string;
   cols?: number;
   /** Extra rows the edge dissolves over. */
   fade?: number;
+  /** Total rows before `fade`. Defaults to the sidebar footer grid. */
+  rows?: number;
+  /** Rows from the bottom that stay filled. The breakup starts above these. */
+  solidRows?: number;
+  /** Drop cells starting above this y, so a removed row takes its outline with it. */
+  omitBefore?: number;
+  /** Drop cells at this y and below. */
+  omitFrom?: number;
 }) {
-  const cells = useMemo(() => buildCells(cols, fade), [cols, fade]);
-  const height = (ROWS + fade) * CELL;
+  const cells = useMemo(
+    () => buildCells(cols, fade, rows, solidRows).filter((cell) => cell.y >= omitBefore && cell.y < omitFrom),
+    [cols, fade, rows, solidRows, omitBefore, omitFrom],
+  );
+  const height = (rows + fade) * CELL;
   const rawId = useId();
   const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
   const cellsId = `mosaic-cells-${id}`;

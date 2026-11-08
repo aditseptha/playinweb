@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Bookmark, Heart, Play, Users } from "lucide-react";
+import { IconBook, IconBookmark, IconHeart, IconPlay, IconUsers } from "@/components/icons";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from "react";
 import { playHref } from "@/components/GameCard";
+import { canPlayClipOnHover, PreviewClip } from "@/components/PreviewClip";
 import { GameThumb } from "@/components/GameThumb";
 import { excerpt, formatDate } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
@@ -135,11 +136,11 @@ export function HomeUiProvider({ children }: { children: ReactNode }) {
             </div>
             <div className={s.sheetFoot}>
               <button type="button" className={cn(s.btn, s.btnGhost)} aria-pressed={saved} onClick={() => ui.toggleSave(sheet)}>
-                <Bookmark className={cn(s.ic, s.sm, saved && s.saved)} fill={saved ? "currentColor" : "none"} />
+                <IconBookmark className={cn(s.ic, s.sm, saved && s.saved)} filled={saved} />
                 {saved ? "Saved" : "Save"}
               </button>
               <Link href={playHref(sheet)} className={cn(s.btn, s.btnPrimary)} onClick={() => setSheet(null)}>
-                <Play className={cn(s.ic, s.sm)} fill="currentColor" />
+                <IconPlay className={cn(s.ic, s.sm)} />
                 Play now
               </Link>
             </div>
@@ -211,24 +212,38 @@ export function usePeek(game: Game) {
 }
 
 function ShotImage({ src }: { src: string }) {
-  return canOptimizeImage(src) ? (
-    <Image src={src} alt="" fill sizes="340px" className="object-cover" />
+  const sharp = canOptimizeImage(src) ? (
+    <Image src={src} alt="" fill sizes="340px" className="object-contain" />
   ) : (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt="" loading="lazy" decoding="async" />
+    <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
+  );
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" className={s.shotBlur} />
+      {sharp}
+    </>
   );
 }
 
 /** Real screenshots when the game has them, cycling; otherwise the cover. */
-function Shots({ game }: { game: Game }) {
+function Shots({ game, playClip = false }: { game: Game; playClip?: boolean }) {
   const shots = game.screenshots.length > 0 ? game.screenshots.slice(0, 4) : [];
   const [index, setIndex] = useState(0);
-
   useEffect(() => {
-    if (shots.length < 2 || mq("(prefers-reduced-motion: reduce)")) return;
+    if (playClip || shots.length < 2 || mq("(prefers-reduced-motion: reduce)")) return;
     const t = window.setInterval(() => setIndex((i) => (i + 1) % shots.length), 1500);
     return () => window.clearInterval(t);
-  }, [shots.length]);
+  }, [playClip, shots.length]);
+  if (playClip && game.previewClipUrl && canPlayClipOnHover()) {
+    return (
+      <div className={s.shots}>
+        <GameThumb game={game} sizes="340px" />
+        <PreviewClip url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} />
+      </div>
+    );
+  }
 
   if (shots.length === 0) {
     return (
@@ -268,18 +283,18 @@ function DetailBody({ game }: { game: Game }) {
       {blurb ? <p className={s.pkDesc}>{blurb}</p> : null}
       <div className={s.pkInfo}>
         <span>
-          <Users className={cn(s.ic, s.xs)} />
+          <IconUsers className={cn(s.ic, s.xs)} />
           {formatPlays(game.playCount)} plays
         </span>
         {game.likeCount > 0 ? (
           <span>
-            <Heart className={cn(s.ic, s.xs)} />
+            <IconHeart className={cn(s.ic, s.xs)} />
             {formatPlays(game.likeCount)} likes
           </span>
         ) : null}
         {game.embeddable ? (
           <span>
-            <BookOpen className={cn(s.ic, s.xs)} />
+            <IconBook className={cn(s.ic, s.xs)} />
             Plays in browser
           </span>
         ) : null}
@@ -326,7 +341,7 @@ function PeekCard({ peek }: { peek: NonNullable<PeekState> }) {
       }
     >
       <DetailBody game={peek.game} />
-      <Shots game={peek.game} />
+      <Shots game={peek.game} playClip />
     </div>
   );
 }

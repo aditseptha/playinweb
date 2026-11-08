@@ -42,6 +42,9 @@ export function saveErrorMessage(err: unknown) {
   if (raw.includes("html_build_name")) {
     return "Missing html_build_name column. Run: alter table public.projects add column if not exists html_build_name text;";
   }
+  if (/cover_focal|cover_portrait|cover_original|preview_clip|project_screenshots/.test(raw)) {
+    return "Media columns are missing in the database. Run supabase/migrations/20261108214000_game_media_standards.sql in the Supabase SQL editor, then save again.";
+  }
   return raw;
 }
 

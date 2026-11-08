@@ -5,6 +5,11 @@ export type Game = {
   description: string
   playUrl: string
   thumbnailUrl: string
+  portraitUrl?: string
+  focalX?: number
+  focalY?: number
+  previewClipUrl?: string
+  previewClipKind?: "video" | "gif"
   screenshots: string[]
   embeddable: boolean
   tags: string[]
@@ -14,6 +19,7 @@ export type Game = {
   likeCount: number
   promotionBoost: number
   channelHandle?: string
+  creatorAvatarUrl?: string
   projectSlug?: string
 };
 

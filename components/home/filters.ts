@@ -73,7 +73,7 @@ export function isNewThisWeek(iso: string) {
   return Date.now() - at < 7 * 86_400_000;
 }
 
-export type Creator = { handle: string; name: string; games: number; plays: number };
+export type Creator = { handle: string; name: string; games: number; plays: number; avatarUrl?: string };
 
 /** Creators who have published at least one game, most played first. */
 export function creatorsOf(games: Game[]): Creator[] {
@@ -84,6 +84,7 @@ export function creatorsOf(games: Game[]): Creator[] {
     const cur = map.get(handle) ?? { handle, name: game.developer || handle, games: 0, plays: 0 };
     cur.games += 1;
     cur.plays += game.playCount;
+    if (!cur.avatarUrl && game.creatorAvatarUrl) cur.avatarUrl = game.creatorAvatarUrl;
     map.set(handle, cur);
   }
   return [...map.values()].sort((a, b) => b.plays - a.plays || b.games - a.games || a.name.localeCompare(b.name));

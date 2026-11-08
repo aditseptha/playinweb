@@ -50,6 +50,11 @@ create table public.projects (
   suggested_donation numeric(10, 2),
   min_price numeric(10, 2),
   cover_path text,
+  cover_portrait_path text,
+  cover_original_path text,
+  cover_focal_x double precision not null default 0.5,
+  cover_focal_y double precision not null default 0.5,
+  preview_clip_path text,
   trailer_url text,
   description text not null default '',
   genre text,
@@ -83,6 +88,9 @@ create table public.projects (
   ),
   constraint projects_community_check check (
     community in ('disabled', 'comments', 'board')
+  ),
+  constraint projects_cover_focal_check check (
+    cover_focal_x between 0 and 1 and cover_focal_y between 0 and 1
   )
 );
 
@@ -100,7 +108,11 @@ create table public.project_screenshots (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects (id) on delete cascade,
   storage_path text not null,
-  sort_order integer not null default 0
+  sort_order integer not null default 0,
+  width integer,
+  height integer,
+  kind text not null default 'image',
+  constraint project_screenshots_kind_check check (kind in ('image', 'gif', 'clip'))
 );
 
 create table public.project_files (
@@ -602,7 +614,9 @@ create table private.admins (
   email text primary key
 );
 
-insert into private.admins (email) values ('aditseptha@gmail.com');
+insert into private.admins (email) values
+  ('aditseptha@gmail.com'),
+  ('rizkyerdiansyah@gmail.com');
 
 create or replace function public.is_admin()
 returns boolean
