@@ -208,6 +208,62 @@ export function IconCloudOff(props: IconProps) {
   return <Glyph slug="cloud-cross" {...props} />;
 }
 
+// Added for the design system components (same Icons8 iOS Filled set).
+export function IconSettings(props: IconProps) {
+  return <Glyph slug="settings" {...props} />;
+}
+export function IconTrash(props: IconProps) {
+  return <Glyph slug="trash" {...props} />;
+}
+export function IconUpload(props: IconProps) {
+  return <Glyph slug="upload" {...props} />;
+}
+export function IconLock(props: IconProps) {
+  return <Glyph slug="lock" {...props} />;
+}
+export function IconGamepad(props: IconProps) {
+  return <Glyph slug="controller" {...props} />;
+}
+export function IconImage(props: IconProps) {
+  return <Glyph slug="image" {...props} />;
+}
+export function IconFileZip(props: IconProps) {
+  return <Glyph slug="zip" {...props} />;
+}
+export function IconInbox(props: IconProps) {
+  return <Glyph slug="inbox" {...props} />;
+}
+export function IconMore(props: IconProps) {
+  return <Glyph slug="more" {...props} />;
+}
+export function IconCopy(props: IconProps) {
+  return <Glyph slug="copy" {...props} />;
+}
+export function IconComment(props: IconProps) {
+  return <Glyph slug="speech-bubble" {...props} />;
+}
+export function IconAlertCircle(props: IconProps) {
+  return <Glyph slug="box-important" {...props} />;
+}
+export function IconCheckCircle(props: IconProps) {
+  return <Glyph slug="ok" {...props} />;
+}
+export function IconWarning(props: IconProps) {
+  return <Glyph slug="error" {...props} />;
+}
+export function IconFolderOpen(props: IconProps) {
+  return <Glyph slug="opened-folder" {...props} />;
+}
+export function IconSignIn(props: IconProps) {
+  return <Glyph slug="enter-2" {...props} />;
+}
+export function IconConfetti(props: IconProps) {
+  return <Glyph slug="confetti" {...props} />;
+}
+export function IconNoResults(props: IconProps) {
+  return <Glyph slug="nothing-found" {...props} />;
+}
+
 export type AppIcon = (props: IconProps) => React.JSX.Element;
 
 export const ICON_GALLERY: { name: string; Icon: AppIcon }[] = [
@@ -267,6 +323,24 @@ export const ICON_GALLERY: { name: string; Icon: AppIcon }[] = [
   { name: "Arrow", Icon: IconArrow },
   { name: "Chart", Icon: IconLineGraph },
   { name: "Cloud off", Icon: IconCloudOff },
+  { name: "Settings", Icon: IconSettings },
+  { name: "Trash", Icon: IconTrash },
+  { name: "Upload", Icon: IconUpload },
+  { name: "Lock", Icon: IconLock },
+  { name: "Gamepad", Icon: IconGamepad },
+  { name: "Image", Icon: IconImage },
+  { name: "Zip file", Icon: IconFileZip },
+  { name: "Inbox", Icon: IconInbox },
+  { name: "More", Icon: IconMore },
+  { name: "Copy", Icon: IconCopy },
+  { name: "Comment", Icon: IconComment },
+  { name: "Alert", Icon: IconAlertCircle },
+  { name: "Check circle", Icon: IconCheckCircle },
+  { name: "Warning", Icon: IconWarning },
+  { name: "Folder", Icon: IconFolderOpen },
+  { name: "Sign in", Icon: IconSignIn },
+  { name: "Confetti", Icon: IconConfetti },
+  { name: "No results", Icon: IconNoResults },
 ];
 
 export function LogoMark({ className }: { className?: string }) {

@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { IconChevronRight } from "@/components/icons";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -53,7 +53,7 @@ export function ListItem({
           <span className="sr-only">Unread</span>
         </>
       ) : null}
-      {href ? <ChevronRight aria-hidden className="size-4 shrink-0 text-pw-faint" /> : null}
+      {href ? <IconChevronRight aria-hidden className="size-4 shrink-0 text-pw-faint" /> : null}
     </>
   );
   return (

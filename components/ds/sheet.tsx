@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { IconClose } from "@/components/icons";
 import { Dialog as RDialog } from "radix-ui";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
@@ -58,7 +58,7 @@ export function SheetContent({
           </div>
           <RDialog.Close asChild>
             <Button variant="ghost" size="icon-sm" aria-label="Close" className="-mr-2">
-              <X />
+              <IconClose />
             </Button>
           </RDialog.Close>
         </div>

@@ -1,26 +1,26 @@
 "use client";
 
 import {
-  Bell,
-  BookmarkIcon,
-  ChartLine,
-  Download,
-  Flag,
-  Heart,
-  Home,
-  Inbox,
-  LayoutGrid,
-  LogOut,
-  MoreHorizontal,
-  Play,
-  Plus,
-  Settings,
-  Share2,
-  SlidersHorizontal,
-  Trash2,
-  User,
-  Wallet,
-} from "lucide-react";
+  IconBell,
+  IconBookmark,
+  IconDownload,
+  IconFlag,
+  IconGrid,
+  IconHeart,
+  IconHome,
+  IconInbox,
+  IconLineGraph,
+  IconLogout,
+  IconMore,
+  IconPlay,
+  IconPlus,
+  IconSettings,
+  IconShare,
+  IconSliders,
+  IconTrash,
+  IconUser,
+  IconWallet,
+} from "@/components/icons";
 import Link from "next/link";
 import { useState } from "react";
 import { Avatar } from "@/components/ds/avatar";
@@ -93,17 +93,17 @@ function Buttons() {
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="primary">
-            <Play className="fill-current" aria-hidden /> Play now
+            <IconPlay className="fill-current" aria-hidden /> Play now
           </Button>
           <Button variant="secondary">
-            <Heart aria-hidden /> Save
+            <IconHeart aria-hidden /> Save
           </Button>
           <Button variant="ghost">Cancel</Button>
           <Button variant="highlight">
-            <Plus aria-hidden /> Publish a game
+            <IconPlus aria-hidden /> Publish a game
           </Button>
           <Button variant="danger">
-            <Trash2 aria-hidden /> Delete game
+            <IconTrash aria-hidden /> Delete game
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -111,10 +111,10 @@ function Buttons() {
           <Button size="md">Medium</Button>
           <Button size="lg">Large</Button>
           <Button size="icon" aria-label="Filters">
-            <SlidersHorizontal />
+            <IconSliders />
           </Button>
           <Button size="icon-sm" variant="ghost" aria-label="Settings">
-            <Settings />
+            <IconSettings />
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -386,7 +386,7 @@ function Overlays() {
         <Sheet>
           <SheetTrigger asChild>
             <Button data-testid="open-sheet">
-              <SlidersHorizontal aria-hidden /> Filters
+              <IconSliders aria-hidden /> Filters
             </Button>
           </SheetTrigger>
           <SheetContent
@@ -414,27 +414,27 @@ function Overlays() {
         <Menu>
           <MenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Account menu" data-testid="open-menu">
-              <MoreHorizontal />
+              <IconMore />
             </Button>
           </MenuTrigger>
           <MenuContent>
             <MenuLabel>Signed in as kikiew</MenuLabel>
             <MenuItem>
-              <User aria-hidden /> My channel
+              <IconUser aria-hidden /> My channel
             </MenuItem>
             <MenuItem>
-              <Download aria-hidden /> Downloads
+              <IconDownload aria-hidden /> Downloads
             </MenuItem>
             <MenuSeparator />
             <MenuItem tone="danger">
-              <LogOut aria-hidden /> Sign out
+              <IconLogout aria-hidden /> Sign out
             </MenuItem>
           </MenuContent>
         </Menu>
 
         <Tooltip content="Saved to this device only">
           <Button variant="ghost" size="icon" aria-label="Saved">
-            <Heart />
+            <IconHeart />
           </Button>
         </Tooltip>
 
@@ -497,7 +497,7 @@ function Tables() {
               <TEmpty colSpan={5}>
                 <EmptyState
                   kind="inline"
-                  icon={Inbox}
+                  icon={IconInbox}
                   title="No donations yet"
                   body="Donations to your games show up here."
                 />
@@ -590,7 +590,7 @@ function PopoverDemo() {
       <Popover>
         <PopoverTrigger asChild>
           <Button data-testid="open-popover">
-            <Share2 aria-hidden /> Share
+            <IconShare aria-hidden /> Share
           </Button>
         </PopoverTrigger>
         <PopoverContent aria-label="Share Ayam Kabur">
@@ -617,18 +617,18 @@ const NAV_LINKS = [
 ];
 
 const CREATOR_NAV: NavGroup[] = [
-  { items: [{ href: "/", label: "Home", icon: Home }] },
+  { items: [{ href: "/", label: "Home", icon: IconHome }] },
   {
     title: "Create",
     items: [
-      { href: "/profile", label: "Channel", icon: User },
-      { href: "/manage", label: "Manage games", icon: LayoutGrid },
-      { href: "/library", label: "Library", icon: BookmarkIcon },
-      { href: "/donations", label: "Wallet", icon: Wallet },
+      { href: "/profile", label: "Channel", icon: IconUser },
+      { href: "/manage", label: "Manage games", icon: IconGrid },
+      { href: "/library", label: "Library", icon: IconBookmark },
+      { href: "/donations", label: "Wallet", icon: IconWallet },
     ],
   },
-  { title: "Explore", items: [{ href: "/top", label: "Top played", icon: ChartLine }] },
-  { title: "Help", items: [{ href: "/report", label: "Report an issue", icon: Flag }] },
+  { title: "Explore", items: [{ href: "/top", label: "Top played", icon: IconLineGraph }] },
+  { title: "Help", items: [{ href: "/report", label: "Report an issue", icon: IconFlag }] },
 ];
 
 function Navigation() {
@@ -647,10 +647,10 @@ function Navigation() {
           actions={
             <>
               <Button variant="ghost" size="icon" aria-label="Notifications">
-                <Bell />
+                <IconBell />
               </Button>
               <Button variant="primary" size="sm" className="hidden sm:inline-flex">
-                <Plus aria-hidden /> Add game
+                <IconPlus aria-hidden /> Add game
               </Button>
             </>
           }
@@ -754,7 +754,7 @@ function Lists() {
           description={formatRelative(DEMO_NOW - 2 * 86_400_000, DEMO_NOW)}
         />
         <ListItem
-          leading={<Settings aria-hidden className="size-5 text-pw-muted" />}
+          leading={<IconSettings aria-hidden className="size-5 text-pw-muted" />}
           title="Account settings"
           href="#components"
         />

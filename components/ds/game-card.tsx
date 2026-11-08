@@ -1,4 +1,4 @@
-import { Heart, Play, Plus, Users } from "lucide-react";
+import { IconHeart, IconPlay, IconPlus, IconUsers } from "@/components/icons";
 import Image from "next/image";
 import Link from "next/link";
 import { formatCompact, formatNumber, gamePath } from "@/lib/format";
@@ -109,14 +109,14 @@ function Stats({ data, className }: { data: GameCardData; className?: string }) 
     <span className={cn("inline-flex items-center gap-3 tabular-nums", className)}>
       {data.plays !== undefined ? (
         <span className="inline-flex items-center gap-1" title={`${formatNumber(data.plays)} plays`}>
-          <Users aria-hidden className="size-3.5" />
+          <IconUsers aria-hidden className="size-3.5" />
           <span className="sr-only">Plays:</span>
           {formatCompact(data.plays)}
         </span>
       ) : null}
       {data.likes !== undefined ? (
         <span className="inline-flex items-center gap-1" title={`${formatNumber(data.likes)} likes`}>
-          <Heart aria-hidden className="size-3.5 text-pw-gold" />
+          <IconHeart aria-hidden className="size-3.5 text-pw-gold" />
           <span className="sr-only">Likes:</span>
           {formatCompact(data.likes)}
         </span>
@@ -148,7 +148,7 @@ function PlayButton({ href, title, size = "md" }: { href: string; title: string;
         focusRing,
       )}
     >
-      <Play aria-hidden className="ml-0.5 size-5 fill-current" />
+      <IconPlay aria-hidden className="ml-0.5 size-5 fill-current" />
     </Link>
   );
 }
@@ -222,7 +222,7 @@ export function GameCard({
         <CardBadge badge={data.badge} />
         {data.likes !== undefined ? (
           <Badge tone="art" look="pill" className="absolute top-3 right-3 z-[3] tabular-nums">
-            <Heart aria-hidden className="text-pw-gold" />
+            <IconHeart aria-hidden className="text-pw-gold" />
             <span className="sr-only">Likes:</span>
             {formatCompact(data.likes)}
           </Badge>
@@ -333,7 +333,7 @@ export function SlotCard({
         aria-hidden
         className="absolute top-[34%] grid size-14 -translate-y-1/2 place-items-center rounded-pw-lg bg-linear-to-b from-pw-gold-soft to-pw-gold text-pw-gold-ink transition-transform duration-300 ease-pw-spring group-hover:scale-110 group-hover:rotate-6"
       >
-        <Plus className="size-7" strokeWidth={3} />
+        <IconPlus className="size-7" />
       </span>
       <h3 className="font-pw-display text-[clamp(22px,2vw,28px)] leading-[0.95] font-extrabold text-pw-mist-50 uppercase">
         {title}

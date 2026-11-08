@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { IconChevronRight } from "@/components/icons";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { focusRing } from "./styles";
@@ -43,7 +43,7 @@ export function Breadcrumb({
                   {item.label}
                 </span>
               )}
-              {!last ? <ChevronRight aria-hidden className="size-4 shrink-0 text-pw-faint" /> : null}
+              {!last ? <IconChevronRight aria-hidden className="size-4 shrink-0 text-pw-faint" /> : null}
             </li>
           );
         })}

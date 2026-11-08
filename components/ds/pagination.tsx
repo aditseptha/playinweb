@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 import Link from "next/link";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -46,11 +46,11 @@ export function Pagination({
           aria-label="Previous page"
           className={cn(cell, "text-pw-text-soft hover:bg-pw-surface-2")}
         >
-          <ChevronLeft aria-hidden className="size-4" />
+          <IconChevronLeft aria-hidden className="size-4" />
         </Link>
       ) : (
         <span aria-hidden className={cn(cell, "text-pw-faint")}>
-          <ChevronLeft className="size-4" />
+          <IconChevronLeft className="size-4" />
         </span>
       )}
       <ol className="flex items-center gap-1">
@@ -84,11 +84,11 @@ export function Pagination({
           aria-label="Next page"
           className={cn(cell, "text-pw-text-soft hover:bg-pw-surface-2")}
         >
-          <ChevronRight aria-hidden className="size-4" />
+          <IconChevronRight aria-hidden className="size-4" />
         </Link>
       ) : (
         <span aria-hidden className={cn(cell, "text-pw-faint")}>
-          <ChevronRight className="size-4" />
+          <IconChevronRight className="size-4" />
         </span>
       )}
     </nav>

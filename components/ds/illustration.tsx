@@ -1,18 +1,18 @@
 import {
-  Bell,
-  CircleAlert,
-  Compass,
-  FolderOpen,
-  Gamepad2,
-  Heart,
-  History,
-  Lock,
-  LogIn,
-  PartyPopper,
-  SearchX,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react";
+  IconAlertCircle,
+  IconBell,
+  IconCompass,
+  IconConfetti,
+  IconFolderOpen,
+  IconGamepad,
+  IconHeart,
+  IconHistory,
+  IconLock,
+  IconNoResults,
+  IconSignIn,
+  IconWallet,
+  type AppIcon,
+} from "@/components/icons";
 import Image from "next/image";
 import { cn } from "@/lib/cn";
 
@@ -21,19 +21,19 @@ import { cn } from "@/lib/cn";
 // When an asset lands in public/illustrations/, add its file name to ASSETS.
 
 export const ILLUSTRATIONS = {
-  "no-results": { icon: SearchX, wave: 1, label: "No search results" },
-  "first-use": { icon: Gamepad2, wave: 1, label: "Creator has no games yet" },
-  "not-found": { icon: Compass, wave: 1, label: "404 / game not found" },
-  error: { icon: CircleAlert, wave: 1, label: "Error / game failed to load" },
-  "no-favorites": { icon: Heart, wave: 2, label: "No favorites yet" },
-  "nothing-played": { icon: History, wave: 2, label: "Nothing played yet" },
-  "empty-library": { icon: FolderOpen, wave: 2, label: "Library or collection empty" },
-  wallet: { icon: Wallet, wave: 2, label: "Wallet empty / PayPal not connected" },
-  "no-notifications": { icon: Bell, wave: 2, label: "No notifications" },
-  "sign-in": { icon: LogIn, wave: 2, label: "Sign in required" },
-  "coming-soon": { icon: Lock, wave: 2, label: "Coming soon / locked" },
-  success: { icon: PartyPopper, wave: 2, label: "Published / payment done" },
-} satisfies Record<string, { icon: LucideIcon; wave: 1 | 2; label: string }>;
+  "no-results": { icon: IconNoResults, wave: 1, label: "No search results" },
+  "first-use": { icon: IconGamepad, wave: 1, label: "Creator has no games yet" },
+  "not-found": { icon: IconCompass, wave: 1, label: "404 / game not found" },
+  error: { icon: IconAlertCircle, wave: 1, label: "Error / game failed to load" },
+  "no-favorites": { icon: IconHeart, wave: 2, label: "No favorites yet" },
+  "nothing-played": { icon: IconHistory, wave: 2, label: "Nothing played yet" },
+  "empty-library": { icon: IconFolderOpen, wave: 2, label: "Library or collection empty" },
+  wallet: { icon: IconWallet, wave: 2, label: "Wallet empty / PayPal not connected" },
+  "no-notifications": { icon: IconBell, wave: 2, label: "No notifications" },
+  "sign-in": { icon: IconSignIn, wave: 2, label: "Sign in required" },
+  "coming-soon": { icon: IconLock, wave: 2, label: "Coming soon / locked" },
+  success: { icon: IconConfetti, wave: 2, label: "Published / payment done" },
+} satisfies Record<string, { icon: AppIcon; wave: 1 | 2; label: string }>;
 
 export type IllustrationName = keyof typeof ILLUSTRATIONS;
 
@@ -83,7 +83,7 @@ export function Illustration({
     >
       {/* Pixel grid backdrop, a stand-in for the art style. */}
       <span className="absolute inset-0 bg-[linear-gradient(var(--pw-line)_1px,transparent_1px),linear-gradient(90deg,var(--pw-line)_1px,transparent_1px)] bg-[size:12px_12px] opacity-70" />
-      <Icon className="relative text-pw-sky" strokeWidth={1.5} style={{ width: px * 0.38, height: px * 0.38 }} />
+      <Icon className="relative text-pw-sky" style={{ width: px * 0.38, height: px * 0.38 }} />
       <span className="absolute right-3 bottom-2 font-pw-pixel text-[9px] tracking-[0.08em] text-pw-faint uppercase">
         draft
       </span>

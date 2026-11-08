@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, CircleCheck, FileArchive, ImageIcon, Upload, X } from "lucide-react";
+import { IconAlertCircle, IconCheckCircle, IconClose, IconFileZip, IconImage, IconUpload } from "@/components/icons";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -73,7 +73,7 @@ export function FileUpload({
     if (good.length) onFiles(good);
   }
 
-  const Icon = icon === "image" ? ImageIcon : FileArchive;
+  const Icon = icon === "image" ? IconImage : IconFileZip;
 
   return (
     <div className="flex flex-col gap-3">
@@ -93,7 +93,7 @@ export function FileUpload({
           over ? "border-pw-primary-hi bg-pw-primary/10" : "border-pw-line-box bg-pw-surface-1",
         )}
       >
-        <Icon aria-hidden className="size-8 text-pw-sky" strokeWidth={1.5} />
+        <Icon aria-hidden className="size-8 text-pw-sky" />
         <div>
           <p className="text-pw-body font-semibold text-pw-text">
             <label htmlFor={id}>{label}</label>
@@ -109,7 +109,7 @@ export function FileUpload({
           onClick={() => input.current?.click()}
           aria-describedby={errors.length ? `${id}-err` : undefined}
         >
-          <Upload aria-hidden /> Choose {multiple ? "files" : "file"}
+          <IconUpload aria-hidden /> Choose {multiple ? "files" : "file"}
         </Button>
         <input
           ref={input}
@@ -149,9 +149,9 @@ export function FileUpload({
               ) : (
                 <div className="flex items-center gap-3">
                   {u.state === "done" ? (
-                    <CircleCheck aria-hidden className="size-5 shrink-0 text-pw-success" />
+                    <IconCheckCircle aria-hidden className="size-5 shrink-0 text-pw-success" />
                   ) : (
-                    <CircleAlert aria-hidden className="size-5 shrink-0 text-pw-danger" />
+                    <IconAlertCircle aria-hidden className="size-5 shrink-0 text-pw-danger" />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-pw-body-sm font-semibold text-pw-text">{u.name}</p>
@@ -166,7 +166,7 @@ export function FileUpload({
                       aria-label={`Remove ${u.name}`}
                       onClick={() => onCancel(u.id)}
                     >
-                      <X />
+                      <IconClose />
                     </Button>
                   ) : null}
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Gamepad2, Inbox, MessageCircle, Play, Plus, Trash2 } from "lucide-react";
+import { IconComment, IconGamepad, IconInbox, IconPlay, IconPlus, IconTrash } from "@/components/icons";
 import { useRef, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
@@ -109,7 +109,7 @@ function Templates() {
             aside={
               <>
                 <Button variant="primary" size="lg">
-                  <Play className="fill-current" aria-hidden /> Play now
+                  <IconPlay className="fill-current" aria-hidden /> Play now
                 </Button>
                 <div className="rounded-pw-xl border border-pw-line bg-pw-surface-1 p-4 text-pw-body-sm text-pw-text-soft">
                   Released {formatDate(DEMO_NOW)} · Adventure
@@ -323,7 +323,7 @@ function FormPatterns() {
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-pw-xl border border-pw-danger/40 p-4">
                 <p className="text-pw-body-sm text-pw-text-soft">Delete the game, its plays and comments.</p>
                 <Button variant="danger" onClick={() => setConfirm(true)}>
-                  <Trash2 aria-hidden /> Delete game
+                  <IconTrash aria-hidden /> Delete game
                 </Button>
               </div>
             </FormSection>
@@ -453,7 +453,7 @@ function States() {
               body="Upload a build or link your game. It takes a few minutes."
               action={
                 <Button variant="primary">
-                  <Plus aria-hidden /> Create game
+                  <IconPlus aria-hidden /> Create game
                 </Button>
               }
             />
@@ -479,7 +479,7 @@ function States() {
           <div className="grid place-items-center rounded-pw-xl border border-pw-line">
             <EmptyState
               kind="inline"
-              icon={MessageCircle}
+              icon={IconComment}
               title="No comments yet"
               body="Be the first to say what you thought."
             />
@@ -574,7 +574,7 @@ function States() {
             </div>
             <div className="flex gap-2">
               <Button variant="primary">
-                <Gamepad2 aria-hidden /> View game
+                <IconGamepad aria-hidden /> View game
               </Button>
               <Button>Copy link</Button>
             </div>
@@ -587,7 +587,7 @@ function States() {
             </div>
             <EmptyState
               kind="inline"
-              icon={Inbox}
+              icon={IconInbox}
               title="Some data may be out of date"
               body="It refreshes on its own once you’re back online."
             />

@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu as MenuIcon, type LucideIcon } from "lucide-react";
+import { IconMenu, type AppIcon } from "@/components/icons";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -12,7 +12,7 @@ import { focusRing } from "./styles";
 // Navigation building blocks. Which shell each page uses (top nav for public pages, sidebar
 // for creator/admin areas, or top nav everywhere) is decided in #4; these work either way.
 
-export type NavItem = { href: string; label: string; icon?: LucideIcon };
+export type NavItem = { href: string; label: string; icon?: AppIcon };
 export type NavGroup = { title?: string; items: NavItem[] };
 
 /** Official mark + lettermark. White lettermark on dark and art, black on light. */
@@ -118,7 +118,7 @@ export function MenuSheet({ groups, current, footer }: { groups: NavGroup[]; cur
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="Open menu" className="md:hidden" data-testid="open-menu-sheet">
-          <MenuIcon />
+          <IconMenu />
         </Button>
       </SheetTrigger>
       <SheetContent title="Menu">
