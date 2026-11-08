@@ -291,6 +291,28 @@
   }
 }
 
+/* Theme switch (lib/theme.ts switchTheme): the new theme is revealed by a clip-path circle
+   from the toggle, so the browser's default crossfade is turned off for that transition. */
+:root[data-theme-reveal]::view-transition-old(root),
+:root[data-theme-reveal]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+/* The old theme stays underneath while the new one spreads over it. */
+:root[data-theme-reveal]::view-transition-new(root) {
+  z-index: 1;
+}
+/* The toggle's moon or sun swings in as the new theme spreads. Only during a switch, never on page load. */
+:root[data-theme-reveal] .theme-icon {
+  animation: theme-icon-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes theme-icon-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.7);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -299,5 +321,10 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     animation-delay: 0s !important;
+  }
+  /* Reduced motion: a short crossfade between themes instead of the moving circle. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 200ms;
   }
 }
