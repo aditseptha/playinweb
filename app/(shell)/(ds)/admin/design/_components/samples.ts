@@ -11,7 +11,7 @@ const NORMAL: GameCardData[] = [
     title: "Ayam Kabur",
     href: "#",
     cover: "/home-hero.webp",
-    coverPosition: "62 40",
+    focal: { x: 0.62, y: 0.4 },
     creator: { name: "kikiew" },
     plays: 12_400,
     likes: 886,

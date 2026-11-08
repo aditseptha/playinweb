@@ -12,8 +12,7 @@ import { Skeleton } from "./skeleton";
 import { focusRing, onArt } from "./styles";
 
 // One card for every game listing. Ratios follow the media standard (#5): 16:9 for feature,
-// wide and row; 3:4 for tall. Crops follow the creator's focal point ("x y" in percent, the
-// same format as a creator's banner_position).
+// wide and row; 3:4 for tall. Crops follow the creator's focal point (cover_focal_x/y, 0–1).
 
 export type GameCardData = {
   title: string;
@@ -22,8 +21,8 @@ export type GameCardData = {
   cover?: string;
   /** Optional 3:4 cover for tall cards. Falls back to the 16:9 cover, cropped at the focal point. */
   coverPortrait?: string;
-  /** Focal point, "x y" in percent. Defaults to "50 50". */
-  coverPosition?: string;
+  /** Focal point of the 16:9 cover, 0–1 on each axis (cover_focal_x / cover_focal_y). Defaults to the centre. */
+  focal?: { x: number; y: number };
   creator: { name: string; avatarUrl?: string };
   plays?: number;
   likes?: number;
@@ -37,6 +36,8 @@ export function toGameCardData(game: Game): GameCardData {
     title: game.title,
     href: gamePath(game),
     cover: game.thumbnailUrl || undefined,
+    coverPortrait: game.portraitUrl || undefined,
+    focal: game.focalX !== undefined && game.focalY !== undefined ? { x: game.focalX, y: game.focalY } : undefined,
     creator: { name: game.developer, avatarUrl: game.creatorAvatarUrl },
     plays: game.playCount,
     likes: game.likeCount,
@@ -44,12 +45,11 @@ export function toGameCardData(game: Game): GameCardData {
   };
 }
 
-/** "37 20" → "37% 20%". Anything unparseable falls back to the centre. */
-export function focalToObjectPosition(raw?: string | null) {
-  const m = raw?.trim().match(/^(\d{1,3}(?:\.\d+)?)\s+(\d{1,3}(?:\.\d+)?)$/);
-  if (!m) return "50% 50%";
-  const clamp = (v: string) => Math.min(100, Math.max(0, Number(v)));
-  return `${clamp(m[1])}% ${clamp(m[2])}%`;
+/** { x: 0.37, y: 0.2 } → "37% 20%". Missing or out-of-range values fall back to the centre. */
+export function focalToObjectPosition(focal?: { x: number; y: number } | null) {
+  const pct = (v: number | undefined) =>
+    typeof v === "number" && Number.isFinite(v) ? Math.round(Math.min(1, Math.max(0, v)) * 100) : 50;
+  return `${pct(focal?.x)}% ${pct(focal?.y)}%`;
 }
 
 type Variant = "feature" | "wide" | "tall" | "row";
@@ -63,7 +63,7 @@ const SIZES: Record<Variant, string> = {
 
 function Cover({ data, variant, priority }: { data: GameCardData; variant: Variant; priority?: boolean }) {
   const src = variant === "tall" ? data.coverPortrait || data.cover : data.cover;
-  const position = variant === "tall" && data.coverPortrait ? "50% 50%" : focalToObjectPosition(data.coverPosition);
+  const position = variant === "tall" && data.coverPortrait ? "50% 50%" : focalToObjectPosition(data.focal);
   const img =
     "object-cover transition-transform duration-500 ease-pw-out group-hover:scale-[1.04] motion-reduce:transition-none";
 
