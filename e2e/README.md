@@ -5,7 +5,7 @@
 - **Accessibility**: axe with the WCAG 2.2 AA rules, in the dark and light preview.
 - **Keyboard**: Dialog, ConfirmDialog, Sheet, Menu and Tabs (Chromium only; Safari only Tabs to buttons with Full Keyboard Access on).
 - **Layout**: no horizontal scroll at 390px.
-- **Screenshots**: the Components section in dark and light, compared on CI only.
+- **Screenshots**: the Button, GameCard and Table demos in dark and light, compared on CI only.
 
 Locally, reuse a running dev server instead of starting a second one:
 
