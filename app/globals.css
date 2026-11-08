@@ -291,16 +291,19 @@
   }
 }
 
-/* Theme switch (lib/theme.ts switchTheme): the new theme is revealed by a clip-path circle
-   from the toggle, so the browser's default crossfade is turned off for that transition. */
+/* Theme switch (lib/theme.ts switchTheme): the old and new pages are clipped square by square
+   (lib/theme-transition.ts), so the browser's default crossfade is turned off for that transition. */
 :root[data-theme-reveal]::view-transition-old(root),
 :root[data-theme-reveal]::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
-/* The old theme stays underneath while the new one spreads over it. */
-:root[data-theme-reveal]::view-transition-new(root) {
-  z-index: 1;
+/* Squares between the old and new theme show this: brand-blue mosaic cells like the footer's
+   MosaicGrid (16px, tone-shaded, faint outline). The tile is generated from the same palette. */
+:root[data-theme-reveal]::view-transition-group(root) {
+  background-color: #0073f8;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect x='0' y='0' width='16' height='16' fill='%230b79f8' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='16' y='0' width='16' height='16' fill='%230062d4' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='32' y='0' width='16' height='16' fill='%230676f8' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='48' y='0' width='16' height='16' fill='%230057bb' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='0' y='16' width='16' height='16' fill='%23006be7' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='16' y='16' width='16' height='16' fill='%230068e1' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='32' y='16' width='16' height='16' fill='%230062d4' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='48' y='16' width='16' height='16' fill='%23005bc5' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='0' y='32' width='16' height='16' fill='%23006fef' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='16' y='32' width='16' height='16' fill='%230056ba' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='32' y='32' width='16' height='16' fill='%23006ce8' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='48' y='32' width='16' height='16' fill='%230061d2' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='0' y='48' width='16' height='16' fill='%230063d5' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='16' y='48' width='16' height='16' fill='%23006ce9' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='32' y='48' width='16' height='16' fill='%23006ae4' stroke='rgba(0,0,0,0.09)'/%3E%3Crect x='48' y='48' width='16' height='16' fill='%230062d3' stroke='rgba(0,0,0,0.09)'/%3E%3C/svg%3E");
+  background-size: 64px 64px;
 }
 /* The toggle's moon or sun swings in as the new theme spreads. Only during a switch, never on page load. */
 :root[data-theme-reveal] .theme-icon {
