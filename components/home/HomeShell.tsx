@@ -21,7 +21,7 @@ import { navItemVisible, useFeatures } from "@/lib/features";
 import { apexHref } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
 import { usePrefersReducedMotion } from "@/lib/reduced-motion";
-import { applyTheme, THEME_KEY } from "@/lib/theme";
+import { switchTheme } from "@/lib/theme";
 
 /** Top-level links: only pages that exist; feature-flagged ones follow the admin flags. */
 const NAV = [
@@ -155,14 +155,10 @@ function ThemeButton() {
       type="button"
       className={s.moon}
       aria-label="Toggle light and dark mode"
-      onClick={() => {
-        const next = document.documentElement.classList.contains("dark") ? "light" : "dark";
-        localStorage.setItem(THEME_KEY, next);
-        applyTheme(next);
-      }}
+      onClick={(e) => switchTheme(e.currentTarget)}
     >
-      <IconMoon className={cn(s.ic, "dark:hidden")} />
-      <IconSun className={cn(s.ic, "hidden dark:block")} />
+      <IconMoon className={cn(s.ic, "theme-icon dark:hidden")} />
+      <IconSun className={cn(s.ic, "theme-icon hidden dark:block")} />
     </button>
   );
 }
