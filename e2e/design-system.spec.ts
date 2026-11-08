@@ -13,6 +13,8 @@ const IGNORED_ERRORS = [
   /Failed to fetch/i,
   // CI points Supabase at a placeholder host, so its requests fail to resolve.
   /net::ERR_/i,
+  /Failed to preconnect/i,
+  /ci-placeholder\.supabase\.co/i,
   /Load failed/i,
   /fetch failed/i,
   // The theme boot <script> in app/layout.tsx (WebKit warns about it on every page).
