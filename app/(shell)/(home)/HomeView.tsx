@@ -1,10 +1,10 @@
 "use client";
 
-import { BookOpen, Flame, Heart, History, Rocket, Search, Sparkles, Users, X } from "lucide-react";
+import { IconBook, IconClose, IconFlame, IconHeart, IconHistory, IconRocket, IconSearch, IconSpark, IconUsers } from "@/components/icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { CreatorCTA, GuestBanner } from "@/components/home/Banners";
-import { FeatureCard, SlotCard, TallCard, WideCard } from "@/components/home/cards";
+import { SlotCard, TallCard, WideCard } from "@/components/home/cards";
 import { FilterRail } from "@/components/home/FilterRail";
 import {
   CREATOR_COLORS,
@@ -145,23 +145,23 @@ function Full({
 
   return (
     <>
-      <Row icon={Sparkles} title="Featured games" href="/?view=featured" kind="wide" sideArrows>
+      <Row icon={IconSpark} title="Featured games" href="/?view=featured" kind="tall" sideArrows>
         {popular.slice(0, 6).map((g, i) => (
-          <FeatureCard key={g.id} game={g} i={i} priority={i < 3} />
+          <TallCard key={g.id} game={g} i={i} priority={i < 3} />
         ))}
       </Row>
-      <Row icon={Rocket} title="New releases" href="/?view=new" kind="tall">
+      <Row icon={IconRocket} title="New releases" href="/?view=new" kind="tall">
         {newest.map((g, i) => (
           <TallCard key={g.id} game={g} i={i} />
         ))}
       </Row>
-      <Row icon={Flame} title="Most played" href="/?view=popular" kind="tall">
+      <Row icon={IconFlame} title="Most played" href="/?view=popular" kind="tall">
         {popular.slice(0, 12).map((g, i) => (
           <TallCard key={g.id} game={g} i={i} badge={i < 2 ? "top" : null} />
         ))}
       </Row>
       {tag && tagged.length > 0 ? (
-        <Row icon={BookOpen} title={`${capitalize(tag)} games`} href={filtersHref({ tags: [tag] })} kind="wide">
+        <Row icon={IconBook} title={`${capitalize(tag)} games`} href={filtersHref({ tags: [tag] })} kind="wide">
           {tagged.map((g, i) => (
             <WideCard key={g.id} game={g} i={i} />
           ))}
@@ -184,14 +184,14 @@ function Sparse({ popular, signedIn }: { popular: Game[]; signedIn: boolean }) {
   return (
     <>
       {featured.length > 0 ? (
-        <Row icon={Sparkles} title="Featured games" kind="wide" sideArrows>
+        <Row icon={IconSpark} title="Featured games" kind="tall" sideArrows>
           {featured.map((g, i) => (
-            <FeatureCard key={g.id} game={g} i={i} priority />
+            <TallCard key={g.id} game={g} i={i} priority />
           ))}
         </Row>
       ) : null}
       <section id="creators" className={s.reveal}>
-        <SectionHead icon={Rocket} title="From the community" />
+        <SectionHead icon={IconRocket} title="From the community" />
         <div className={s.community}>
           {community.map((g, i) => (
             <TallCard key={g.id} game={g} i={i} />
@@ -217,12 +217,17 @@ function Creators({
   const scrollable = !(edge.l && edge.r);
   return (
     <section id="creators" className={cn(s.creators, s.revealSelf)}>
-      <SectionHead icon={Users} title="Popular creators" tools={scrollable ? <Arrows edge={edge} go={go} /> : null} />
+      <SectionHead icon={IconUsers} title="Popular creators" tools={scrollable ? <Arrows edge={edge} go={go} /> : null} />
       <div className={s.chips} ref={ref}>
         {creators.map((c, i) => (
           <button key={c.handle} type="button" className={s.chip} aria-pressed={selected.includes(c.handle)} onClick={() => onPick(c.handle)}>
             <span className={s.ini} style={{ background: CREATOR_COLORS[i % CREATOR_COLORS.length] }}>
-              {initials(c.name)}
+              {c.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={c.avatarUrl} alt="" />
+              ) : (
+                initials(c.name)
+              )}
             </span>
             <span>
               <b>{c.name}</b>
@@ -280,7 +285,7 @@ function Results({
   return (
     <section aria-live="polite">
       <SectionHead
-        icon={view === "saved" ? Heart : view === "recent" ? History : Search}
+        icon={view === "saved" ? IconHeart : view === "recent" ? IconHistory : IconSearch}
         title={title}
         count={games.length}
         tools={<SeeAll href="/" label="Back to home" />}
@@ -290,7 +295,7 @@ function Results({
           {chips.map((c) => (
             <button key={c.key} type="button" className={s.fchip} onClick={c.remove} aria-label={`Remove ${c.label}`}>
               {c.label}
-              <X className={cn(s.ic, s.xs)} />
+              <IconClose className={cn(s.ic, s.xs)} />
             </button>
           ))}
         </div>

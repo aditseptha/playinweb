@@ -1,34 +1,29 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { BuildFields } from "@/components/project-form/BuildFields";
-import { MediaAside } from "@/components/project-form/MediaAside";
+import f from "@/components/project-form/form.module.css";
+import { MediaAside, type MediaHandle } from "@/components/project-form/MediaAside";
 import {
   asCommunity,
   asKind,
-  fieldLabel,
-  fieldLegend,
-  imageSizeError,
-  imageTooLarge,
   isHttpUrl,
   MAX_FILE,
-  MAX_IMAGE_BYTES,
   MAX_TAGS,
-  minCoverSize,
   saveErrorMessage,
-  sectionLabel,
   SelectField,
 } from "@/components/project-form/shared";
 import { useSignupDialog } from "@/components/SignupDialog";
 import { Button } from "@/components/ui/button";
-import { Field, SelectInput, TextArea, TextInput } from "@/components/ui/field";
+import { Field, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { cn } from "@/lib/cn";
 import { slugify } from "@/lib/format";
+import { taglineFrom, type LinkPreview } from "@/lib/link-preview";
 import { apexHref, apexOrigin, isSlug, projectPublicUrl } from "@/lib/host";
 import {
   contentType,
@@ -40,11 +35,10 @@ import {
   MAX_HTML_BYTES,
 } from "@/lib/html-game";
 import { fileExt, MEDIA_BUCKET } from "@/lib/media";
+import { MAX_CLIP_BYTES, MAX_IMAGE_BYTES } from "@/lib/media-standard";
 import {
   COMMUNITIES,
   GENRES,
-  LEGACY_PROJECT_KINDS,
-  PROJECT_KINDS,
   RELEASE_STATUSES,
   STORES,
   type Community,
@@ -52,6 +46,24 @@ import {
 } from "@/lib/project-fields";
 import { clearCatalogueCache, type ProjectRecord } from "@/lib/projects";
 import { createClient } from "@/lib/supabase/client";
+
+const KIND_CHOICES: { id: ProjectKind; title: string; hint: string }[] = [
+  { id: "html", title: "Playable on PlayInWeb", hint: "Upload a game people play here" },
+  { id: "external", title: "External link", hint: "Redirect players to another site" },
+];
+
+const RELEASE_SHORT: Record<string, string> = {
+  released: "Released",
+  in_development: "In development",
+  prototype: "Prototype",
+  canceled: "Canceled",
+};
+
+const COMMUNITY_SHORT: Record<string, string> = {
+  disabled: "Off",
+  comments: "Comments",
+  board: "Discussion board",
+};
 
 export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const editing = Boolean(project);
@@ -62,9 +74,12 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const { openSignup } = useSignupDialog();
   const router = useRouter();
   const [title, setTitle] = useState(project?.title ?? "");
+  const [tagline, setTagline] = useState(project?.tagline ?? "");
+  const [description, setDescription] = useState(project?.description ?? "");
   const [slug, setSlug] = useState(project?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [kind, setKind] = useState<ProjectKind>(asKind(project?.kind));
+  const [kind, setKind] = useState<ProjectKind | null>(project ? asKind(project.kind) : null);
+  const [detailsOpen, setDetailsOpen] = useState(editing);
   const [allowDonations, setAllowDonations] = useState(project ? project.pricing_type !== "no_payments" : true);
   const [community, setCommunity] = useState<Community>(asCommunity(project?.community));
   const [containsAi, setContainsAi] = useState<"" | "yes" | "no">(
@@ -75,31 +90,27 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const [storeUrls, setStoreUrls] = useState<Record<string, string>>(
     Object.fromEntries((project?.project_store_links ?? []).map((l) => [l.store, l.url])),
   );
-  const [cover, setCover] = useState<File | null>(null);
-  const [shots, setShots] = useState<File[]>([]);
-  const [keptShots, setKeptShots] = useState(
-    [...(project?.project_screenshots ?? [])].sort((a, b) => a.sort_order - b.sort_order),
-  );
+  const mediaRef = useRef<MediaHandle>(null);
+  const continueRequest = useRef(0);
   const [htmlBuild, setHtmlBuild] = useState<File | null>(null);
   const [flashBuild, setFlashBuild] = useState<File | null>(null);
   const [playLink, setPlayLink] = useState(
     project?.kind === "external" && project.play_url.startsWith("http") ? project.play_url : "",
   );
   const [visibility, setVisibility] = useState<"public" | "private">(project?.published === false ? "private" : "public");
+  const [suggestedCover, setSuggestedCover] = useState<File | null>(null);
+  const [filledFromLink, setFilledFromLink] = useState(false);
+  const [readingLink, setReadingLink] = useState(false);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
   const [pending, setPending] = useState(false);
 
-  const previewUrl = useMemo(() => {
-    if (!profile || !slug) return "";
-    return projectPublicUrl(profile.handle, slug);
-  }, [profile, slug]);
-
-  const kindOptions = useMemo(() => {
-    const options: { id: string; label: string }[] = [...PROJECT_KINDS];
-    if (project && LEGACY_PROJECT_KINDS.includes(project.kind as (typeof LEGACY_PROJECT_KINDS)[number])) {
-      options.push({ id: project.kind, label: `${project.kind} (legacy)` });
+  const playChoices = useMemo(() => {
+    const choices = [...KIND_CHOICES];
+    if (project && !choices.some((choice) => choice.id === project.kind)) {
+      choices.push({ id: project.kind as ProjectKind, title: project.kind, hint: "Current type" });
     }
-    return options;
+    return choices;
   }, [project]);
 
   if (loading) return <p className="text-ui text-text-muted">Loading account…</p>;
@@ -108,9 +119,6 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
     return (
       <div className="rounded-panel bg-surface-2 px-5 py-10 text-center">
         <p className="text-title font-medium">Create an account first</p>
-        <p className="mx-auto mt-1 max-w-md text-ui text-text-muted">
-          Games are published on your page, like yourname/game.
-        </p>
         <div className="mt-4 flex justify-center gap-3">
           <Button type="button" variant="primary" size="sm" onClick={() => openSignup()}>
             Create account
@@ -130,12 +138,83 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
     setTagDraft("");
   }
 
+  async function continueToDetails() {
+    setError("");
+    const request = ++continueRequest.current;
+    if (!kind) {
+      setError("Choose how people play this game.");
+      return;
+    }
+    if (kind === "html" && !htmlBuild && !editing) {
+      setError("Upload a .zip or .html file.");
+      return;
+    }
+    if (kind === "html" && htmlBuild) {
+      try {
+        await filesFromHtmlUpload(htmlBuild.name, await htmlBuild.arrayBuffer());
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not read this file.");
+        return;
+      }
+    }
+    if (kind === "flash" && !flashBuild && (!editing || !project?.play_url)) {
+      setError("Upload a .swf file.");
+      return;
+    }
+    if (kind === "external") {
+      const url = playLink.trim();
+      if (!isHttpUrl(url)) {
+        setError("Enter a valid play link.");
+        return;
+      }
+      setReadingLink(true);
+      try {
+        const preview = await requestLinkPreview(url);
+        if (continueRequest.current !== request || playLink.trim() !== url) return;
+        if (preview) applyLinkPreview(preview);
+      } finally {
+        setReadingLink(false);
+      }
+    }
+    if (continueRequest.current !== request) return;
+    setDetailsOpen(true);
+  }
+
+  function applyLinkPreview(preview: LinkPreview) {
+    let filled = false;
+    if (!title.trim() && preview.title) {
+      setTitle(preview.title);
+      if (!slugTouched) setSlug(slugify(preview.title).slice(0, 48));
+      filled = true;
+    }
+    if (!description.trim() && preview.description) {
+      setDescription(preview.description);
+      filled = true;
+    }
+    if (!tagline.trim() && preview.description) {
+      setTagline(taglineFrom(preview.description));
+      filled = true;
+    }
+    const cover = fileFromPreview(preview.image);
+    setSuggestedCover(cover);
+    if (cover) filled = true;
+    setFilledFromLink(filled);
+  }
+
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!detailsOpen) {
+      await continueToDetails();
+      return;
+    }
     setError("");
     const fd = new FormData(e.currentTarget);
     const nextTitle = title.trim();
     const nextSlug = editing && project ? project.slug : slug.trim();
+    if (!kind) {
+      setError("Choose how people play this game.");
+      return;
+    }
     if (!nextTitle || !nextSlug) {
       setError("Title and game URL are required.");
       return;
@@ -175,13 +254,26 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         return;
       }
     }
-    if (cover && imageTooLarge(cover)) {
-      setError(imageSizeError("Cover image"));
+    const media = mediaRef.current?.getDraft();
+    if (!media) return;
+    if (!editing && !project?.cover_path && !media.landscape) {
+      setError("Upload a landscape cover, at least 1280×720.");
       return;
     }
-    const oversizedShot = shots.find((file) => imageTooLarge(file));
-    if (oversizedShot) {
-      setError(imageSizeError(oversizedShot.name));
+    if (media.landscape && media.landscape.size > MAX_IMAGE_BYTES) {
+      setError("Cover image must be 5 MB or smaller.");
+      return;
+    }
+    if (media.portrait && media.portrait.size > MAX_IMAGE_BYTES) {
+      setError("Portrait cover must be 5 MB or smaller.");
+      return;
+    }
+    if (media.clip && media.clip.size > MAX_CLIP_BYTES) {
+      setError("Preview clip must be 8 MB or smaller.");
+      return;
+    }
+    if (media.shots.length > 8) {
+      setError("You can add up to 8 screenshots.");
       return;
     }
 
@@ -191,33 +283,33 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
     const uid = user.id;
     const handle = profile.handle;
 
-    async function upload(folder: string, file: File) {
-      const limit = folder === "covers" || folder === "screenshots" ? MAX_IMAGE_BYTES : MAX_FILE;
-      if (file.size > limit) {
-        throw new Error(
-          folder === "covers"
-            ? imageSizeError("Cover image")
-            : folder === "screenshots"
-              ? imageSizeError(file.name)
-              : `${file.name} is over 50 MB.`,
-        );
-      }
+    async function upload(folder: string, file: File, type?: string) {
+      const limit = folder === "clips" ? MAX_CLIP_BYTES : folder === "covers" || folder === "screenshots" ? MAX_IMAGE_BYTES : MAX_FILE;
+      if (file.size > limit) throw new Error(`${file.name} is too large.`);
       const path = `${uid}/${folder}/${crypto.randomUUID()}.${fileExt(file.name)}`;
-      const { error: upError } = await supabase.storage.from(MEDIA_BUCKET).upload(path, file);
+      const { error: upError } = await supabase.storage.from(MEDIA_BUCKET).upload(path, file, type ? { contentType: type } : undefined);
       if (upError) throw upError;
       return path;
     }
 
     try {
       let coverPath: string | null = project?.cover_path ?? null;
-      if (cover) {
-        const ok = await minCoverSize(cover, 320, 180);
-        if (!ok) throw new Error("Cover must be at least 320×180.");
-        coverPath = await upload("covers", cover);
+      let portraitPath: string | null = media.dropPortrait ? null : (project?.cover_portrait_path ?? null);
+      let originalPath: string | null = project?.cover_original_path ?? null;
+      let clipPath: string | null = media.dropClip ? null : (project?.preview_clip_path ?? null);
+      if (media.landscape) {
+        setStatus("Uploading cover…");
+        coverPath = await upload("covers", media.landscape, "image/webp");
+        if (media.original) originalPath = await upload("covers", media.original, media.original.type || undefined);
       }
-
-      const shotPaths: string[] = [];
-      for (const file of shots) shotPaths.push(await upload("screenshots", file));
+      if (media.portrait) {
+        setStatus("Uploading portrait cover…");
+        portraitPath = await upload("covers", media.portrait, "image/webp");
+      }
+      if (media.clip) {
+        setStatus("Uploading preview clip…");
+        clipPath = await upload("clips", media.clip, media.clip.type || undefined);
+      }
 
       const fields = {
         title: nextTitle,
@@ -230,6 +322,11 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         suggested_donation: null,
         min_price: null,
         cover_path: coverPath,
+        cover_portrait_path: portraitPath,
+        cover_original_path: originalPath,
+        cover_focal_x: media.focalX,
+        cover_focal_y: media.focalY,
+        preview_clip_path: clipPath,
         trailer_url: String(fd.get("trailerUrl") ?? "").trim() || null,
         description: String(fd.get("description") ?? "").trim(),
         genre: String(fd.get("genre") ?? "") === "No genre" ? null : String(fd.get("genre") ?? "").trim() || null,
@@ -329,28 +426,38 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         const { error: tagError } = await supabase.from("project_tags").insert(tags.map((tag) => ({ project_id: projectId, tag })));
         if (tagError) throw tagError;
       }
-      const originalPaths = (project?.project_screenshots ?? []).map((shot) => shot.storage_path);
-      const keptPaths = keptShots.map((shot) => shot.storage_path);
-      const removedPaths = originalPaths.filter((path) => !keptPaths.includes(path));
-      if (removedPaths.length) {
+      setStatus(media.shots.some((shot) => shot.file) ? "Uploading screenshots…" : "Saving screenshots…");
+      const previous = project?.project_screenshots ?? [];
+      const rows: { project_id: string; storage_path: string; sort_order: number; width: number | null; height: number | null; kind: string }[] = [];
+      for (const shot of media.shots) {
+        const storage_path = shot.file ? await upload("screenshots", shot.file, shot.file.type || undefined) : shot.storagePath;
+        if (!storage_path) continue;
+        rows.push({
+          project_id: projectId,
+          storage_path,
+          sort_order: rows.length,
+          width: shot.width,
+          height: shot.height,
+          kind: "image",
+        });
+      }
+      if (rows.length) {
+        const { error: shotError } = await supabase.from("project_screenshots").insert(rows);
+        if (shotError) throw shotError;
+      }
+      if (previous.length) {
         const { error: clearShots } = await supabase
           .from("project_screenshots")
           .delete()
           .eq("project_id", projectId)
-          .in("storage_path", removedPaths);
+          .in("id", previous.map((shot) => shot.id));
         if (clearShots) throw clearShots;
+      }
+      const keptPaths = new Set(rows.map((row) => row.storage_path));
+      const removedPaths = previous.map((shot) => shot.storage_path).filter((path) => path && !keptPaths.has(path));
+      if (removedPaths.length) {
         const { error: storageError } = await supabase.storage.from(MEDIA_BUCKET).remove(removedPaths);
         if (storageError) throw storageError;
-      }
-      if (shotPaths.length) {
-        const { error: shotError } = await supabase.from("project_screenshots").insert(
-          shotPaths.map((storage_path, i) => ({
-            project_id: projectId,
-            storage_path,
-            sort_order: keptShots.length + i,
-          })),
-        );
-        if (shotError) throw shotError;
       }
       const links = STORES.map((s) => ({ store: s.id, url: storeUrls[s.id]?.trim() ?? "" })).filter((l) => l.url);
       if (links.length) {
@@ -365,13 +472,73 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
       router.refresh();
     } catch (err) {
       setPending(false);
+      setStatus("");
       setError(saveErrorMessage(err));
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <div className="flex min-w-0 flex-col gap-6">
+    <form onSubmit={onSubmit} className={f.stack}>
+      <section className={f.block}>
+        <div className={f.kinds} role="radiogroup" aria-label="How people play it">
+          {playChoices.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="radio"
+              aria-checked={kind === item.id}
+              className={f.kind}
+              onClick={() => {
+                if (item.id === kind) return;
+                setKind(item.id);
+                if (!editing) {
+                  setDetailsOpen(false);
+                  setSuggestedCover(null);
+                  setFilledFromLink(false);
+                  continueRequest.current += 1;
+                }
+                setError("");
+              }}
+            >
+              <strong>{item.title}</strong>
+              <small>{item.hint}</small>
+            </button>
+          ))}
+        </div>
+
+        {kind ? (
+          <BuildFields
+            kind={kind}
+            editing={editing}
+            project={project}
+            htmlBuild={htmlBuild}
+            setHtmlBuild={setHtmlBuild}
+            flashBuild={flashBuild}
+            setFlashBuild={setFlashBuild}
+            playLink={playLink}
+            setPlayLink={setPlayLink}
+            setError={setError}
+            action={
+              detailsOpen ? null : (
+                <Button type="button" variant="primary" disabled={readingLink} onClick={() => void continueToDetails()}>
+                  {readingLink ? "Reading…" : "Continue"}
+                </Button>
+              )
+            }
+          />
+        ) : null}
+
+        {kind && !detailsOpen && error ? <p className="text-ui text-danger">{error}</p> : null}
+      </section>
+
+      {detailsOpen ? (
+        <>
+
+      <section className={f.block}>
+        <header className={f.head}>
+          <h2>About this game</h2>
+          {filledFromLink ? <p>Filled from the play link. Change anything.</p> : null}
+        </header>
         <Field label="Title">
           <TextInput
             value={title}
@@ -384,14 +551,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           />
         </Field>
 
-        <Field
-          label="Game URL"
-          hint={
-            editing
-              ? previewUrl || "This URL is locked after the game is created."
-              : previewUrl || "Shown as yourname/game on this site."
-          }
-        >
+        <Field label="Game URL" hint={editing ? "Locked" : undefined}>
           <div className="flex h-10 min-w-0 items-center overflow-hidden rounded-lg bg-surface-2 sm:h-9">
             <span className="hidden max-w-[55%] shrink-0 truncate bg-surface-3 px-3 py-2 text-caption text-text-subtle lg:inline">
               {`${apexOrigin()}/${profile.handle}/`}
@@ -410,46 +570,86 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           </div>
         </Field>
 
-        <SelectField label="Release status" name="releaseStatus" defaultValue={project?.release_status ?? "released"}>
-          {RELEASE_STATUSES.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
+        <Field label="Tagline">
+          <TextInput name="tagline" placeholder="Optional" value={tagline} onChange={(e) => setTagline(e.target.value)} />
+        </Field>
+
+        <Field label="Description">
+          <TextArea
+            name="description"
+            className="h-[150px] min-h-[150px]"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </Field>
+
+        <SelectField label="Genre" name="genre" defaultValue={project?.genre && GENRES.includes(project.genre as (typeof GENRES)[number]) ? project.genre : "No genre"}>
+          {GENRES.map((g) => (
+            <option key={g} value={g}>
+              {g}
             </option>
           ))}
         </SelectField>
 
-        <Field label={fieldLabel("Short description or tagline", "Optional. Avoid duplicating your game's title.")}>
-          <TextInput name="tagline" placeholder="Optional" defaultValue={project?.tagline ?? ""} />
-        </Field>
-
-        <Field label={fieldLabel("Kind of game", "Choose how players access your game.")}>
-          <SelectInput value={kind} onChange={(e) => setKind(e.target.value as ProjectKind)}>
-            {kindOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
+        <div>
+          <p className="text-caption font-medium text-text-muted">Tags</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setTags(tags.filter((t) => t !== tag))}
+                className="rounded-lg bg-surface-2 px-3 py-1 text-caption hover:bg-surface-3"
+              >
+                {tag} ×
+              </button>
             ))}
-          </SelectInput>
-        </Field>
+          </div>
+          <TextInput
+            value={tagDraft}
+            onChange={(e) => setTagDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                addTag(tagDraft);
+              }
+            }}
+            placeholder="Press Enter"
+            className="mt-2"
+          />
+        </div>
 
-        <BuildFields
-          kind={kind}
-          editing={editing}
+        <SelectField label="Release status" name="releaseStatus" defaultValue={project?.release_status ?? "released"}>
+          {RELEASE_STATUSES.map((item) => (
+            <option key={item.id} value={item.id}>
+              {RELEASE_SHORT[item.id] ?? item.label}
+            </option>
+          ))}
+        </SelectField>
+      </section>
+
+      <section className={f.block}>
+        <header className={f.head}>
+          <h2>Cover and media</h2>
+        </header>
+        <MediaAside
           project={project}
-          htmlBuild={htmlBuild}
-          setHtmlBuild={setHtmlBuild}
-          flashBuild={flashBuild}
-          setFlashBuild={setFlashBuild}
-          playLink={playLink}
-          setPlayLink={setPlayLink}
+          title={title}
+          handleRef={mediaRef}
           setError={setError}
+          suggestedCover={suggestedCover}
         />
+      </section>
+
+      <section className={f.block}>
+        <header className={f.head}>
+          <h2>Listing</h2>
+        </header>
 
         {donationsOpen ? (
           <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-surface-2 px-4 py-3">
             <div className="min-w-0">
               <p className="text-ui font-medium">Allow donations</p>
-              <p className="mt-0.5 text-meta text-text-subtle">Let players support your game with a voluntary donation.</p>
             </div>
             <span className="relative inline-flex h-7 w-12 shrink-0">
               <input
@@ -478,71 +678,27 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           </label>
         ) : null}
 
-        <Field label={fieldLabel("Description", "This will make up the content of your game page.")}>
-          <TextArea name="description" className="h-[150px] min-h-[150px]" defaultValue={project?.description ?? ""} />
-        </Field>
-
-        <SelectField
-          label={fieldLabel("Genre", "You can add additional genres with tags.")}
-          name="genre"
-          defaultValue={project?.genre && GENRES.includes(project.genre as (typeof GENRES)[number]) ? project.genre : "No genre"}
-        >
-          {GENRES.map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
-          ))}
-        </SelectField>
-
-        <div>
-          {sectionLabel("Tags", "Any other keywords someone might search. Max of 10.")}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => setTags(tags.filter((t) => t !== tag))}
-                className="rounded-lg bg-surface-2 px-3 py-1 text-caption hover:bg-surface-3"
-              >
-                {tag} ×
-              </button>
-            ))}
-          </div>
-          <TextInput
-            value={tagDraft}
-            onChange={(e) => setTagDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === ",") {
-                e.preventDefault();
-                addTag(tagDraft);
-              }
-            }}
-            placeholder="Click to view options, type to filter or enter custom tag"
-            className="mt-2"
-          />
-        </div>
-
         <fieldset>
-          {fieldLegend("Generative AI disclosure", "Does this game contain output from generative AI tools?")}
+          <legend className="text-caption font-medium text-text-muted">Generative AI</legend>
           <label className="mt-2 flex items-start gap-2 text-ui">
             <input type="radio" name="ai" checked={containsAi === "yes"} onChange={() => setContainsAi("yes")} />
-            Yes — This game contains the output of Generative AI
+            Yes
           </label>
           <label className="mt-2 flex items-start gap-2 text-ui">
             <input type="radio" name="ai" checked={containsAi === "no"} onChange={() => setContainsAi("no")} />
-            No — This game does not contain the output of Generative AI
+            No
           </label>
         </fieldset>
 
         <div>
-          {sectionLabel("App store links", "These will be linked to on the game page.")}
+          <p className="text-caption font-medium text-text-muted">Store links</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {STORES.map((store) => (
               <TextInput
                 key={store.id}
                 value={storeUrls[store.id] ?? ""}
                 onChange={(e) => setStoreUrls({ ...storeUrls, [store.id]: e.target.value })}
-                placeholder={`+ ${store.label}`}
+                placeholder={store.label}
               />
             ))}
           </div>
@@ -553,18 +709,13 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           {COMMUNITIES.map((item) => (
             <label key={item.id} className="mt-2 flex items-start gap-2 text-ui">
               <input type="radio" name="community" checked={community === item.id} onChange={() => setCommunity(item.id)} />
-              {item.label}
+              {COMMUNITY_SHORT[item.id] ?? item.id}
             </label>
           ))}
         </fieldset>
 
         <fieldset>
-          {fieldLegend(
-            "Visibility",
-            visibility === "private"
-              ? "Only you can open this listing. It stays off the catalogue and your public page."
-              : "Anyone can find and play this listing.",
-          )}
+          <legend className="text-caption font-medium text-text-muted">Visibility</legend>
           <label className="mt-2 flex items-start gap-2 text-ui">
             <input type="radio" name="visibility" checked={visibility === "public"} onChange={() => setVisibility("public")} />
             Public
@@ -576,17 +727,16 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         </fieldset>
 
         {error ? <p className="text-ui text-danger">{error}</p> : null}
+        {status && pending ? <p className="text-ui text-text-muted">{status}</p> : null}
 
         <Button type="submit" variant="primary" disabled={pending} className="w-fit">
           {pending ? "Saving…" : editing ? "Save changes" : "Save & view page"}
         </Button>
 
         {editing && project ? (
-          <div className="mt-10 border-t border-border pt-8">
+          <div className="mt-4 border-t border-border pt-6">
             <p className="text-caption font-medium text-text-muted">Danger zone</p>
-            <p className="mt-1 max-w-xl text-body text-text-muted">
-              Permanently delete this game, its media, and all stats. This cannot be undone.
-            </p>
+            <p className="mt-1 max-w-xl text-body text-text-muted">Deletes the game and its files.</p>
             <DeleteProjectButton
               project={project}
               className="mt-3"
@@ -594,18 +744,49 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
             />
           </div>
         ) : null}
-      </div>
-
-      <MediaAside
-        project={project}
-        cover={cover}
-        setCover={setCover}
-        shots={shots}
-        setShots={setShots}
-        keptShots={keptShots}
-        setKeptShots={setKeptShots}
-        setError={setError}
-      />
+      </section>
+        </>
+      ) : null}
     </form>
   );
+}
+
+async function requestLinkPreview(url: string): Promise<LinkPreview | null> {
+  try {
+    const response = await fetch("/api/link-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as Partial<LinkPreview>;
+    const image = data.image;
+    const mime = image?.mime;
+    const usable =
+      image &&
+      typeof image.base64 === "string" &&
+      (mime === "image/jpeg" || mime === "image/png" || mime === "image/webp")
+        ? { mime, base64: image.base64 }
+        : null;
+    return {
+      title: typeof data.title === "string" ? data.title : "",
+      description: typeof data.description === "string" ? data.description : "",
+      image: usable,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function fileFromPreview(image: LinkPreview["image"]) {
+  if (!image?.base64) return null;
+  try {
+    const binary = atob(image.base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    const ext = image.mime === "image/png" ? "png" : image.mime === "image/webp" ? "webp" : "jpg";
+    return new File([bytes], `cover.${ext}`, { type: image.mime });
+  } catch {
+    return null;
+  }
 }

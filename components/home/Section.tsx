@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
+import { IconChevronLeft, IconChevronRight, type AppIcon } from "@/components/icons";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import s from "@/components/home/home.module.css";
@@ -50,7 +50,7 @@ function Arrow({ dir, edge, go, className }: { dir: -1 | 1; edge: Edge; go: (dir
       onClick={() => go(dir)}
       aria-label={dir === -1 ? "Previous" : "Next"}
     >
-      {dir === -1 ? <ChevronLeft className={cn(s.ic, s.sm)} /> : <ChevronRight className={cn(s.ic, s.sm)} />}
+      {dir === -1 ? <IconChevronLeft className={cn(s.ic, s.sm)} /> : <IconChevronRight className={cn(s.ic, s.sm)} />}
     </button>
   );
 }
@@ -70,7 +70,7 @@ export function SectionHead({
   count,
   tools,
 }: {
-  icon: LucideIcon;
+  icon: AppIcon;
   title: string;
   count?: number;
   tools?: ReactNode;
@@ -111,7 +111,7 @@ export function Row({
   sideArrows = false,
   children,
 }: {
-  icon: LucideIcon;
+  icon: AppIcon;
   title: string;
   href?: string;
   kind: "tall" | "wide";

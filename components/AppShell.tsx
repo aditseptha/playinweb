@@ -38,6 +38,7 @@ import { SidebarFooterGrid } from "@/components/SidebarFooterGrid";
 import { Button, LinkButton } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/field";
 import { isAdminEmail } from "@/lib/admin";
+import { BRAND_MARKS, BRAND_MARK_INTERVAL_MS } from "@/lib/brand";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { navItemVisible, publicNavFlags, useFeatures } from "@/lib/features";
@@ -336,17 +337,15 @@ function SearchForm({ initialQuery, autoFocus }: { initialQuery: string; autoFoc
   );
 }
 
-const BRAND_MARKS = ["/playinweb-icon.png", "/playinweb-mark.png"];
-
 function BrandMark() {
   const [index, setIndex] = useState(0);
   const reduceMotion = usePrefersReducedMotion();
 
   useEffect(() => {
-    if (reduceMotion) return;
+    if (reduceMotion || BRAND_MARKS.length < 2) return;
     const id = window.setInterval(() => {
       setIndex((current) => (current + 1) % BRAND_MARKS.length);
-    }, 5000);
+    }, BRAND_MARK_INTERVAL_MS);
     return () => window.clearInterval(id);
   }, [reduceMotion]);
 
@@ -627,6 +626,10 @@ function Sidebar({
             )}
           >
             © 2026 PlayInWeb
+            {" · "}
+            <a href="https://icons8.com" className="underline" target="_blank" rel="noreferrer">
+              Icons by Icons8
+            </a>
           </p>
         </div>
       </div>

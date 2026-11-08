@@ -1,4 +1,5 @@
 import { slugify } from "@/lib/format";
+import { focalOrCenter } from "@/lib/media-standard";
 import { flashStoragePrefix, htmlStoragePrefix } from "@/lib/html-game";
 import { projectEmbedUrl } from "@/lib/host";
 import { MEDIA_BUCKET, publicMediaUrl } from "@/lib/media";
@@ -13,7 +14,14 @@ type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type ProjectRecord = Project & {
   profiles: Pick<Profile, "handle" | "display_name" | "follower_count" | "avatar_path"> | null;
   project_tags?: { tag: string }[];
-  project_screenshots?: { id: string; storage_path: string; sort_order: number }[];
+  project_screenshots?: {
+    id: string;
+    storage_path: string;
+    sort_order: number;
+    width?: number | null;
+    height?: number | null;
+    kind?: string;
+  }[];
   project_files?: {
     file_name: string;
     storage_path: string | null;
@@ -37,7 +45,15 @@ const PROJECT_SELECT = `
 const CATALOGUE_SELECT = `
   id, title, slug, tagline, description, cover_path, play_count, view_count, like_count,
   created_at, embeddable, kind, play_url,
-  profiles!projects_owner_id_fkey ( handle, display_name ),
+  profiles!projects_owner_id_fkey ( handle, display_name, avatar_path ),
+  project_tags ( tag )
+`;
+
+const CATALOGUE_MEDIA_SELECT = `
+  id, title, slug, tagline, description, cover_path, cover_portrait_path, cover_focal_x, cover_focal_y, preview_clip_path,
+  play_count, view_count, like_count,
+  created_at, embeddable, kind, play_url,
+  profiles!projects_owner_id_fkey ( handle, display_name, avatar_path ),
   project_tags ( tag )
 `;
 
@@ -46,7 +62,7 @@ const DOWNLOADS_SELECT = `
   project_files ( file_name, storage_path, external_url, size_bytes )
 `;
 
-const CATALOGUE_CACHE_KEY = "showcase.catalogue.v2";
+const CATALOGUE_CACHE_KEY = "showcase.catalogue.v4";
 const CATALOGUE_TTL_MS = 5 * 60 * 1000;
 
 type CatalogueCache = { at: number; games: Game[] };
@@ -73,17 +89,27 @@ function writeCatalogueCache(games: Game[]) {
   }
 }
 
+async function selectCatalogue(supabase: ReturnType<typeof createClient>) {
+  const media = await supabase
+    .from("projects")
+    .select(CATALOGUE_MEDIA_SELECT)
+    .eq("published", true)
+    .order("created_at", { ascending: false });
+  if (!media.error) return media;
+  return supabase
+    .from("projects")
+    .select(CATALOGUE_SELECT)
+    .eq("published", true)
+    .order("created_at", { ascending: false });
+}
+
 export async function fetchCatalogueGames(opts?: { force?: boolean }): Promise<Game[]> {
   if (!opts?.force) {
     const cached = readCatalogueCache();
     if (cached?.fresh) return cached.games;
   }
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("projects")
-    .select(CATALOGUE_SELECT)
-    .eq("published", true)
-    .order("created_at", { ascending: false });
+  const { data, error } = await selectCatalogue(supabase);
   if (error) {
     console.error(error);
     return readCatalogueCache()?.games ?? [];
@@ -197,6 +223,9 @@ export async function deleteProject(project: ProjectRecord): Promise<{ ok: true 
   const storagePaths = new Set<string>();
 
   if (project.cover_path && isStoragePath(project.cover_path)) storagePaths.add(project.cover_path);
+  if (project.cover_portrait_path && isStoragePath(project.cover_portrait_path)) storagePaths.add(project.cover_portrait_path);
+  if (project.cover_original_path && isStoragePath(project.cover_original_path)) storagePaths.add(project.cover_original_path);
+  if (project.preview_clip_path && isStoragePath(project.preview_clip_path)) storagePaths.add(project.preview_clip_path);
   for (const shot of project.project_screenshots ?? []) {
     if (isStoragePath(shot.storage_path)) storagePaths.add(shot.storage_path);
   }
@@ -269,12 +298,20 @@ export async function fetchProjectsForHandle(handle: string) {
   const profile = await fetchProfileByHandle(handle);
   if (!profile) return { profile: null, projects: [] as ProjectRecord[] };
   const supabase = createClient();
-  const { data } = await supabase
+  const media = await supabase
     .from("projects")
-    .select(CATALOGUE_SELECT)
+    .select(CATALOGUE_MEDIA_SELECT)
     .eq("owner_id", profile.id)
     .eq("published", true)
     .order("created_at", { ascending: false });
+  const { data } = media.error
+    ? await supabase
+        .from("projects")
+        .select(CATALOGUE_SELECT)
+        .eq("owner_id", profile.id)
+        .eq("published", true)
+        .order("created_at", { ascending: false })
+    : media;
   return { profile, projects: (data ?? []) as unknown as ProjectRecord[] };
 }
 
@@ -289,6 +326,9 @@ export function projectToGame(project: ProjectRecord): Game {
     : project.play_url.startsWith("http")
       ? project.play_url
       : publicMediaUrl(project.play_url) || project.play_url;
+  const focal = focalOrCenter(project.cover_focal_x, project.cover_focal_y);
+  const portrait = publicMediaUrl(project.cover_portrait_path);
+  const clip = publicMediaUrl(project.preview_clip_path);
   return {
     id: project.id,
     title: project.title,
@@ -296,6 +336,11 @@ export function projectToGame(project: ProjectRecord): Game {
     description: project.tagline || project.description || project.title,
     playUrl: play,
     thumbnailUrl: publicMediaUrl(project.cover_path),
+    portraitUrl: portrait || undefined,
+    focalX: focal.x,
+    focalY: focal.y,
+    previewClipUrl: clip || undefined,
+    previewClipKind: clip.toLowerCase().includes(".gif") ? "gif" : clip ? "video" : undefined,
     screenshots: shots,
     embeddable: project.embeddable && (project.kind === "html" || Boolean(project.play_url)),
     tags: (project.project_tags ?? []).map((t) => t.tag),
@@ -323,6 +368,11 @@ export function gameToProjectRecord(game: Game): ProjectRecord {
     kind: game.embeddable ? "html" : "external",
     html_build_name: null,
     cover_path: game.thumbnailUrl || null,
+    cover_portrait_path: game.portraitUrl || null,
+    cover_original_path: null,
+    cover_focal_x: game.focalX ?? 0.5,
+    cover_focal_y: game.focalY ?? 0.5,
+    preview_clip_path: game.previewClipUrl || null,
     created_at: game.createdAt,
     updated_at: game.createdAt,
     play_count: game.playCount,
@@ -351,6 +401,9 @@ export function gameToProjectRecord(game: Game): ProjectRecord {
       id: `${game.id}-shot-${sort_order}`,
       storage_path,
       sort_order,
+      width: null,
+      height: null,
+      kind: "image",
     })),
     project_files: [],
     project_store_links: [],

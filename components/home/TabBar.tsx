@@ -1,19 +1,19 @@
 "use client";
 
-import {
-  BookOpen,
-  Compass,
-  Ghost,
-  Heart,
-  History,
-  LayoutGrid,
-  Puzzle,
-  Search,
-  SlidersHorizontal,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  IconBook,
+  IconCompass,
+  IconGhost,
+  IconGrid,
+  IconHeart,
+  IconHistory,
+  IconPuzzle,
+  IconSearch,
+  IconSliders,
+  IconSpark,
+  type AppIcon,
+} from "@/components/icons";
 import { capitalize, type HomeFilters } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
@@ -22,16 +22,16 @@ const TAB_TAGS = 4;
 const SEARCH_DEBOUNCE_MS = 250;
 
 /** Icons for common genres; anything else gets sparkles. */
-function tagIcon(tag: string): LucideIcon {
+function tagIcon(tag: string): AppIcon {
   const t = tag.toLowerCase();
-  if (/horror|horor|scary|ghost/.test(t)) return Ghost;
-  if (/story|folk|narrative|visual novel|cerita/.test(t)) return BookOpen;
-  if (/adventure|explor|petualangan/.test(t)) return Compass;
-  if (/puzzle/.test(t)) return Puzzle;
-  return Sparkles;
+  if (/horror|horor|scary|ghost/.test(t)) return IconGhost;
+  if (/story|folk|narrative|visual novel|cerita/.test(t)) return IconBook;
+  if (/adventure|explor|petualangan/.test(t)) return IconCompass;
+  if (/puzzle/.test(t)) return IconPuzzle;
+  return IconSpark;
 }
 
-type Tab = { key: string; label: string; icon: LucideIcon; active: boolean; onClick: () => void };
+type Tab = { key: string; label: string; icon: AppIcon; active: boolean; onClick: () => void };
 
 export function TabBar({
   filters,
@@ -66,7 +66,7 @@ export function TabBar({
   const nothing = !filters.view && !filters.tags.length && !filters.creators.length;
 
   const tabs: Tab[] = [
-    { key: "all", label: "All games", icon: LayoutGrid, active: nothing, onClick: onReset },
+    { key: "all", label: "All games", icon: IconGrid, active: nothing, onClick: onReset },
     ...tags.slice(0, TAB_TAGS).map((tag) => ({
       key: `tag:${tag}`,
       label: capitalize(tag),
@@ -77,14 +77,14 @@ export function TabBar({
     {
       key: "saved",
       label: "Favorites",
-      icon: Heart,
+      icon: IconHeart,
       active: filters.view === "saved",
       onClick: () => onChange({ view: "saved" }),
     },
     {
       key: "recent",
       label: "Recently played",
-      icon: History,
+      icon: IconHistory,
       active: filters.view === "recent",
       onClick: () => onChange({ view: "recent" }),
     },
@@ -132,7 +132,7 @@ export function TabBar({
           onClick={onOpenFilter}
           aria-label="Open filters"
         >
-          <SlidersHorizontal className={cn(s.ic, s.sm)} />
+          <IconSliders className={cn(s.ic, s.sm)} />
           {filterCount > 0 ? <b className={s.tnum}>{filterCount}</b> : null}
         </button>
       ) : null}
@@ -152,7 +152,7 @@ export function TabBar({
       <label className={s.search}>
         <span className={s.sr}>Search games</span>
         <input type="search" placeholder="Search games" value={q} onChange={(e) => setQ(e.target.value)} />
-        <Search className={cn(s.ic, s.sm)} />
+        <IconSearch className={cn(s.ic, s.sm)} />
       </label>
     </div>
   );

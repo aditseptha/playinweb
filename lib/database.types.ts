@@ -192,16 +192,22 @@ export type Database = {
       }
       project_screenshots: {
         Row: {
+          height: number | null
           id: string
+          kind: string
           project_id: string
           sort_order: number
           storage_path: string
+          width: number | null
         }
         Insert: {
+          height?: number | null
           id?: string
+          kind?: string
           project_id: string
           sort_order?: number
           storage_path: string
+          width?: number | null
         }
         Update: Partial<Database["public"]["Tables"]["project_screenshots"]["Insert"]>
         Relationships: []
@@ -229,7 +235,11 @@ export type Database = {
           classification: string
           community: string
           contains_ai: boolean | null
+          cover_focal_x: number
+          cover_focal_y: number
+          cover_original_path: string | null
           cover_path: string | null
+          cover_portrait_path: string | null
           created_at: string
           custom_noun: string
           description: string
@@ -243,6 +253,7 @@ export type Database = {
           owner_id: string
           play_count: number
           play_url: string
+          preview_clip_path: string | null
           view_count: number
           pricing_type: string
           published: boolean
@@ -258,7 +269,11 @@ export type Database = {
           classification?: string
           community?: string
           contains_ai?: boolean | null
+          cover_focal_x?: number
+          cover_focal_y?: number
+          cover_original_path?: string | null
           cover_path?: string | null
+          cover_portrait_path?: string | null
           created_at?: string
           custom_noun?: string
           description?: string
@@ -272,6 +287,7 @@ export type Database = {
           owner_id: string
           play_count?: number
           play_url?: string
+          preview_clip_path?: string | null
           view_count?: number
           pricing_type?: string
           published?: boolean

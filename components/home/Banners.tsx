@@ -1,6 +1,6 @@
 "use client";
 
-import { CloudOff, History, Plus } from "lucide-react";
+import { IconCloudOff, IconHistory, IconPlus } from "@/components/icons";
 import Link from "next/link";
 import { GameThumb } from "@/components/GameThumb";
 import { useLoginDialog } from "@/components/LoginDialog";
@@ -37,11 +37,11 @@ export function GuestBanner({ recent, popular }: { recent: { game: Game; at: num
         <div className={s.recent}>
           <div className={s.recentCard}>
             <div className={s.recentHead}>
-              <History className={cn(s.ic, s.sm)} />
+              <IconHistory className={cn(s.ic, s.sm)} />
               {recent.length > 0 ? "Recently played" : "Popular right now"}
               {recent.length > 0 ? (
                 <span className={s.pillWarn}>
-                  <CloudOff className={cn(s.ic, s.xs)} />
+                  <IconCloudOff className={cn(s.ic, s.xs)} />
                   This device only
                 </span>
               ) : null}
@@ -49,7 +49,7 @@ export function GuestBanner({ recent, popular }: { recent: { game: Game; at: num
             {rows.map(({ game, at }) => (
               <Link key={game.id} href={gamePath(game)} className={s.recentRow}>
                 <span className={s.recentThumb}>
-                  <GameThumb game={game} sizes="44px" />
+                  <GameThumb game={game} sizes="48px" ratio="portrait" />
                 </span>
                 <span>
                   <span className={s.rTop}>
@@ -78,7 +78,7 @@ export function CreatorCTA({ games }: { games: Game[] }) {
         <p>Publishing is free. Upload an HTML build and it&apos;s playable in the browser right away.</p>
         <div className={s.ctaBtns}>
           <Link href={apexHref("/register")} className={cn(s.btn, s.btnInk)}>
-            <Plus className={cn(s.ic, s.sm)} />
+            <IconPlus className={cn(s.ic, s.sm)} />
             Start a game
           </Link>
           <Link href={apexHref("/manage")} className={cn(s.btn, s.btnGlassO)}>

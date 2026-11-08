@@ -32,6 +32,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
+import { ICON_GALLERY, ICON_SIZES, IconBookmark, IconHeart } from "@/components/icons";
 import { useState } from "react";
 import { Badge } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
@@ -516,6 +517,46 @@ function Icons() {
       title="Icons"
       description="lucide-react at 16, 20 or 24px with the default 2px stroke. Custom icons only for the brand. Decorative icons get aria-hidden; icon-only buttons get an aria-label."
     >
+      <Demo
+        title="App icon set: Icons8 iOS Filled"
+        note="components/icons.tsx, shipped on main. Icons take their colour from the surface (currentColor)."
+        code={`import { IconHeart } from "@/components/icons";\n<IconHeart width={20} height={20} />`}
+      >
+        <div className="flex flex-col gap-4">
+          {[
+            ["On blue", "bg-pw-navy text-pw-mist-50"],
+            ["On a cover", "bg-pw-night-900 text-pw-gold-soft"],
+          ].map(([label, tone]) => (
+            <section key={label}>
+              <h4 className="mb-2 text-pw-caption font-semibold text-pw-muted">{label}</h4>
+              <ul className={cn("grid grid-cols-2 gap-3 rounded-pw-lg p-4 sm:grid-cols-3 lg:grid-cols-5", tone)}>
+                {ICON_GALLERY.map(({ name, Icon }) => (
+                  <li key={`${label}-${name}`} className="flex items-center gap-3">
+                    <span className="flex items-end gap-2">
+                      {ICON_SIZES.map((size) => (
+                        <Icon key={size} width={size} height={size} />
+                      ))}
+                    </span>
+                    <span className="text-pw-caption">{name}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+          <div className="flex flex-wrap gap-6 rounded-pw-lg bg-pw-navy p-4 text-pw-body-sm text-pw-mist-50">
+            <span className="flex items-center gap-2">
+              <IconBookmark filled={false} width={24} height={24} />
+              <IconBookmark width={24} height={24} />
+              Bookmark (before / after saving)
+            </span>
+            <span className="flex items-center gap-2">
+              <IconHeart filled={false} width={24} height={24} />
+              <IconHeart width={24} height={24} />
+              Heart (before / after liking)
+            </span>
+          </div>
+        </div>
+      </Demo>
       <Demo title="Sizes" code={`import { Heart } from "lucide-react";\n<Heart aria-hidden className="size-5" />`}>
         <ul className="grid grid-cols-4 gap-4 sm:grid-cols-5 lg:grid-cols-10">
           {ICONS.map(([name, I]) => (

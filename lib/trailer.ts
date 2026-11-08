@@ -30,6 +30,17 @@ export function parseTrailer(url: string | null | undefined): Trailer | null {
   return null;
 }
 
+export async function vimeoThumbUrl(id: string) {
+  try {
+    const response = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(`https://vimeo.com/${id}`)}`);
+    if (!response.ok) return "";
+    const data = (await response.json()) as { thumbnail_url?: string };
+    return data.thumbnail_url ?? "";
+  } catch {
+    return "";
+  }
+}
+
 function youtube(id: string): Trailer {
   return {
     provider: "youtube",

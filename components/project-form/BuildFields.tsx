@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { fieldLabel, formatSize, MAX_FILE, type HtmlPreview } from "@/components/project-form/shared";
+import { useEffect, useState, type ReactNode } from "react";
+import { formatSize, MAX_FILE, type HtmlPreview } from "@/components/project-form/shared";
+import f from "@/components/project-form/form.module.css";
 import { Field, TextInput } from "@/components/ui/field";
 import {
   filesFromHtmlUpload,
@@ -27,6 +28,7 @@ export function BuildFields({
   playLink,
   setPlayLink,
   setError,
+  action,
 }: {
   kind: ProjectKind;
   editing: boolean;
@@ -38,6 +40,7 @@ export function BuildFields({
   playLink: string;
   setPlayLink: (value: string) => void;
   setError: (message: string) => void;
+  action?: ReactNode;
 }) {
   const [htmlPreview, setHtmlPreview] = useState<HtmlPreview | null>(null);
   const [fetchedBuildName, setFetchedBuildName] = useState("");
@@ -98,35 +101,42 @@ export function BuildFields({
   return (
     <>
       {kind === "html" ? (
-        <Field
-          label="HTML5 game"
-          hint={
-            editing
-              ? "Leave empty to keep the current build. Upload a new .zip to replace it. Max 100 MB."
-              : "A .zip with index.html, like itch.io. Max 100 MB. Players run it here — the original host is never shown."
-          }
-        >
-          <input
-            type="file"
-            accept=".zip,.html,.htm,application/zip"
-            className="block w-full text-ui text-text-muted file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:text-body file:text-text"
-            onChange={(e) => {
-              const file = e.target.files?.[0] ?? null;
-              if (file && file.size > MAX_HTML_BYTES) {
-                e.target.value = "";
-                setHtmlBuild(null);
-                setHtmlPreview({
-                  name: file.name,
-                  size: file.size,
-                  files: [],
-                  error: "HTML5 game must be 100 MB or smaller.",
-                });
-                return;
-              }
-              setHtmlBuild(file);
-              if (!file) setHtmlPreview(null);
-            }}
-          />
+        <div>
+          <p className="text-caption font-medium text-text-muted">Game file</p>
+          <div className={`${f.pick} continueHost mt-2`}>
+            <label>
+              {htmlBuild || storedBuildName ? (
+                <strong>{htmlBuild?.name || `Current file: ${storedBuildName}`}</strong>
+              ) : (
+                <span className={f.pickLine}>
+                  <span className={f.pickPlus} aria-hidden>+</span>
+                  <span>Choose a .zip or .html file. Max 100 MB.</span>
+                </span>
+              )}
+              <input
+                type="file"
+                accept=".zip,.html,.htm,application/zip"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (file && file.size > MAX_HTML_BYTES) {
+                    e.target.value = "";
+                    setHtmlBuild(null);
+                    setHtmlPreview({
+                      name: file.name,
+                      size: file.size,
+                      files: [],
+                      error: "HTML5 game must be 100 MB or smaller.",
+                    });
+                    return;
+                  }
+                  setHtmlBuild(file);
+                  if (!file) setHtmlPreview(null);
+                }}
+              />
+            </label>
+            {action}
+          </div>
           {htmlPreview ? (
             <HtmlBuildPreview preview={htmlPreview} />
           ) : htmlBuild ? (
@@ -138,29 +148,41 @@ export function BuildFields({
               Current file: Name not saved — re-upload your .zip to show the file name here.
             </p>
           ) : null}
-        </Field>
+        </div>
       ) : null}
 
       {kind === "flash" ? (
-        <Field
-          label={fieldLabel("Flash game", "Upload a .swf file. Max 50 MB.")}
-        >
-          <input
-            type="file"
-            accept=".swf,application/x-shockwave-flash"
-            className="block w-full text-ui text-text-muted file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:text-body file:text-text"
-            onChange={(e) => {
-              const file = e.target.files?.[0] ?? null;
-              if (file && file.size > MAX_FILE) {
-                e.target.value = "";
-                setFlashBuild(null);
-                setError("Flash game must be 50 MB or smaller.");
-                return;
-              }
-              setFlashBuild(file);
-              setError("");
-            }}
-          />
+        <div>
+          <p className="text-caption font-medium text-text-muted">Flash file</p>
+          <div className={`${f.pick} continueHost mt-2`}>
+            <label>
+              {flashBuild || storedBuildName ? (
+                <strong>{flashBuild?.name || `Current file: ${storedBuildName}`}</strong>
+              ) : (
+                <span className={f.pickLine}>
+                  <span className={f.pickPlus} aria-hidden>+</span>
+                  <span>Choose a .swf file. Max 50 MB.</span>
+                </span>
+              )}
+              <input
+                type="file"
+                accept=".swf,application/x-shockwave-flash"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (file && file.size > MAX_FILE) {
+                    e.target.value = "";
+                    setFlashBuild(null);
+                    setError("Flash game must be 50 MB or smaller.");
+                    return;
+                  }
+                  setFlashBuild(file);
+                  setError("");
+                }}
+              />
+            </label>
+            {action}
+          </div>
           {flashBuild ? (
             <p className="text-meta text-text-subtle">Selected file: {flashBuild.name}</p>
           ) : storedBuildName ? (
@@ -170,18 +192,21 @@ export function BuildFields({
               Current file: Name not saved — re-upload your .swf to show the file name here.
             </p>
           ) : null}
-        </Field>
+        </div>
       ) : null}
 
       {kind === "external" ? (
-        <Field label={fieldLabel("Play URL", "Link to itch.io, Steam, your site, or anywhere players can play.")}>
-          <TextInput
-            type="url"
-            value={playLink}
-            onChange={(e) => setPlayLink(e.target.value)}
-            placeholder="https://…"
-            required
-          />
+        <Field label="Play link">
+          <div className={action ? `${f.linkRow} linkAction` : undefined}>
+            <TextInput
+              type="url"
+              value={playLink}
+              onChange={(e) => setPlayLink(e.target.value)}
+              placeholder="https://…"
+              required
+            />
+            {action ? <div className={f.linkAction}>{action}</div> : null}
+          </div>
         </Field>
       ) : null}
     </>

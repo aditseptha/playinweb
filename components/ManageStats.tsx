@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { GameThumb } from "@/components/GameThumb";
 import { LinkButton } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
 import { formatPlays } from "@/lib/format";
 import { projectPublicUrl } from "@/lib/host";
+import { coverBelowStandard } from "@/lib/media-standard";
 import { projectToGame, type ProjectRecord, type StatDay } from "@/lib/projects";
 
 type Range = "daily" | "weekly";
@@ -50,6 +52,7 @@ export function ManageStats({
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                     <div className="min-w-0">
                       <h2 className="truncate text-title font-semibold tracking-tight">{project.title}</h2>
+                      <CoverQualityNote src={game.thumbnailUrl} href={`/manage/${project.id}`} />
                       <p className="truncate text-caption text-text-subtle">
                         @{handle}/{project.slug}
                         {project.published ? "" : " · Private"}
@@ -92,6 +95,33 @@ export function ManageStats({
         })}
       </ul>
     </div>
+  );
+}
+
+function CoverQualityNote({ src, href }: { src: string; href: string }) {
+  const [soft, setSoft] = useState(false);
+  if (!src) return null;
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt=""
+        src={src}
+        className="hidden"
+        onLoad={(event) => {
+          const { naturalWidth, naturalHeight } = event.currentTarget;
+          if (coverBelowStandard(naturalWidth, naturalHeight)) setSoft(true);
+        }}
+      />
+      {soft ? (
+        <p className="mt-1 text-caption text-text-muted">
+          Your cover looks soft on a large screen.{" "}
+          <Link href={href} className="underline">
+            Upload a sharper one?
+          </Link>
+        </p>
+      ) : null}
+    </>
   );
 }
 

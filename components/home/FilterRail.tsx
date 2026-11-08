@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, ChevronUp, SlidersHorizontal } from "lucide-react";
+import { IconCheck, IconChevronUp, IconSliders } from "@/components/icons";
 import { useId, useState, type ReactNode } from "react";
 import { CREATOR_COLORS, capitalize, toggle, type Creator, type HomeFilters } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
+import { initials } from "@/lib/format";
 
 const VISIBLE_TAGS = 6;
 const STACK = 6;
@@ -16,7 +17,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
     <div className={s.fgroup}>
       <button type="button" className={s.fhead} aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
         {title}
-        <ChevronUp className={cn(s.ic, s.sm)} />
+        <IconChevronUp className={cn(s.ic, s.sm)} />
       </button>
       {open ? (
         <div className={s.fbody} id={id}>
@@ -32,7 +33,7 @@ function CheckRow({ label, checked, onChange }: { label: string; checked: boolea
     <label className={s.check}>
       <input type="checkbox" checked={checked} onChange={onChange} />
       <span className={s.box}>
-        <Check className={s.ic} />
+        <IconCheck className={s.ic} />
       </span>
       <span className={s.checkLabel}>{label}</span>
     </label>
@@ -65,7 +66,7 @@ export function FilterRail({
     <aside className={s.rail} aria-label="Filter games">
       <div className={s.railHead}>
         <span className={s.railTitle}>
-          <SlidersHorizontal className={cn(s.ic, s.sm)} />
+          <IconSliders className={cn(s.ic, s.sm)} />
           FILTER
         </span>
         <button type="button" className={s.linkGold} onClick={onReset} disabled={!dirty}>
@@ -100,7 +101,14 @@ export function FilterRail({
                 title={c.name}
                 className={cn(s.av, filters.creators.includes(c.handle) && s.avOn)}
                 style={{ background: CREATOR_COLORS[i % CREATOR_COLORS.length] }}
-              />
+              >
+                {c.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.avatarUrl} alt="" />
+                ) : (
+                  initials(c.name)
+                )}
+              </span>
             ))}
             <span className={s.more}>
               {filters.creators.length

@@ -1,4 +1,4 @@
-export const ADMIN_EMAILS = ["aditseptha@gmail.com"] as const;
+export const ADMIN_EMAILS = ["aditseptha@gmail.com", "rizkyerdiansyah@gmail.com"] as const;
 
 export function isAdminEmail(email: string | null | undefined) {
   if (!email) return false;
