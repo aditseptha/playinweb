@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowRight, Heart, Play, Plus, Sparkles, Star, Users } from "lucide-react";
+import { IconArrow, IconHeart, IconPlay, IconPlus, IconSpark, IconStar, IconUsers } from "@/components/icons";
 import Link from "next/link";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { playHref } from "@/components/GameCard";
 import { GameThumb } from "@/components/GameThumb";
+import { PreviewClip, useCardClip } from "@/components/PreviewClip";
 import { isNewThisWeek } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
 import { usePeek } from "@/components/home/Peek";
@@ -25,25 +26,68 @@ function canTilt() {
 function PlayButton({ game }: { game: Game }) {
   return (
     <Link href={playHref(game)} className={s.play} aria-label={`Play ${game.title}`}>
-      <Play className={s.ic} />
+      <IconPlay className={s.ic} />
     </Link>
   );
 }
 
-function Art({ game, priority, sizes }: { game: Game; priority?: boolean; sizes: string }) {
+function Art({
+  game,
+  priority,
+  sizes,
+  ratio = "landscape",
+}: {
+  game: Game;
+  priority?: boolean;
+  sizes: string;
+  ratio?: "landscape" | "portrait";
+}) {
   return (
     <div className={s.art} aria-hidden>
-      <GameThumb game={game} priority={priority} sizes={sizes} />
+      <GameThumb game={game} priority={priority} sizes={sizes} ratio={ratio} />
     </div>
+  );
+}
+
+function PausePreview({ onPause }: { onPause: () => void }) {
+  return (
+    <button
+      type="button"
+      className={s.clipPause}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onPause();
+      }}
+    >
+      Pause
+    </button>
   );
 }
 
 /** Large landscape card for the featured row. */
 export function FeatureCard({ game, i = 0, priority = false }: { game: Game; i?: number; priority?: boolean }) {
   const peek = usePeek(game);
+  const clip = useCardClip(game.previewClipUrl);
   return (
-    <article className={cn(s.card, s.cOrig, s.rv)} style={indexStyle(i)} {...peek}>
+    <article
+      className={cn(s.card, s.cOrig, s.rv)}
+      style={indexStyle(i)}
+      {...peek}
+      onPointerEnter={(event) => {
+        peek.onPointerEnter(event);
+        clip.onEnter();
+      }}
+      onPointerLeave={() => {
+        peek.onPointerLeave();
+        clip.onLeave();
+      }}
+    >
       <Art game={game} priority={priority} sizes="(min-width: 1024px) 30vw, (min-width: 768px) 48vw, 92vw" />
+      {clip.playing && game.previewClipUrl ? (
+        <PreviewClip url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} onDisplace={clip.pause} />
+      ) : null}
+      {clip.playing ? <PausePreview onPause={clip.pause} /> : null}
       <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
       {game.embeddable ? <span className={s.pill}>Instant play</span> : null}
       <div className={s.glass}>
@@ -52,11 +96,11 @@ export function FeatureCard({ game, i = 0, priority = false }: { game: Game; i?:
           <div className={s.meta}>
             <span className={s.who}>{game.developer}</span>
             <span>
-              <Users className={cn(s.ic, s.xs)} /> <b className={s.tnum}>{formatPlays(game.playCount)}</b>
+              <IconUsers className={cn(s.ic, s.xs)} /> <b className={s.tnum}>{formatPlays(game.playCount)}</b>
             </span>
             {game.likeCount > 0 ? (
               <span>
-                <Heart className={cn(s.ic, s.xs, s.goldIc)} /> <b className={s.tnum}>{formatPlays(game.likeCount)}</b>
+                <IconHeart className={cn(s.ic, s.xs, s.goldIc)} /> <b className={s.tnum}>{formatPlays(game.likeCount)}</b>
               </span>
             ) : null}
           </div>
@@ -112,13 +156,13 @@ export function TallCard({
       onPointerMove={onMove}
       onPointerLeave={onLeave}
     >
-      <Art game={game} priority={priority} sizes="(min-width: 1181px) 15vw, (min-width: 768px) 24vw, 46vw" />
+      <Art game={game} priority={priority} sizes="(min-width: 1181px) 15vw, (min-width: 768px) 24vw, 46vw" ratio="portrait" />
       <span className={s.shine} />
       <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
       {label ? <span className={cn(s.badge, label === "top" && s.badgeTop)}>{label === "top" ? "TOP" : "NEW"}</span> : null}
       {game.likeCount > 0 ? (
         <span className={s.rate}>
-          <Heart className={s.ic} /> <span className={s.tnum}>{formatPlays(game.likeCount)}</span>
+          <IconHeart className={s.ic} /> <span className={s.tnum}>{formatPlays(game.likeCount)}</span>
         </span>
       ) : null}
       <div className={s.tTitle}>{game.title}</div>
@@ -132,9 +176,26 @@ export function TallCard({
 /** Wide landscape card for a tag row. */
 export function WideCard({ game, i = 0 }: { game: Game; i?: number }) {
   const peek = usePeek(game);
+  const clip = useCardClip(game.previewClipUrl);
   return (
-    <article className={cn(s.card, s.cFolk, s.rv)} style={indexStyle(i)} {...peek}>
+    <article
+      className={cn(s.card, s.cFolk, s.rv)}
+      style={indexStyle(i)}
+      {...peek}
+      onPointerEnter={(event) => {
+        peek.onPointerEnter(event);
+        clip.onEnter();
+      }}
+      onPointerLeave={() => {
+        peek.onPointerLeave();
+        clip.onLeave();
+      }}
+    >
       <Art game={game} sizes="(min-width: 1024px) 30vw, (min-width: 768px) 48vw, 92vw" />
+      {clip.playing && game.previewClipUrl ? (
+        <PreviewClip url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} onDisplace={clip.pause} />
+      ) : null}
+      {clip.playing ? <PausePreview onPause={clip.pause} /> : null}
       <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
       <div className={s.fText}>
         <div className={s.fTitle}>{game.title}</div>
@@ -162,16 +223,16 @@ export function SlotCard({ slot }: { slot: number }) {
     <div className={cn(s.slot, s.rv)} style={indexStyle(slot - 1)}>
       <span className={s.slotLbl}>SLOT {String(slot).padStart(2, "0")}</span>
       <span className={s.spark} style={{ top: 46, left: 28 }}>
-        <Sparkles className={cn(s.ic, s.sm)} />
+        <IconSpark className={cn(s.ic, s.sm)} />
       </span>
       <span className={s.spark} style={{ top: 34, right: 40 }}>
-        <Star className={cn(s.ic, s.xs)} />
+        <IconStar className={cn(s.ic, s.xs)} />
       </span>
       <span className={s.spark} style={{ top: 96, left: 26 }}>
-        <Star className={cn(s.ic, s.xs)} />
+        <IconStar className={cn(s.ic, s.xs)} />
       </span>
       <span className={cn(s.spark, s.sparkViolet)} style={{ top: 92, right: 26 }}>
-        <Sparkles className={cn(s.ic, s.xs)} />
+        <IconSpark className={cn(s.ic, s.xs)} />
       </span>
       <span className={s.hexWrap} aria-hidden>
         <span className={s.hex3d}>
@@ -179,17 +240,17 @@ export function SlotCard({ slot }: { slot: number }) {
             <i key={a} className={s.hexSide} style={{ "--a": `${a}deg`, "--c": c } as CSSProperties} />
           ))}
           <span className={s.hexFace}>
-            <Plus className={s.ic} />
+            <IconPlus className={s.ic} />
           </span>
           <span className={cn(s.hexFace, s.hexBack)}>
-            <Plus className={s.ic} />
+            <IconPlus className={s.ic} />
           </span>
         </span>
       </span>
       <h4>Your turn!</h4>
       <p>Publish your first game</p>
       <Link href={apexHref("/register")} className={cn(s.btn, s.btnPrimary)}>
-        Publish <ArrowRight className={cn(s.ic, s.xs)} />
+        Publish <IconArrow className={cn(s.ic, s.xs)} />
       </Link>
     </div>
   );

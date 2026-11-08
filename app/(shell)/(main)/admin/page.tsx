@@ -22,5 +22,14 @@ export default function AdminPage() {
     );
   }
 
-  return <AdminPanel />;
+  return (
+    <div>
+      <p className="mb-4 text-ui">
+        <LinkButton href={apexHref("/admin/design")} variant="secondary">
+          Icon gallery
+        </LinkButton>
+      </p>
+      <AdminPanel />
+    </div>
+  );
 }

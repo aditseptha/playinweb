@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { hueFromId } from "@/lib/format";
+import { objectPosition } from "@/lib/media-standard";
 import { canOptimizeImage } from "@/lib/optimize-image";
 import type { Game } from "@/lib/types";
 
@@ -13,34 +14,56 @@ export function GameThumb({
   priority = false,
   quality,
   sizes = "(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw",
+  ratio = "landscape",
+  fit = "cover",
 }: {
   game: Game;
   src?: string;
   priority?: boolean;
   quality?: number;
   sizes?: string;
+  ratio?: "landscape" | "portrait";
+  fit?: "cover" | "contain";
 }) {
-  const image = src || game.thumbnailUrl;
+  const image = src || (ratio === "portrait" && game.portraitUrl ? game.portraitUrl : game.thumbnailUrl);
+  const position = objectPosition(game.focalX, game.focalY);
   if (image) {
     const className =
-      "absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out-quint group-hover:scale-[1.03]";
-    if (canOptimizeImage(image)) {
+      fit === "contain"
+        ? "absolute inset-0 h-full w-full object-contain"
+        : "absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out-quint group-hover:scale-[1.03]";
+    const picture = canOptimizeImage(image) ? (
+      <Image
+        src={image}
+        alt=""
+        fill
+        sizes={sizes}
+        quality={quality}
+        preload={priority}
+        className={className}
+        style={{ objectPosition: position }}
+      />
+    ) : (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={image}
+        alt=""
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        className={className}
+        style={{ objectPosition: position }}
+      />
+    );
+    if (fit === "contain") {
       return (
-        <Image
-          src={image}
-          alt=""
-          fill
-          sizes={sizes}
-          quality={quality}
-          preload={priority}
-          className={className}
-        />
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl" />
+          {picture}
+        </>
       );
     }
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={image} alt="" loading={priority ? "eager" : "lazy"} decoding="async" className={className} />
-    );
+    return picture;
   }
 
   const hue = hueFromId(game.id);
@@ -58,6 +81,11 @@ export function GameThumb({
     >
       <Pattern kind={pattern} hue={hue} />
       <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+      {game.title ? (
+        <p className="absolute inset-x-3 top-1/2 -translate-y-1/2 text-center text-sm font-semibold leading-tight text-white drop-shadow">
+          {game.title}
+        </p>
+      ) : null}
     </div>
   );
 }

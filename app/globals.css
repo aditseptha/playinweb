@@ -245,7 +245,7 @@
 }
 
 .icon-chart-dot {
-  offset-path: path("M5 16L9 11.5L12 13.5L16.5 7L20 5.5");
+  offset-path: path("M4 16 L8 12 L12 8 L16 13 L20 13");
   offset-rotate: 0deg;
 }
 
