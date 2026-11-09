@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { gameDescription, gameJsonLd, gameTitle, jsonLdHtml, type GameSeoInput } from "@/lib/game-seo";
 import { apexHref, apexOrigin, projectPublicUrl, siteOrigin } from "@/lib/host";
-import { PROJECT_SELECT, isPersistedId, projectToGame, type ProjectRecord } from "@/lib/projects";
+import { PROJECT_SELECT, isPersistedId, ownerHandle, projectToGame, type ProjectRecord } from "@/lib/projects";
 import { createClient } from "@/lib/supabase/server";
 
 // Data and metadata for the game page (/{handle}/{slug}, and /game/[id] which redirects there).
@@ -60,6 +60,33 @@ export const getGameByHandleSlug = cache(async (handle: string, slug: string) =>
     return null;
   }
   return toRecord(data);
+});
+
+/**
+ * The current address of a game that used to live at /{handle}/{slug}, or null.
+ * Read with the visitor's session, so an old address of an unpublished game stays hidden.
+ * Returns null (a plain 404) if the redirects table is not there yet.
+ */
+export const getSlugRedirect = cache(async (handle: string, slug: string) => {
+  const supabase = await createClient();
+  const { data: profile } = await supabase.from("profiles").select("id").eq("handle", handle).maybeSingle();
+  if (!profile) return null;
+  const { data: row, error } = await supabase
+    .from("project_slug_redirects")
+    .select("project_id")
+    .eq("owner_id", profile.id)
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error || !row) return null;
+  const { data: project } = await supabase
+    .from("projects")
+    .select("slug, profiles!projects_owner_id_fkey ( handle )")
+    .eq("id", row.project_id)
+    .maybeSingle();
+  const target = ownerHandle(project?.profiles);
+  if (!project || !target) return null;
+  // Never answer an address with itself.
+  return target === handle && project.slug === slug ? null : projectPublicUrl(target, project.slug);
 });
 
 /** The game's one public address, or null for a game without a creator handle or slug. */
