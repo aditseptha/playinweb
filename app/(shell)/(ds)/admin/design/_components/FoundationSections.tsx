@@ -500,7 +500,7 @@ function Illustrations() {
       id="illustrations"
       eyebrow="Language"
       title="Illustrations"
-      description="Pixel art, night and folklore, palette from the tokens. Page-level empty and status states only; inline empties use an icon. Until each piece is drawn, a placeholder stands in and pages don’t wait. Sizes L 240, M 160, S 96. WebP files use image-rendering: pixelated."
+      description="Pixel art, night and folklore, palette from the tokens, with Kunang the firefly as the recurring character. Page-level empty and status states only; inline empties use an icon. Files are 480px transparent WebP in public/illustrations/, shown at L 240, M 160 or S 96. A name without a file falls back to a placeholder."
     >
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {(Object.keys(ILLUSTRATIONS) as IllustrationName[]).map((n) => (
