@@ -43,6 +43,15 @@ export function formatMoney(n: number, currency = "USD"): string {
   }).format(Number.isFinite(n) ? n : 0);
 }
 
+/** File sizes for uploads: 980 KB, 3.4 MB, 100 MB. Binary units (1 MB = 1024 KB), like the OS. */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "0 KB";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  const mb = bytes / (1024 * 1024);
+  if (mb < 1024) return `${mb >= 10 ? Math.round(mb) : mb.toFixed(1).replace(/\.0$/, "")} MB`;
+  return `${(mb / 1024).toFixed(1).replace(/\.0$/, "")} GB`;
+}
+
 /** "play" → "1 play" / "12.4K plays". Pass `pluralWord` for irregular words. */
 export function formatCount(n: number, word: string, pluralWord = `${word}s`, { full: useFull = false } = {}) {
   const shown = useFull ? formatNumber(n) : formatCompact(n);

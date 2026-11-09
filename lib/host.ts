@@ -1,4 +1,9 @@
 export const RESERVED_HANDLES = new Set([
+  // Next.js metadata routes at the site root (link preview images).
+  "opengraph-image",
+  "twitter-image",
+  // public/illustrations/ (design system artwork) must not be read as a creator handle.
+  "illustrations",
   "www",
   "api",
   "app",

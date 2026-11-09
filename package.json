@@ -11,7 +11,9 @@
     "tokens": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build-tokens.mjs",
     "tokens:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build-tokens.mjs --check",
     "check:hex": "node scripts/check-hex.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "emails": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build-emails.mjs",
+    "emails:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build-emails.mjs --check"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",

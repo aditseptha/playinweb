@@ -5,7 +5,7 @@
 - **Accessibility**: axe with the WCAG 2.2 AA rules, in the dark and light preview.
 - **Keyboard**: Dialog, ConfirmDialog, Sheet, Menu and Tabs (Chromium only; Safari only Tabs to buttons with Full Keyboard Access on).
 - **Layout**: no horizontal scroll at 390px.
-- **Screenshots**: the Components section in dark and light, compared on CI only.
+- **Screenshots**: the Button, GameCard and Table demos in dark and light, compared on CI only.
 
 Locally, reuse a running dev server instead of starting a second one:
 
@@ -20,6 +20,8 @@ When a baseline is missing, the test passes and attaches the screenshot to the r
 
 To add or update baselines:
 
-1. Open the PR's **CI → Design system** run and download the `playwright-report` artifact.
-2. Check the attached screenshots look right.
-3. Save them as `e2e/__screenshots__/chromium/components-dark.png` (and the other names) and commit.
+1. Open the PR's **CI → Design system** run and download the `screenshot-baselines` artifact.
+2. Check the screenshots look right.
+3. Copy its `chromium/` and `webkit/` folders into `e2e/__screenshots__/` and commit.
+
+To refresh a baseline after an intended change, delete the old file in the same PR; CI makes a new one.

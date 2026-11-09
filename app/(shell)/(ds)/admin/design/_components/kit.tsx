@@ -64,7 +64,7 @@ export function Demo({
   bodyClassName?: string;
 }) {
   return (
-    <div className={cn("overflow-hidden rounded-pw-xl border border-pw-line", className)}>
+    <div data-demo={title} className={cn("overflow-hidden rounded-pw-xl border border-pw-line", className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-pw-line bg-pw-surface-1 px-4 py-3">
         <h3 className="text-pw-body font-bold text-pw-text">{title}</h3>
         {note ? <p className="text-pw-caption text-pw-muted">{note}</p> : null}

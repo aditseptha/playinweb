@@ -3,6 +3,7 @@
 import { IconLogout, IconMenu, IconMoon, IconPlus, IconSun, IconUser } from "@/components/icons";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { dsFontVars } from "@/app/fonts";
 import { Avatar } from "@/components/Avatar";
@@ -189,6 +190,7 @@ function Nav({ onReport }: { onReport: () => void }) {
   const { openLogin } = useLoginDialog();
   const { openSignup } = useSignupDialog();
   const visible = useVisible();
+  const pathname = usePathname();
   const { open: accountOpen, setOpen: setAccountOpen, ref: accountRef } = usePopover();
   const [sheet, setSheet] = useState(false);
 
@@ -201,7 +203,7 @@ function Nav({ onReport }: { onReport: () => void }) {
           </Link>
           <nav className={s.navlinks} aria-label="Primary">
             {NAV.filter((l) => visible(l.href)).map((l) => (
-              <Link key={l.href} href={hrefFor(l.href)}>
+              <Link key={l.href} href={hrefFor(l.href)} aria-current={pathname === l.href ? "page" : undefined}>
                 {l.label}
               </Link>
             ))}

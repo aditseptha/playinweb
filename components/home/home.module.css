@@ -140,6 +140,8 @@
 }
 .navlinks { display: flex; align-items: center; gap: 36px; margin-left: 48px; color: var(--soft); font-weight: 500; }
 .navlinks a:hover { color: var(--text); }
+/* Current page: a quiet pill, so the active link reads without shouting. */
+.navlinks a[aria-current="page"] { color: var(--text); margin-inline: -14px; padding: 8px 14px; border-radius: var(--r-pill); background: rgba(123, 195, 255, 0.12); box-shadow: inset 0 0 0 1px rgba(123, 195, 255, 0.16); }
 .navTools { display: flex; align-items: center; gap: 4px; height: 42px; }
 .navTools .bell [role="dialog"] { left: 0; right: auto; }
 .moon { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: var(--soft); }

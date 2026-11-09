@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -127,6 +127,18 @@ test.describe("keyboard", () => {
     await expect(trigger).toBeFocused();
   });
 
+  test("popover closes on Esc and returns focus", async ({ page }) => {
+    await open(page);
+    const trigger = page.getByTestId("open-popover");
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    const panel = page.getByRole("dialog", { name: "Share Ayam Kabur" });
+    await expect(panel).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
   test("tabs move with arrow keys", async ({ page }) => {
     await open(page);
     const tabs = page.getByRole("tablist", { name: "Game categories" });
@@ -137,27 +149,49 @@ test.describe("keyboard", () => {
 });
 
 // Screenshot comparison runs on CI only (Linux baselines). When a baseline doesn't exist yet,
-// the shot is attached to the report instead, so a maintainer can review and commit it.
+// the shot is saved for review instead, so a maintainer can commit it (see e2e/README.md).
+const SHOT_DEMOS = ["Button", "GameCard", "Table"];
+const SHOT_STYLE_PATH = join("e2e", "screenshot.css");
+
+/** Lets the page grow to full height (it normally scrolls inside a container) and loads every image. */
+async function prepareForShots(page: Page) {
+  await page.evaluate(async () => {
+    for (const el of [document.documentElement, document.body, document.querySelector("[data-scroll-root]")]) {
+      if (el instanceof HTMLElement) Object.assign(el.style, { overflow: "visible", height: "auto" });
+    }
+    const images = [...document.images];
+    images.forEach((img) => (img.loading = "eager"));
+    await Promise.all(images.map((img) => (img.complete ? null : img.decode().catch(() => null))));
+  });
+}
+
 test.describe("screenshots", () => {
   test.skip(!process.env.CI, "Screenshot baselines are compared on CI only.");
 
   for (const theme of ["Dark", "Light"] as const) {
-    test(`components (${theme.toLowerCase()})`, async ({ page }, info) => {
+    test(`key demos (${theme.toLowerCase()})`, async ({ page }, info) => {
       await open(page);
       await setPreview(page, theme);
-      const section = page.locator("#components");
-      await section.scrollIntoViewIfNeeded();
+      await prepareForShots(page);
       await page.waitForLoadState("networkidle");
-      const name = `components-${theme.toLowerCase()}.png`;
-      const baseline = join("e2e", "__screenshots__", info.project.name, name);
-      if (existsSync(baseline)) {
-        await expect(section).toHaveScreenshot(name);
-      } else {
-        await info.attach(name, {
-          body: await section.screenshot({ animations: "disabled" }),
-          contentType: "image/png",
-        });
-        info.annotations.push({ type: "baseline missing", description: name });
+      for (const demo of SHOT_DEMOS) {
+        const target = page.locator(`[data-demo="${demo}"]`);
+        const name = `${demo.toLowerCase()}-${theme.toLowerCase()}.png`;
+        const baseline = join("e2e", "__screenshots__", info.project.name, name);
+        if (existsSync(baseline)) {
+          await expect(target).toHaveScreenshot(name, { stylePath: SHOT_STYLE_PATH });
+        } else {
+          // scale "css" matches what toHaveScreenshot compares against (WebKit runs at 2× pixel density).
+          const body = await target.screenshot({
+            animations: "disabled",
+            scale: "css",
+            style: readFileSync(SHOT_STYLE_PATH, "utf8"),
+          });
+          mkdirSync(join("test-results", "baselines", info.project.name), { recursive: true });
+          writeFileSync(join("test-results", "baselines", info.project.name, name), body);
+          await info.attach(name, { body, contentType: "image/png" });
+          info.annotations.push({ type: "baseline missing", description: name });
+        }
       }
     });
   }
