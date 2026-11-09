@@ -12,6 +12,13 @@ import { createClient } from "@/lib/supabase/server";
 // anonymous on purpose: the Manage page calls it from the browser, and link-preview images must
 // stay public. cache() lets generateMetadata and the page share one query per request.
 
+/** PROJECT_SELECT embeds `project_comments ( count )`; flatten it to comment_count (replies included). */
+function toRecord(row: unknown): ProjectRecord | null {
+  if (!row) return null;
+  const { project_comments: comments, ...rest } = row as ProjectRecord & { project_comments?: { count: number }[] };
+  return { ...rest, comment_count: comments?.[0]?.count ?? 0 };
+}
+
 export const getGameById = cache(async (id: string) => {
   if (!isPersistedId(id)) return null;
   const supabase = await createClient();
@@ -20,7 +27,22 @@ export const getGameById = cache(async (id: string) => {
     console.error(error);
     return null;
   }
-  return (data as unknown as ProjectRecord | null) ?? null;
+  return toRecord(data);
+});
+
+/** How many published games the creator has, for "{n} games" on the creator card. */
+export const getCreatorGameCount = cache(async (ownerId: string) => {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", ownerId)
+    .eq("published", true);
+  if (error) {
+    console.error(error);
+    return null;
+  }
+  return count ?? null;
 });
 
 export const getGameByHandleSlug = cache(async (handle: string, slug: string) => {
@@ -37,7 +59,7 @@ export const getGameByHandleSlug = cache(async (handle: string, slug: string) =>
     console.error(error);
     return null;
   }
-  return (data as unknown as ProjectRecord | null) ?? null;
+  return toRecord(data);
 });
 
 /** The game's one public address, or null for a game without a creator handle or slug. */

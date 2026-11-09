@@ -8,7 +8,8 @@ import { Field, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 
-export function ReportDialog({ onClose }: { onClose: () => void }) {
+/** `defaultSubject` pre-fills the subject, for example "Game: Ayam Kabur (link)" from a game page. */
+export function ReportDialog({ onClose, defaultSubject }: { onClose: () => void; defaultSubject?: string }) {
   const titleId = useId();
   const { user, loading } = useAuth();
   const { openLogin } = useLoginDialog();
@@ -91,7 +92,7 @@ export function ReportDialog({ onClose }: { onClose: () => void }) {
             </p>
             <form onSubmit={(e) => void onSubmit(e)} className="mt-5 flex flex-col gap-4">
               <Field label="Subject">
-                <TextInput name="subject" required placeholder="What went wrong?" />
+                <TextInput name="subject" required placeholder="What went wrong?" defaultValue={defaultSubject} />
               </Field>
               <Field label="Details">
                 <TextArea name="details" required placeholder="Page, game, and what you expected." />
