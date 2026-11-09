@@ -5,6 +5,7 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 import { DeleteProjectButton } from "@/components/DeleteProjectButton";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { BuildFields } from "@/components/project-form/BuildFields";
+import { CurationFields, type CurationDraft } from "@/components/project-form/CurationFields";
 import f from "@/components/project-form/form.module.css";
 import { MediaAside, type MediaHandle } from "@/components/project-form/MediaAside";
 import {
@@ -22,6 +23,8 @@ import { Field, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { cn } from "@/lib/cn";
+import { CURATION_LICENSES } from "@/lib/curation";
+import type { Database } from "@/lib/database.types";
 import { slugify } from "@/lib/format";
 import { taglineFrom, type LinkPreview } from "@/lib/link-preview";
 import { apexHref, apexOrigin, isSlug, projectPublicUrl } from "@/lib/host";
@@ -65,7 +68,34 @@ const COMMUNITY_SHORT: Record<string, string> = {
   board: "Discussion board",
 };
 
-export function ProjectForm({ project }: { project?: ProjectRecord }) {
+type CurationRow = Database["public"]["Tables"]["project_curation"]["Row"];
+
+/**
+ * Save the game as a curated game (#9): owned by the `listed` system account, with credit and license.
+ * Admin only; row-level security allows it for admins and for games owned by that account alone.
+ */
+export type CuratedTarget = {
+  ownerId: string;
+  handle: string;
+  row?: Partial<CurationRow> | null;
+  /** Where to go after saving an edit or deleting. */
+  doneHref: string;
+};
+
+function curationDraft(row: Partial<CurationRow> | null | undefined): CurationDraft {
+  return {
+    creatorName: row?.creator_name ?? "",
+    creatorUrl: row?.creator_url ?? "",
+    sourceUrl: row?.source_url ?? "",
+    sourceCodeUrl: row?.source_code_url ?? "",
+    license: row?.license ?? "",
+    licenseUrl: row?.license_url ?? "",
+    modified: row?.modified ?? false,
+    confirmed: false,
+  };
+}
+
+export function ProjectForm({ project, curated }: { project?: ProjectRecord; curated?: CuratedTarget }) {
   const editing = Boolean(project);
   const { user, profile, loading } = useAuth();
   const { feature: donationsFeature } = useFeature("donations");
@@ -78,7 +108,9 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const [description, setDescription] = useState(project?.description ?? "");
   const [slug, setSlug] = useState(project?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [kind, setKind] = useState<ProjectKind | null>(project ? asKind(project.kind) : null);
+  // Curated games are always hosted here (link-out curated games come later, #9 F2).
+  const [kind, setKind] = useState<ProjectKind | null>(project ? asKind(project.kind) : curated ? "html" : null);
+  const [curation, setCuration] = useState<CurationDraft>(() => curationDraft(curated?.row));
   const [detailsOpen, setDetailsOpen] = useState(editing);
   const [allowDonations, setAllowDonations] = useState(project ? project.pricing_type !== "no_payments" : true);
   const [community, setCommunity] = useState<Community>(asCommunity(project?.community));
@@ -106,12 +138,12 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
   const [pending, setPending] = useState(false);
 
   const playChoices = useMemo(() => {
-    const choices = [...KIND_CHOICES];
+    const choices = curated ? KIND_CHOICES.filter((choice) => choice.id === "html") : [...KIND_CHOICES];
     if (project && !choices.some((choice) => choice.id === project.kind)) {
       choices.push({ id: project.kind as ProjectKind, title: project.kind, hint: "Current type" });
     }
     return choices;
-  }, [project]);
+  }, [project, curated]);
 
   if (loading) return <p className="text-ui text-text-muted">Loading account…</p>;
 
@@ -227,6 +259,29 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
       setError("Please disclose whether this game uses generative AI.");
       return;
     }
+    if (curated) {
+      const links = [curation.creatorUrl, curation.sourceUrl, curation.sourceCodeUrl, curation.licenseUrl];
+      if (!curation.creatorName.trim()) {
+        setError("Add the creator's name.");
+        return;
+      }
+      if (!(CURATION_LICENSES as readonly string[]).includes(curation.license)) {
+        setError("Choose the license that lets us host this game.");
+        return;
+      }
+      if (links.some((link) => link.trim() && !isHttpUrl(link.trim()))) {
+        setError("Links must start with http:// or https://.");
+        return;
+      }
+      if (["GPL-2.0", "GPL-3.0", "LGPL-3.0", "AGPL-3.0", "MPL-2.0"].includes(curation.license) && !curation.sourceCodeUrl.trim()) {
+        setError("This license needs a link to the source code.");
+        return;
+      }
+      if (!editing && !curation.confirmed) {
+        setError("Confirm that you checked the license.");
+        return;
+      }
+    }
     if (kind === "html" && !htmlBuild && !editing) {
       setError("Upload a .zip of the HTML game (with index.html), or a single HTML file.");
       return;
@@ -280,8 +335,8 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
     if (!user || !profile) return;
     setPending(true);
     const supabase = createClient();
-    const uid = user.id;
-    const handle = profile.handle;
+    const uid = curated?.ownerId ?? user.id;
+    const handle = curated?.handle ?? profile.handle;
 
     async function upload(folder: string, file: File, type?: string) {
       const limit = folder === "clips" ? MAX_CLIP_BYTES : folder === "covers" || folder === "screenshots" ? MAX_IMAGE_BYTES : MAX_FILE;
@@ -318,7 +373,8 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         classification: "game",
         kind,
         release_status: String(fd.get("releaseStatus") ?? "released"),
-        pricing_type: donationsOpen && allowDonations ? "donate" : "no_payments",
+        // No PlayInWeb donations for a game until its creator claims it (#9).
+        pricing_type: !curated && donationsOpen && allowDonations ? "donate" : "no_payments",
         suggested_donation: null,
         min_price: null,
         cover_path: coverPath,
@@ -331,10 +387,12 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         description: String(fd.get("description") ?? "").trim(),
         genre: String(fd.get("genre") ?? "") === "No genre" ? null : String(fd.get("genre") ?? "").trim() || null,
         custom_noun: project?.custom_noun || "game",
-        community,
+        // Comments open once the creator claims the game (#9).
+        community: curated ? "disabled" : community,
         contains_ai: containsAi === "yes",
         embeddable: kind === "html",
-        published: visibility === "public",
+        // A new curated game stays hidden until its credit is saved, then goes public below.
+        published: curated && !editing ? false : visibility === "public",
       };
 
       let projectId = project?.id ?? "";
@@ -467,8 +525,30 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         if (linkError) throw linkError;
       }
 
+      if (curated) {
+        setStatus("Saving credit…");
+        const credit = {
+          project_id: projectId,
+          play_mode: "hosted",
+          creator_name: curation.creatorName.trim(),
+          creator_url: curation.creatorUrl.trim() || null,
+          source_url: curation.sourceUrl.trim() || null,
+          source_code_url: curation.sourceCodeUrl.trim() || null,
+          license: curation.license,
+          license_url: curation.licenseUrl.trim() || null,
+          modified: curation.modified,
+          ...(curated.row ? {} : { listed_by: user.id }),
+        };
+        const { error: creditError } = await supabase.from("project_curation").upsert(credit, { onConflict: "project_id" });
+        if (creditError) throw creditError;
+        if (!editing && visibility === "public") {
+          const { error: publishError } = await supabase.from("projects").update({ published: true }).eq("id", projectId);
+          if (publishError) throw publishError;
+        }
+      }
+
       clearCatalogueCache();
-      router.push(editing ? "/manage" : projectPublicUrl(handle, nextSlug));
+      router.push(editing ? (curated?.doneHref ?? "/manage") : projectPublicUrl(handle, nextSlug));
       router.refresh();
     } catch (err) {
       setPending(false);
@@ -554,7 +634,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         <Field label="Game URL" hint={editing ? "Locked" : undefined}>
           <div className="flex h-10 min-w-0 items-center overflow-hidden rounded-lg bg-surface-2 sm:h-9">
             <span className="hidden max-w-[55%] shrink-0 truncate bg-surface-3 px-3 py-2 text-caption text-text-subtle lg:inline">
-              {`${apexOrigin()}/${profile.handle}/`}
+              {`${apexOrigin()}/${curated?.handle ?? profile.handle}/`}
             </span>
             <TextInput
               value={slug}
@@ -628,6 +708,8 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
         </SelectField>
       </section>
 
+      {curated ? <CurationFields draft={curation} onChange={setCuration} requireConfirm={!editing} /> : null}
+
       <section className={f.block}>
         <header className={f.head}>
           <h2>Cover and media</h2>
@@ -646,7 +728,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           <h2>Listing</h2>
         </header>
 
-        {donationsOpen ? (
+        {donationsOpen && !curated ? (
           <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-surface-2 px-4 py-3">
             <div className="min-w-0">
               <p className="text-ui font-medium">Allow donations</p>
@@ -704,15 +786,19 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
           </div>
         </div>
 
-        <fieldset>
-          <legend className="text-caption font-medium text-text-muted">Community</legend>
-          {COMMUNITIES.map((item) => (
-            <label key={item.id} className="mt-2 flex items-start gap-2 text-ui">
-              <input type="radio" name="community" checked={community === item.id} onChange={() => setCommunity(item.id)} />
-              {COMMUNITY_SHORT[item.id] ?? item.id}
-            </label>
-          ))}
-        </fieldset>
+        {curated ? (
+          <p className="text-ui text-text-muted">Comments and donations stay off until the creator claims this game.</p>
+        ) : (
+          <fieldset>
+            <legend className="text-caption font-medium text-text-muted">Community</legend>
+            {COMMUNITIES.map((item) => (
+              <label key={item.id} className="mt-2 flex items-start gap-2 text-ui">
+                <input type="radio" name="community" checked={community === item.id} onChange={() => setCommunity(item.id)} />
+                {COMMUNITY_SHORT[item.id] ?? item.id}
+              </label>
+            ))}
+          </fieldset>
+        )}
 
         <fieldset>
           <legend className="text-caption font-medium text-text-muted">Visibility</legend>
@@ -740,7 +826,7 @@ export function ProjectForm({ project }: { project?: ProjectRecord }) {
             <DeleteProjectButton
               project={project}
               className="mt-3"
-              onDeleted={() => router.push(apexHref("/manage"))}
+              onDeleted={() => router.push(curated ? curated.doneHref : apexHref("/manage"))}
             />
           </div>
         ) : null}

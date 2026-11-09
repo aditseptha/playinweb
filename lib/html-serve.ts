@@ -76,7 +76,11 @@ async function serveDraftHtml(handle: string, slug: string, path: string) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!project.published && user?.id !== project.owner_id) {
-    return new Response("Not found", { status: 404 });
+    // Admins preview unpublished curated games (#9), which belong to the `listed` account.
+    const { data: canManage } = user
+      ? await supabase.rpc("can_manage_curated", { owner: project.owner_id })
+      : { data: false };
+    if (!canManage) return new Response("Not found", { status: 404 });
   }
 
   const storagePath = `${htmlStoragePrefix(project.owner_id, project.id)}/${path}`;
