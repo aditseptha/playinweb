@@ -298,7 +298,7 @@ function Cards() {
   return (
     <Demo
       title="GameCard"
-      note="16:9 for feature, wide and row; 3:4 for tall (media standard, #5). Crops follow the creator’s focal point."
+      note="16:9 for feature and wide; 3:4 for tall and row (media standard, #5). Crops follow the creator’s focal point."
       code={`import { GameCard, toGameCardData } from "@/components/ds/game-card";\n<GameCard data={toGameCardData(game)} variant="feature" />`}
     >
       <div className="flex flex-col gap-8">
