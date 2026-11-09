@@ -1,3 +1,4 @@
+import { curationFromRow } from "@/lib/curation";
 import { slugify } from "@/lib/format";
 import { focalOrCenter } from "@/lib/media-standard";
 import { flashStoragePrefix, htmlStoragePrefix } from "@/lib/html-game";
@@ -10,6 +11,7 @@ import type { Game } from "@/lib/types";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+type CurationRow = Database["public"]["Tables"]["project_curation"]["Row"];
 
 export type ProjectRecord = Project & {
   profiles: Pick<Profile, "handle" | "display_name" | "follower_count" | "avatar_path"> & { bio?: string | null } | null;
@@ -30,6 +32,8 @@ export type ProjectRecord = Project & {
   }[];
   project_store_links?: { store: string; url: string }[];
   comment_count?: number;
+  /** Credit for a curated game (#9), attached by withCuration(). Absent for a creator's own game. */
+  project_curation?: Partial<CurationRow> | null;
 };
 
 export const PROJECT_SELECT = `
@@ -56,6 +60,34 @@ const CATALOGUE_MEDIA_SELECT = `
   profiles!projects_owner_id_fkey ( handle, display_name, avatar_path ),
   project_tags ( tag )
 `;
+
+const CURATION_SELECT =
+  "project_id, status, play_mode, creator_name, creator_url, source_url, source_code_url, license, license_url, modified";
+
+/** Either Supabase client (browser or server); both are typed with Database. */
+type Client = Pick<SupabaseClient<Database>, "from">;
+
+/**
+ * Attach curated-game credit (project_curation) to project rows.
+ * A separate query on purpose: if the table is missing or the read fails, the rows come back
+ * unchanged and every page keeps working, just without curated badges.
+ */
+export async function withCuration<T extends { id: string }>(
+  supabase: Client,
+  rows: T[],
+): Promise<(T & { project_curation?: Partial<CurationRow> | null })[]> {
+  if (!rows.length) return rows;
+  const ids = rows.map((r) => r.id).filter(isPersistedId);
+  if (!ids.length) return rows;
+  // Few rows: ask for those. Many (the catalogue): the table is small, so read the active ones.
+  const query = supabase.from("project_curation").select(CURATION_SELECT);
+  const { data, error } = await (ids.length <= 50
+    ? query.in("project_id", ids)
+    : query.in("status", ["listed", "claim_pending"]));
+  if (error || !data) return rows;
+  const byId = new Map(data.map((row) => [row.project_id, row]));
+  return rows.map((r) => (byId.has(r.id) ? { ...r, project_curation: byId.get(r.id) } : r));
+}
 
 const DOWNLOADS_SELECT = `
   id, title,
@@ -114,7 +146,8 @@ export async function fetchCatalogueGames(opts?: { force?: boolean }): Promise<G
     console.error(error);
     return readCatalogueCache()?.games ?? [];
   }
-  const games = ((data ?? []) as unknown as ProjectRecord[]).map(projectToGame);
+  const rows = await withCuration(supabase, (data ?? []) as unknown as ProjectRecord[]);
+  const games = rows.map(projectToGame);
   writeCatalogueCache(games);
   return games;
 }
@@ -167,7 +200,9 @@ export async function fetchProjectById(id: string) {
     console.error(error);
     return null;
   }
-  return (data as unknown as ProjectRecord | null) ?? null;
+  if (!data) return null;
+  const [record] = await withCuration(supabase, [data as unknown as ProjectRecord]);
+  return record;
 }
 
 export async function fetchProjectByHandleSlug(handle: string, slug: string) {
@@ -184,7 +219,9 @@ export async function fetchProjectByHandleSlug(handle: string, slug: string) {
     console.error(error);
     return null;
   }
-  return (data as unknown as ProjectRecord | null) ?? null;
+  if (!data) return null;
+  const [record] = await withCuration(supabase, [data as unknown as ProjectRecord]);
+  return record;
 }
 
 export async function fetchProfileByHandle(handle: string) {
@@ -335,12 +372,14 @@ export function projectToGame(project: ProjectRecord): Game {
       ? project.play_url
       : publicMediaUrl(project.play_url) || project.play_url;
   const focal = focalOrCenter(project.cover_focal_x, project.cover_focal_y);
+  const curated = curationFromRow(project.project_curation);
   const portrait = publicMediaUrl(project.cover_portrait_path);
   const clip = publicMediaUrl(project.preview_clip_path);
   return {
     id: project.id,
     title: project.title,
-    developer: project.profiles?.display_name || project.profiles?.handle || "Creator",
+    // A curated game credits its original creator, never the `listed` system account.
+    developer: curated?.creatorName || project.profiles?.display_name || project.profiles?.handle || "Creator",
     description: project.tagline || project.description || project.title,
     playUrl: play,
     thumbnailUrl: publicMediaUrl(project.cover_path),
@@ -358,8 +397,9 @@ export function projectToGame(project: ProjectRecord): Game {
     likeCount: project.like_count,
     promotionBoost: 0,
     channelHandle: project.profiles?.handle,
-    creatorAvatarUrl: publicMediaUrl(project.profiles?.avatar_path) || undefined,
+    creatorAvatarUrl: curated ? undefined : publicMediaUrl(project.profiles?.avatar_path) || undefined,
     projectSlug: project.slug,
+    ...(curated ? { curated } : {}),
   };
 }
 
