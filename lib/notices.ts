@@ -1,6 +1,7 @@
 import { isDummyDonation, isDummyPayout } from "@/lib/dummy-seed";
 import { formatMoney } from "@/lib/format";
 import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
+import { ownerHandle } from "@/lib/projects";
 import { createClient } from "@/lib/supabase/client";
 
 export type Notice = {
@@ -33,10 +34,20 @@ type ProfileBit = { handle: string; display_name: string } | null;
 
 export async function loadNotices(userId: string, admin: boolean): Promise<Notice[]> {
   const supabase = createClient();
-  const { data: games } = await supabase.from("projects").select("id, title, slug").eq("owner_id", userId);
+  const { data: games } = await supabase
+    .from("projects")
+    .select("id, title, slug, profiles!projects_owner_id_fkey ( handle )")
+    .eq("owner_id", userId);
   const owned = games ?? [];
   const gameIds = owned.map((g) => g.id);
   const titleById = new Map(owned.map((g) => [g.id, g.title]));
+  // Link straight to the game's public address; /game/{id} would only redirect there.
+  const urlById = new Map(
+    owned.map((g) => {
+      const handle = ownerHandle(g.profiles);
+      return [g.id, handle && g.slug ? projectPublicUrl(handle, g.slug) : apexHref(`/game/${g.id}`)];
+    }),
+  );
 
   const [donations, comments, follows, payouts, tips, reports] = await Promise.all([
     gameIds.length
@@ -117,7 +128,7 @@ export async function loadNotices(userId: string, admin: boolean): Promise<Notic
     out.push({
       id: `comment:${row.id}`,
       at: row.created_at,
-      href: apexHref(`/game/${row.project_id}`),
+      href: urlById.get(row.project_id) ?? apexHref(`/game/${row.project_id}`),
       title: `${who} commented`,
       detail: clip(row.body, 80),
     });

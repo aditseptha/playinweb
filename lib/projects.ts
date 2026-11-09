@@ -32,7 +32,7 @@ export type ProjectRecord = Project & {
   comment_count?: number;
 };
 
-const PROJECT_SELECT = `
+export const PROJECT_SELECT = `
   *,
   profiles!projects_owner_id_fkey ( handle, display_name, follower_count, avatar_path ),
   project_tags ( tag ),
@@ -145,6 +145,14 @@ export async function fetchPublishedDownloads(): Promise<ProjectRecord[]> {
     return [];
   }
   return (data ?? []) as unknown as ProjectRecord[];
+}
+
+/**
+ * The owner's handle from an embedded `profiles!projects_owner_id_fkey ( handle )` select.
+ * PostgREST returns one object (a game has one owner); the generated types say array, so accept both.
+ */
+export function ownerHandle(embed: { handle: string } | { handle: string }[] | null | undefined) {
+  return (Array.isArray(embed) ? embed[0]?.handle : embed?.handle) || null;
 }
 
 export function isPersistedId(id: string) {
