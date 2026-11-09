@@ -37,8 +37,21 @@ export const ILLUSTRATIONS = {
 
 export type IllustrationName = keyof typeof ILLUSTRATIONS;
 
-/** Finished artwork, by name → file in public/illustrations/. Empty until wave 1 is drawn. */
-const ASSETS: Partial<Record<IllustrationName, string>> = {};
+/** Finished artwork, by name → file in public/illustrations/ (480px WebP, transparent). */
+const ASSETS: Partial<Record<IllustrationName, string>> = {
+  "no-results": "no-results.webp",
+  "first-use": "first-use.webp",
+  "not-found": "not-found.webp",
+  error: "error.webp",
+  "no-favorites": "no-favorites.webp",
+  "nothing-played": "nothing-played.webp",
+  "empty-library": "empty-library.webp",
+  wallet: "wallet.webp",
+  "no-notifications": "no-notifications.webp",
+  "sign-in": "sign-in.webp",
+  "coming-soon": "coming-soon.webp",
+  success: "success.webp",
+};
 
 export function hasIllustrationAsset(name: IllustrationName) {
   return Boolean(ASSETS[name]);
