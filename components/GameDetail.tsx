@@ -35,9 +35,11 @@ import { ReportDialog } from "@/components/ReportDialog";
 import { useSignupDialog } from "@/components/SignupDialog";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
+import { licenseLabel, shortUrl, type Curation } from "@/lib/curation";
 import { formatJoined, formatPlays } from "@/lib/format";
 import { addGuestPlayMs, GUEST_PLAY_LIMIT_MS, guestPlayExpired, guestPlayRemainingMs } from "@/lib/guest-play";
 import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
+import { LEGAL_CONTACT_EMAIL } from "@/lib/legal";
 import { cachedAvatarUrl } from "@/lib/media";
 import { RELEASE_STATUSES, STORES } from "@/lib/project-fields";
 import { isPersistedId, projectToGame, type ProjectRecord } from "@/lib/projects";
@@ -167,6 +169,7 @@ export function GameDetail({
   }
   const [copied, setCopied] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [claimOpen, setClaimOpen] = useState(false);
   const autoPlayed = useRef(false);
   const viewBump = useRef<Promise<void>>(Promise.resolve());
 
@@ -239,8 +242,11 @@ export function GameDetail({
 
   if (!creator) notFound();
 
-  const creatorName = creator.display_name || creator.handle;
-  const creatorUrl = siteOrigin(creator.handle);
+  // A curated game (#9) credits its original creator and links to their site, not to the `listed` account.
+  const curated = game.curated;
+  const creatorName = curated?.creatorName ?? (creator.display_name || creator.handle);
+  const creatorUrl = curated ? (curated.creatorUrl ?? curated.sourceUrl ?? null) : siteOrigin(creator.handle);
+  const avatar = curated ? undefined : cachedAvatarUrl(project.owner_id, creator.avatar_path) || undefined;
   const shareUrl =
     persisted && creator.handle && project.slug
       ? projectPublicUrl(creator.handle, project.slug)
@@ -250,6 +256,9 @@ export function GameDetail({
   const stores = project.project_store_links ?? [];
   const own = Boolean(user && user.id === project.owner_id);
   const saved = library.includes(projectId);
+  const removeHref = `mailto:${LEGAL_CONTACT_EMAIL}?subject=${encodeURIComponent(
+    `Remove: ${project.title} (${shareUrl})`,
+  )}&body=${encodeURIComponent("I made this game and want it removed from PlayInWeb. Link to my original game page:\n\n")}`;
 
   async function onPlay() {
     if (loading) return;
@@ -396,23 +405,28 @@ export function GameDetail({
                 className="max-lg:order-3"
                 title={project.title}
                 tagline={project.tagline}
-                eyebrow={[genre, statusLabel(project.release_status)].filter(Boolean).join(" · ")}
+                eyebrow={[curated ? "Curated" : null, genre, statusLabel(project.release_status)].filter(Boolean).join(" · ")}
                 creatorName={creatorName}
                 creatorUrl={creatorUrl}
-                avatar={cachedAvatarUrl(project.owner_id, creator.avatar_path) || undefined}
+                creatorExternal={Boolean(curated)}
+                avatar={avatar}
                 counts={counts}
                 tags={tags}
               />
               <AboutBlock className="max-lg:order-6" text={project.description} />
               <div className="max-lg:order-10 min-w-0 lg:pt-2">
-                <ProjectComments
-                  projectId={projectId}
-                  ownerId={project.owner_id}
-                  creatorName={creatorName}
-                  enabled={persisted && project.community !== "disabled"}
-                  initialCount={project.comment_count ?? 0}
-                  onCountChange={onCommentCount}
-                />
+                {curated ? (
+                  <p className="text-pw-body-sm text-pw-muted">Comments open once the creator claims this game.</p>
+                ) : (
+                  <ProjectComments
+                    projectId={projectId}
+                    ownerId={project.owner_id}
+                    creatorName={creatorName}
+                    enabled={persisted && project.community !== "disabled"}
+                    initialCount={project.comment_count ?? 0}
+                    onCountChange={onCommentCount}
+                  />
+                )}
               </div>
             </div>
 
@@ -423,27 +437,39 @@ export function GameDetail({
               )}
             >
               <PlayCard className="max-lg:order-5" actions={actions} />
-              <CreatorCard
-                className="max-lg:order-4"
-                name={creatorName}
-                url={creatorUrl}
-                avatar={cachedAvatarUrl(project.owner_id, creator.avatar_path) || undefined}
-                bio={creator.bio}
-                followers={followers}
-                games={creatorGameCount ?? null}
-                canFollow={persisted && !own}
-                following={following}
-                onFollow={() => void onFollow()}
-              />
-              <div className="max-lg:order-7 min-w-0 empty:hidden">
-                <ProjectCheckout project={project} creatorName={creatorName} />
-              </div>
+              {curated ? (
+                <CuratedCreditCard
+                  className="max-lg:order-4"
+                  credit={curated}
+                  onClaim={() => setClaimOpen(true)}
+                  removeHref={removeHref}
+                />
+              ) : (
+                <CreatorCard
+                  className="max-lg:order-4"
+                  name={creatorName}
+                  url={creatorUrl ?? siteOrigin(creator.handle)}
+                  avatar={avatar}
+                  bio={creator.bio}
+                  followers={followers}
+                  games={creatorGameCount ?? null}
+                  canFollow={persisted && !own}
+                  following={following}
+                  onFollow={() => void onFollow()}
+                />
+              )}
+              {curated ? null : (
+                <div className="max-lg:order-7 min-w-0 empty:hidden">
+                  <ProjectCheckout project={project} creatorName={creatorName} />
+                </div>
+              )}
               <QuickFacts
                 className="max-lg:order-8"
                 released={project.created_at}
                 plays={plays}
                 status={project.release_status}
                 genre={genre}
+                license={curated ? licenseLabel(curated.license) : null}
                 runs={
                   game.embeddable
                     ? "In your browser"
@@ -458,7 +484,12 @@ export function GameDetail({
             </div>
           </div>
 
-          <Shelves games={games} current={game} creatorName={creatorName} creatorUrl={creatorUrl} />
+          <Shelves
+            games={games}
+            current={game}
+            creatorName={creatorName}
+            creatorUrl={curated ? null : creatorUrl}
+          />
         </div>
       </div>
 
@@ -466,6 +497,19 @@ export function GameDetail({
 
       {reportOpen ? (
         <ReportDialog defaultSubject={`Game: ${project.title} (${shareUrl})`} onClose={() => setReportOpen(false)} />
+      ) : null}
+      {claimOpen ? (
+        <ReportDialog
+          defaultSubject={`Claim: ${project.title} (${shareUrl})`}
+          onClose={() => setClaimOpen(false)}
+          copy={{
+            title: "Claim this game",
+            intro: "Made this game? We will move it to your account, with its plays and likes, and you can edit it, open comments and take donations.",
+            detailsPlaceholder: "How can we confirm it is yours? For example a link to your profile or repo, or an email from the address on your game page.",
+            submit: "Send claim",
+            sent: "Thanks. We will check it and reply to your account email.",
+          }}
+        />
       ) : null}
     </ProjectHeroRoot>
   );
@@ -480,6 +524,7 @@ function TitleBlock({
   eyebrow,
   creatorName,
   creatorUrl,
+  creatorExternal,
   avatar,
   counts,
   tags,
@@ -489,7 +534,9 @@ function TitleBlock({
   tagline: string;
   eyebrow: string;
   creatorName: string;
-  creatorUrl: string;
+  creatorUrl: string | null;
+  /** The creator link leaves PlayInWeb (a curated game's original creator). */
+  creatorExternal?: boolean;
   avatar?: string;
   counts: { plays: number; likes: number; comments: number };
   tags: string[];
@@ -515,12 +562,18 @@ function TitleBlock({
           <Avatar name={creatorName} src={avatar} size="xs" />
           <span>
             by{" "}
-            <Link
-              href={creatorUrl}
-              className={cn("rounded-pw-sm font-semibold text-pw-link hover:underline", focusRing)}
-            >
-              {creatorName}
-            </Link>
+            {creatorUrl ? (
+              <Link
+                href={creatorUrl}
+                {...(creatorExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                className={cn("rounded-pw-sm font-semibold text-pw-link hover:underline", focusRing)}
+              >
+                {creatorName}
+                {creatorExternal ? <span className="sr-only"> (opens in a new tab)</span> : null}
+              </Link>
+            ) : (
+              <span className="font-semibold text-pw-text">{creatorName}</span>
+            )}
           </span>
         </span>
         <Dot />
@@ -772,12 +825,102 @@ function CreatorCard({
   );
 }
 
+/** In place of the creator card on a curated game (#9): the credit, and how its creator claims or removes it. */
+function CuratedCreditCard({
+  className,
+  credit,
+  onClaim,
+  removeHref,
+}: {
+  className?: string;
+  credit: Curation;
+  onClaim: () => void;
+  removeHref: string;
+}) {
+  const links = [
+    credit.licenseUrl ? { href: credit.licenseUrl, label: licenseLabel(credit.license) } : null,
+    credit.sourceCodeUrl ? { href: credit.sourceCodeUrl, label: `Source · ${shortUrl(credit.sourceCodeUrl)}` } : null,
+    credit.sourceUrl ? { href: credit.sourceUrl, label: `Original · ${shortUrl(credit.sourceUrl)}` } : null,
+  ].filter((link): link is { href: string; label: string } => Boolean(link));
+  const external = { target: "_blank", rel: "noopener noreferrer" } as const;
+
+  return (
+    <section aria-label="Creator" className={cn(card, "flex flex-col gap-3", className)}>
+      <div className="flex items-center gap-3">
+        <Avatar name={credit.creatorName} size="lg" />
+        <div className="min-w-0 flex-1">
+          {credit.creatorUrl ? (
+            <a
+              href={credit.creatorUrl}
+              {...external}
+              className={cn("block truncate rounded-pw-sm text-pw-body font-bold text-pw-text hover:underline", focusRing)}
+            >
+              {credit.creatorName}
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          ) : (
+            <p className="truncate text-pw-body font-bold text-pw-text">{credit.creatorName}</p>
+          )}
+          <p className="truncate text-pw-body-sm text-pw-text-soft">Not on PlayInWeb yet</p>
+        </div>
+      </div>
+      <p className="text-pw-body-sm text-pw-text-soft">
+        {credit.license === "Permission"
+          ? "Shared on PlayInWeb with the creator’s permission."
+          : "Curated by PlayInWeb under an open license."}
+        {credit.modified ? " Modified for PlayInWeb." : ""}
+      </p>
+      {links.length > 0 ? (
+        <ul className="flex flex-col gap-1">
+          {links.map((link) => (
+            <li key={link.href}>
+              <a
+                href={link.href}
+                {...external}
+                className={cn(
+                  "group flex items-center gap-2 rounded-pw-md px-2 py-2 text-pw-body-sm font-semibold text-pw-text transition-colors hover:bg-pw-surface-2",
+                  focusRing,
+                )}
+              >
+                <span className="min-w-0 truncate">{link.label}</span>
+                <IconExternal aria-hidden className="ml-auto size-4 shrink-0 text-pw-muted group-hover:text-pw-text" />
+                <span className="sr-only">(opens in a new tab)</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {credit.creatorUrl ? (
+        <p className="text-pw-caption text-pw-muted">
+          This creator hasn&rsquo;t joined PlayInWeb yet, so{" "}
+          <a href={credit.creatorUrl} {...external} className={cn("rounded-pw-sm font-semibold text-pw-link hover:underline", focusRing)}>
+            support goes straight to them
+          </a>
+          .
+        </p>
+      ) : null}
+      <div className="flex flex-col gap-2 border-t border-pw-line pt-3">
+        <p className="text-pw-body-sm font-semibold text-pw-text">Is this your game?</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="primary" size="sm" onClick={onClaim}>
+            Claim it
+          </Button>
+          <Button variant="secondary" size="sm" asChild>
+            <a href={removeHref}>Remove it</a>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function QuickFacts({
   className,
   released,
   plays,
   status,
   genre,
+  license,
   runs,
 }: {
   className?: string;
@@ -785,6 +928,8 @@ function QuickFacts({
   plays: number;
   status: string;
   genre: string | null;
+  /** Shown for curated games (#9). */
+  license?: string | null;
   runs: string;
 }) {
   const facts: { label: string; value: ReactNode }[] = [
@@ -799,6 +944,7 @@ function QuickFacts({
     },
     { label: "Genre", value: genre ?? "—" },
     { label: "Runs", value: runs },
+    ...(license ? [{ label: "License", value: license }] : []),
   ];
   return (
     <section aria-labelledby="facts-title" className={cn(card, "flex flex-col gap-3", className)}>
@@ -857,7 +1003,8 @@ function Shelves({
   games: ReturnType<typeof useGames>["games"];
   current: ReturnType<typeof projectToGame>;
   creatorName: string;
-  creatorUrl: string;
+  /** Null for a curated game: its creator has no page here. */
+  creatorUrl: string | null;
 }) {
   // The catalogue loads in the browser after the page. Until it arrives, skeletons hold the space.
   const loadingCatalogue = games.length === 0;
@@ -870,7 +1017,7 @@ function Shelves({
         <Shelf
           eyebrow="Same creator"
           title={`More from ${creatorName}`}
-          link={{ href: creatorUrl, label: "See all games" }}
+          link={creatorUrl ? { href: creatorUrl, label: "See all games" } : undefined}
         >
           <ul className="scrollbar-hide -mx-4 flex snap-x gap-4 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-4">
             {loadingCatalogue
@@ -921,7 +1068,7 @@ function Shelf({
 }: {
   eyebrow: string;
   title: string;
-  link: { href: string; label: string };
+  link?: { href: string; label: string };
   children: ReactNode;
 }) {
   return (
@@ -933,16 +1080,18 @@ function Shelf({
             {title}
           </h2>
         </div>
-        <Link
-          href={link.href}
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1.5 rounded-pw-sm text-pw-body-sm font-semibold text-pw-link hover:underline",
-            focusRing,
-          )}
-        >
-          {link.label}
-          <IconArrow aria-hidden className="size-4" />
-        </Link>
+        {link ? (
+          <Link
+            href={link.href}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 rounded-pw-sm text-pw-body-sm font-semibold text-pw-link hover:underline",
+              focusRing,
+            )}
+          >
+            {link.label}
+            <IconArrow aria-hidden className="size-4" />
+          </Link>
+        ) : null}
       </div>
       {children}
     </section>

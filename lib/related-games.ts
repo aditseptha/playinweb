@@ -1,9 +1,18 @@
 // Shelves under a game: "More from {creator}" and "Similar games". No imports, so `node --test` can
 // load this file directly.
 
-type Item = { id: string; tags: string[]; playCount: number; channelHandle?: string; developer: string };
+type Item = {
+  id: string;
+  tags: string[];
+  playCount: number;
+  channelHandle?: string;
+  developer: string;
+  /** Curated games (#9) share the `listed` account's handle; their creator is `developer`. */
+  curated?: unknown;
+};
 
 function sameCreator(a: Item, b: Item) {
+  if (a.curated || b.curated) return Boolean(a.curated && b.curated) && a.developer === b.developer;
   return a.channelHandle && b.channelHandle ? a.channelHandle === b.channelHandle : a.developer === b.developer;
 }
 

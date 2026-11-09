@@ -85,7 +85,8 @@ export function GameCard({
   priority?: boolean;
   rank?: number;
 }) {
-  const channel = channelPath(game.developer, game.channelHandle);
+  // A curated game's handle is the `listed` system account (#9), so its name links to the game.
+  const channel = game.curated ? gamePath(game) : channelPath(game.developer, game.channelHandle);
 
   if (variant === "related") {
     return (

@@ -46,9 +46,13 @@ export function HomeView({ initialGames }: { initialGames: Game[] }) {
   const [filterSheet, setFilterSheet] = useState(false);
 
   const games = useMemo(() => withInitialGames(store.games, initialGames), [store.games, initialGames]);
+  // Curated games (#9) get their own "Curated picks" row. The hero and the other rows stay with
+  // games creators published here, so a large curated catalogue never pushes them down.
+  const own = useMemo(() => games.filter((g) => !g.curated), [games]);
+  const curated = useMemo(() => byPopularity(games.filter((g) => g.curated)), [games]);
   const tags = useMemo(() => catalogueTags(games), [games]);
-  const creators = useMemo(() => creatorsOf(games), [games]);
-  const popular = useMemo(() => byPopularity(games), [games]);
+  const creators = useMemo(() => creatorsOf(own), [own]);
+  const popular = useMemo(() => byPopularity(own), [own]);
   const browsing = isBrowsing(filters);
   const hasRail = tags.length > 0 || creators.length > 0;
   const filterCount = filters.tags.length + filters.creators.length;
@@ -90,11 +94,12 @@ export function HomeView({ initialGames }: { initialGames: Game[] }) {
             ) : (
               <>
                 {!loading && !user ? <GuestBanner recent={recent} popular={popular} /> : null}
-                {games.length < SPARSE_LIMIT ? (
+                {own.length < SPARSE_LIMIT ? (
                   <Sparse popular={popular} signedIn={Boolean(user)} />
                 ) : (
-                  <Full games={games} popular={popular} tags={tags} creators={creators} filters={filters} onChange={go} />
+                  <Full games={own} popular={popular} tags={tags} creators={creators} filters={filters} onChange={go} />
                 )}
+                {curated.length > 0 ? <CuratedPicks games={curated} /> : null}
               </>
             )}
           </div>
@@ -175,6 +180,17 @@ function Full({
         />
       ) : null}
     </>
+  );
+}
+
+/** Games by other creators that PlayInWeb hosts with credit until they claim them (#9). */
+function CuratedPicks({ games }: { games: Game[] }) {
+  return (
+    <Row icon={IconHeart} title="Curated picks" kind="tall">
+      {games.slice(0, 12).map((g, i) => (
+        <TallCard key={g.id} game={g} i={i} />
+      ))}
+    </Row>
   );
 }
 

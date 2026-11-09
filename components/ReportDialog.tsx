@@ -8,8 +8,19 @@ import { Field, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 
-/** `defaultSubject` pre-fills the subject, for example "Game: Ayam Kabur (link)" from a game page. */
-export function ReportDialog({ onClose, defaultSubject }: { onClose: () => void; defaultSubject?: string }) {
+/**
+ * `defaultSubject` pre-fills the subject, for example "Game: Ayam Kabur (link)" from a game page.
+ * `copy` reuses the dialog for other requests sent to the admin queue, such as claiming a curated game.
+ */
+export function ReportDialog({
+  onClose,
+  defaultSubject,
+  copy,
+}: {
+  onClose: () => void;
+  defaultSubject?: string;
+  copy?: { title: string; intro: string; detailsPlaceholder: string; submit: string; sent: string };
+}) {
   const titleId = useId();
   const { user, loading } = useAuth();
   const { openLogin } = useLoginDialog();
@@ -64,7 +75,7 @@ export function ReportDialog({ onClose, defaultSubject }: { onClose: () => void;
       >
         <div className="flex items-start justify-between gap-3">
           <h2 id={titleId} className="text-title font-semibold tracking-tight text-text">
-            {sent ? "Report sent" : "Report an issue"}
+            {sent ? (copy ? "Request sent" : "Report sent") : (copy?.title ?? "Report an issue")}
           </h2>
           <button
             type="button"
@@ -80,7 +91,7 @@ export function ReportDialog({ onClose, defaultSubject }: { onClose: () => void;
             <div className="mt-4 grid size-11 place-items-center rounded-full bg-emerald-400/15 text-emerald-300">
               <IconCheck className="h-5 w-5" />
             </div>
-            <p className="mt-3 text-body text-text-muted">Thanks. We got your report.</p>
+            <p className="mt-3 text-body text-text-muted">{copy?.sent ?? "Thanks. We got your report."}</p>
             <Button type="button" variant="primary" className="mt-6 w-full" onClick={onClose}>
               OK
             </Button>
@@ -88,17 +99,17 @@ export function ReportDialog({ onClose, defaultSubject }: { onClose: () => void;
         ) : (
           <>
             <p className="mt-1.5 text-body text-text-muted">
-              Broken play links, missing files, or something that should not be here.
+              {copy?.intro ?? "Broken play links, missing files, or something that should not be here."}
             </p>
             <form onSubmit={(e) => void onSubmit(e)} className="mt-5 flex flex-col gap-4">
               <Field label="Subject">
                 <TextInput name="subject" required placeholder="What went wrong?" defaultValue={defaultSubject} />
               </Field>
               <Field label="Details">
-                <TextArea name="details" required placeholder="Page, game, and what you expected." />
+                <TextArea name="details" required placeholder={copy?.detailsPlaceholder ?? "Page, game, and what you expected."} />
               </Field>
               <Button type="submit" variant="primary" className="self-start" disabled={loading || pending}>
-                {pending ? "Sending…" : "Submit report"}
+                {pending ? "Sending…" : (copy?.submit ?? "Submit report")}
               </Button>
               {error ? <p className="text-ui text-danger">{error}</p> : null}
             </form>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cache } from "react";
+import { curationFromRow } from "@/lib/curation";
 import { gameDescription, gameJsonLd, gameTitle, jsonLdHtml, type GameSeoInput } from "@/lib/game-seo";
 import { apexHref, apexOrigin, projectPublicUrl, siteOrigin } from "@/lib/host";
 import { PROJECT_SELECT, isPersistedId, projectToGame, withCuration, type ProjectRecord } from "@/lib/projects";
@@ -78,12 +79,13 @@ export function gameCanonicalUrl(project: ProjectRecord) {
 function seoInput(project: ProjectRecord): GameSeoInput {
   const handle = project.profiles?.handle ?? "";
   const cover = projectToGame(project).thumbnailUrl;
+  const curated = curationFromRow(project.project_curation);
   return {
     title: project.title,
     tagline: project.tagline,
     description: project.description,
-    creatorName: project.profiles?.display_name || handle || "Creator",
-    creatorUrl: handle ? siteOrigin(handle) : apexOrigin(),
+    creatorName: curated?.creatorName || project.profiles?.display_name || handle || "Creator",
+    creatorUrl: curated ? curated.creatorUrl || apexOrigin() : handle ? siteOrigin(handle) : apexOrigin(),
     url: gameCanonicalUrl(project) ?? apexHref(`/game/${project.id}`),
     image: cover ? (cover.startsWith("/") ? apexHref(cover) : cover) : null,
     genre: project.genre && project.genre !== "No genre" ? project.genre : null,
@@ -105,10 +107,13 @@ export function gameMetadata(project: ProjectRecord): Metadata {
     twitter: { card: "summary_large_image", title, description },
     // Unpublished games only reach their owner, and must never be indexed.
     ...(project.published ? {} : { robots: { index: false, follow: false } }),
+    // Curated games (#9) stay out of search until their creators claim them; the credit links still count.
+    ...(project.published && curationFromRow(project.project_curation) ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
-/** JSON-LD for a published game, ready for dangerouslySetInnerHTML. Null for drafts. */
+/** JSON-LD for a published game, ready for dangerouslySetInnerHTML. Null for drafts and curated games. */
 export function gameJsonLdHtml(project: ProjectRecord) {
-  return project.published ? jsonLdHtml(gameJsonLd(seoInput(project))) : null;
+  if (!project.published || curationFromRow(project.project_curation)) return null;
+  return jsonLdHtml(gameJsonLd(seoInput(project)));
 }
