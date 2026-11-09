@@ -1,3 +1,4 @@
+import { curationFromRow } from "@/lib/curation";
 import { gameOgImage, OG_SIZE, siteOgImage } from "@/lib/og";
 import { publicMediaUrl } from "@/lib/media";
 import { fetchProjectByHandleSlug } from "@/lib/projects";
@@ -12,7 +13,11 @@ export default async function Image({ params }: { params: Promise<{ handle: stri
   if (!project) return siteOgImage();
   return gameOgImage({
     title: project.title,
-    creator: project.profiles?.display_name || project.profiles?.handle || handle,
+    creator:
+      curationFromRow(project.project_curation)?.creatorName ||
+      project.profiles?.display_name ||
+      project.profiles?.handle ||
+      handle,
     plays: project.play_count,
     coverUrl: publicMediaUrl(project.cover_path),
   });

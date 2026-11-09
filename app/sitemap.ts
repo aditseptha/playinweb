@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { isCuratedHandle } from "@/lib/curation";
 import { sitemapPaths } from "@/lib/game-seo";
 import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
 import { ownerHandle } from "@/lib/projects";
@@ -23,7 +24,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return pages;
   }
 
-  const rows = (data ?? []).map((row) => ({ slug: row.slug, handle: ownerHandle(row.profiles) }));
+  // Curated games (#9) stay out of search until their creators claim them.
+  const rows = (data ?? [])
+    .map((row) => ({ slug: row.slug, handle: ownerHandle(row.profiles) }))
+    .filter((row) => !isCuratedHandle(row.handle));
   const { creators, games } = sitemapPaths(rows);
   return [
     ...pages,

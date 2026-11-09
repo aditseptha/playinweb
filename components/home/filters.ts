@@ -80,7 +80,8 @@ export function creatorsOf(games: Game[]): Creator[] {
   const map = new Map<string, Creator>();
   for (const game of games) {
     const handle = game.channelHandle?.toLowerCase();
-    if (!handle) continue;
+    // Curated games all belong to the `listed` system account, which is not a creator.
+    if (!handle || game.curated) continue;
     const cur = map.get(handle) ?? { handle, name: game.developer || handle, games: 0, plays: 0 };
     cur.games += 1;
     cur.plays += game.playCount;
@@ -122,7 +123,9 @@ export function matchesFilters(game: Game, f: HomeFilters) {
   if (f.creators.length && !f.creators.includes(game.channelHandle?.toLowerCase() ?? "")) return false;
   const q = f.q.trim().toLowerCase();
   if (q) {
-    const hay = [game.title, game.developer, game.channelHandle ?? "", ...game.tags].join(" ").toLowerCase();
+    // A curated game's handle is the system account, not its creator, so it is not searchable.
+    const handle = game.curated ? "" : (game.channelHandle ?? "");
+    const hay = [game.title, game.developer, handle, ...game.tags].join(" ").toLowerCase();
     if (!hay.includes(q)) return false;
   }
   return true;

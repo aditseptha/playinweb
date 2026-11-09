@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { InlineAlert } from "@/components/ds/feedback";
 import { GameDetail } from "@/components/GameDetail";
 import { HomeShell } from "@/components/home/HomeShell";
+import { isCuratedHandle } from "@/lib/curation";
 import { gameJsonLdHtml, gameMetadata, getCreatorGameCount, getGameByHandleSlug, getSlugRedirect } from "@/lib/game-page";
 import { withSearch } from "@/lib/game-seo";
 import { apexHref } from "@/lib/host";
@@ -45,11 +46,21 @@ export default async function SiteProjectPage({ params, searchParams }: Props) {
             // Row-level security only returns an unpublished game to its owner.
             <InlineAlert
               tone="warning"
-              title="Draft · Only you can see this page"
+              title={isCuratedHandle(handle) ? "Draft · Only admins can see this page" : "Draft · Only you can see this page"}
               action={
-                <Link href={apexHref(`/manage/${project.id}`)} className="font-semibold underline underline-offset-4">
-                  Publish it in Manage games
-                </Link>
+                isCuratedHandle(handle) ? (
+                  // Curated games (#9) are edited by admins in the Curated games tab.
+                  <Link
+                    href={apexHref(`/admin?tab=curated&edit=${project.id}`)}
+                    className="font-semibold underline underline-offset-4"
+                  >
+                    Publish it in Curated games
+                  </Link>
+                ) : (
+                  <Link href={apexHref(`/manage/${project.id}`)} className="font-semibold underline underline-offset-4">
+                    Publish it in Manage games
+                  </Link>
+                )
               }
             />
           )

@@ -86,7 +86,8 @@ function Rankings({ initialGames }: { initialGames: Game[] }) {
   const [shown, setShown] = useState(PAGE);
 
   const ranked = useMemo(() => {
-    const games = withInitialGames(store.games, initialGames).filter((g) => g.playCount > 0);
+    // Curated games (#9) stay out of the rankings until their creators claim them.
+    const games = withInitialGames(store.games, initialGames).filter((g) => g.playCount > 0 && !g.curated);
     return games.sort((a, b) => periodScore(b, range) - periodScore(a, range)).slice(0, MAX_RANK);
   }, [store.games, initialGames, range]);
 
