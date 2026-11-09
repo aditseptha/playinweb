@@ -12,7 +12,7 @@ type Project = Database["public"]["Tables"]["projects"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 export type ProjectRecord = Project & {
-  profiles: Pick<Profile, "handle" | "display_name" | "follower_count" | "avatar_path"> | null;
+  profiles: Pick<Profile, "handle" | "display_name" | "follower_count" | "avatar_path"> & { bio?: string | null } | null;
   project_tags?: { tag: string }[];
   project_screenshots?: {
     id: string;
@@ -34,7 +34,7 @@ export type ProjectRecord = Project & {
 
 export const PROJECT_SELECT = `
   *,
-  profiles!projects_owner_id_fkey ( handle, display_name, follower_count, avatar_path ),
+  profiles!projects_owner_id_fkey ( handle, display_name, follower_count, avatar_path, bio ),
   project_tags ( tag ),
   project_screenshots ( id, storage_path, sort_order ),
   project_files ( file_name, storage_path, external_url, size_bytes ),

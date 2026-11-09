@@ -1,26 +1,44 @@
 "use client";
 
+import Image from "next/image";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Button } from "@/components/ds/button";
+import { Illustration } from "@/components/ds/illustration";
+import { focusRing, onArt } from "@/components/ds/styles";
 import { GameThumb, PROJECT_STAGE_IMAGE_SIZES } from "@/components/GameThumb";
 import { PreviewClip } from "@/components/PreviewClip";
-import { Button } from "@/components/ui/button";
-import { IconExpand, IconFullscreen, IconFullscreenExit, IconPlay, IconShrink } from "@/components/icons";
+import {
+  IconClose,
+  IconExpand,
+  IconExternal,
+  IconFullscreen,
+  IconFullscreenExit,
+  IconPlay,
+  IconShrink,
+} from "@/components/icons";
 import { cn } from "@/lib/cn";
 import { projectPublicUrl } from "@/lib/host";
 import { GUEST_PLAY_LIMIT_MS } from "@/lib/guest-play";
 import { playFrameSandbox } from "@/lib/html-game";
+import { canOptimizeImage } from "@/lib/optimize-image";
 import type { Game } from "@/lib/types";
 import { vimeoThumbUrl, parseTrailer, type Trailer } from "@/lib/trailer";
 
+// The game stage and its media strip. ProjectHeroRoot owns the play state; the stage, the strip,
+// the Play card and the sticky Play bar read it through useProjectHero().
+//
+// One rule matters more than any style here: the game iframe is never moved to another parent.
+// Moving it reloads the game and loses the player's progress. Wide view only changes the page grid,
+// and the fallback fullscreen only changes CSS on the stage frame.
+
 type Slide = { id: string; kind: "trailer" | "cover" | "shot" | "clip"; src?: string };
+
+/** A game that hasn't signalled it loaded after this long gets the "didn't load" screen. */
+const LOAD_TIMEOUT_MS = 25_000;
 
 type HeroCtx = {
   game: Game;
   trailer: Trailer | null;
-  tags: string[];
-  playLabel?: string;
-  playCount: number;
-  liked: boolean;
   slides: Slide[];
   slide: string;
   playing: boolean;
@@ -28,55 +46,64 @@ type HeroCtx = {
   current: Slide | undefined;
   canPlay: boolean;
   playLocked: boolean;
+  /** Changes on Restart; keys the iframe so it reloads in place. */
+  frameKey: number;
   onLoginRequest?: () => void;
+  onSignupRequest?: () => void;
+  onReport?: () => void;
   startPlay: () => void;
+  /** Reloads the running game. Doesn't count another play or reset the guest timer. */
+  restart: () => void;
+  stop: () => void;
   shrink: () => void;
   expand: () => void;
   pickSlide: (id: string) => void;
-  onLike: () => void;
 };
 
 const HeroContext = createContext<HeroCtx | null>(null);
 
-function useHero() {
+export function useProjectHero() {
   const ctx = useContext(HeroContext);
   if (!ctx) throw new Error("ProjectHero parts need ProjectHeroRoot");
   return ctx;
 }
 
+/** "itch.io" from "https://www.itch.io/…", for "Play on itch.io". */
+export function playDomain(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
 export function ProjectHeroRoot({
   game,
   trailerUrl,
-  tags,
-  playLabel,
-  playCount,
-  liked,
   autoPlay = false,
   allowPlay = true,
   playLocked = false,
   onLoginRequest,
+  onSignupRequest,
+  onReport,
   onDeniedPlay,
   onPlay,
   onExpandedChange,
   onPlayingChange,
-  onLike,
   children,
 }: {
   game: Game;
   trailerUrl?: string | null;
-  tags: string[];
-  playLabel?: string;
-  playCount?: number;
-  liked: boolean;
   autoPlay?: boolean;
   allowPlay?: boolean;
   playLocked?: boolean;
   onLoginRequest?: () => void;
+  onSignupRequest?: () => void;
+  onReport?: () => void;
   onDeniedPlay?: () => void;
   onPlay: () => void;
   onExpandedChange?: (expanded: boolean) => void;
   onPlayingChange?: (playing: boolean) => void;
-  onLike: () => void;
   children: ReactNode;
 }) {
   const trailer = useMemo(() => parseTrailer(trailerUrl), [trailerUrl]);
@@ -104,10 +131,12 @@ export function ProjectHeroRoot({
     ],
     [trailer, vimeoThumb, game.thumbnailUrl, game.previewClipUrl, game.screenshots],
   );
-  const [slide, setSlide] = useState(slides[0]?.id ?? "");
+  // Open on the cover when there is one: it's the poster for the Play button.
+  const [slide, setSlide] = useState(slides.find((s) => s.kind === "cover")?.id ?? slides[0]?.id ?? "");
   const autoStart = autoPlay && game.embeddable && allowPlay;
   const [playing, setPlaying] = useState(!playLocked && autoPlay && game.embeddable);
   const [expanded, setExpanded] = useState(!playLocked && autoStart);
+  const [frameKey, setFrameKey] = useState(0);
   const [prevAutoStart, setPrevAutoStart] = useState(autoStart);
   const [prevPlayLocked, setPrevPlayLocked] = useState(playLocked);
   if (autoStart !== prevAutoStart) {
@@ -141,10 +170,6 @@ export function ProjectHeroRoot({
     () => ({
       game,
       trailer,
-      tags,
-      playLabel,
-      playCount: playCount ?? game.playCount,
-      liked,
       slides,
       slide,
       playing,
@@ -152,7 +177,10 @@ export function ProjectHeroRoot({
       current,
       canPlay,
       playLocked,
+      frameKey,
       onLoginRequest,
+      onSignupRequest,
+      onReport,
       startPlay() {
         if (!canPlay) return;
         if (!allowPlay) {
@@ -174,6 +202,14 @@ export function ProjectHeroRoot({
         }
         onPlay();
       },
+      restart() {
+        setFrameKey((k) => k + 1);
+      },
+      stop() {
+        if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+        setPlaying(false);
+        setExpanded(false);
+      },
       shrink() {
         setExpanded(false);
       },
@@ -185,15 +221,10 @@ export function ProjectHeroRoot({
         setExpanded(false);
         setSlide(id);
       },
-      onLike,
     }),
     [
       game,
       trailer,
-      tags,
-      playLabel,
-      playCount,
-      liked,
       slides,
       slide,
       playing,
@@ -201,36 +232,61 @@ export function ProjectHeroRoot({
       current,
       canPlay,
       playLocked,
+      frameKey,
       onLoginRequest,
+      onSignupRequest,
+      onReport,
       allowPlay,
       listingUrl,
       onDeniedPlay,
       onPlay,
-      onLike,
     ],
   );
 
   return <HeroContext.Provider value={value}>{children}</HeroContext.Provider>;
 }
 
+function guestLimitLabel() {
+  return GUEST_PLAY_LIMIT_MS >= 60_000
+    ? `${Math.round(GUEST_PLAY_LIMIT_MS / 60_000)} minutes`
+    : `${Math.round(GUEST_PLAY_LIMIT_MS / 1000)} seconds`;
+}
+
+const stageIconButton = cn(
+  "relative inline-flex h-9 items-center gap-1.5 rounded-pw-pill px-3 text-pw-body-sm font-semibold text-pw-on-art transition-colors duration-150",
+  "bg-[color-mix(in_srgb,var(--pw-night-950)_72%,transparent)] hover:bg-[color-mix(in_srgb,var(--pw-night-800)_90%,transparent)]",
+  focusRing,
+);
+
 export function ProjectHeroStage() {
   const {
     game,
     trailer,
-    tags,
-    playLabel,
     playing,
     expanded,
     current,
     canPlay,
     playLocked,
+    frameKey,
     onLoginRequest,
+    onSignupRequest,
+    onReport,
     startPlay,
+    restart,
+    stop,
     shrink,
     expand,
-  } = useHero();
+  } = useProjectHero();
   const stageRef = useRef<HTMLDivElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  // Fallback for browsers without the Fullscreen API on elements (Safari on iPhone).
+  const [pseudo, setPseudo] = useState(false);
+  // Which frame (by frameKey) has finished loading, and which one timed out.
+  const [loadedKey, setLoadedKey] = useState<number | null>(null);
+  const [timedOutKey, setTimedOutKey] = useState<number | null>(null);
+  const running = playing && game.embeddable && !playLocked;
+  const loaded = loadedKey === frameKey;
+  const timedOut = timedOutKey === frameKey && !loaded;
 
   useEffect(() => {
     function sync() {
@@ -240,181 +296,376 @@ export function ProjectHeroStage() {
     return () => document.removeEventListener("fullscreenchange", sync);
   }, []);
 
+  useEffect(() => {
+    if (!running || loaded) return;
+    const id = window.setTimeout(() => setTimedOutKey(frameKey), LOAD_TIMEOUT_MS);
+    return () => window.clearTimeout(id);
+  }, [running, loaded, frameKey]);
+
+  // Leaving the game also leaves the fallback fullscreen.
+  const [prevRunning, setPrevRunning] = useState(running);
+  if (running !== prevRunning) {
+    setPrevRunning(running);
+    if (!running) setPseudo(false);
+  }
+
+  useEffect(() => {
+    if (!pseudo) return;
+    const root = document.querySelector<HTMLElement>("[data-scroll-root]");
+    const previous = root?.style.overflow ?? "";
+    if (root) root.style.overflow = "hidden";
+    // Esc only reaches the page when focus is outside the game, so the Exit button stays visible too.
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPseudo(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      if (root) root.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [pseudo]);
+
   async function toggleFullscreen() {
     const node = stageRef.current;
     if (!node) return;
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
+    if (pseudo) {
+      setPseudo(false);
       return;
     }
-    await node.requestFullscreen();
+    if (document.fullscreenElement) {
+      await document.exitFullscreen().catch(() => {});
+      return;
+    }
+    if (document.fullscreenEnabled && typeof node.requestFullscreen === "function") {
+      try {
+        await node.requestFullscreen();
+        return;
+      } catch {
+        // Refused (or unsupported for this element): fall through to the CSS fallback.
+      }
+    }
+    setPseudo(true);
   }
 
   async function collapse() {
-    if (document.fullscreenElement) await document.exitFullscreen();
+    if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+    setPseudo(false);
     shrink();
   }
+
+  const isFull = fullscreen || pseudo;
+  const poster = !current || current.kind === "cover" || current.kind === "shot";
 
   return (
     <div
       ref={stageRef}
-      className="project-stage relative aspect-video overflow-hidden rounded-panel bg-bg-inset"
-    >
-      {playing && game.embeddable && !playLocked ? (
-        <iframe
-          src={game.playUrl}
-          title={game.title}
-          className="absolute inset-0 h-full w-full border-0"
-          allow="fullscreen; gamepad; accelerometer; autoplay; pointer-lock; clipboard-write"
-          allowFullScreen
-          sandbox={playFrameSandbox()}
-        />
-      ) : current?.kind === "clip" && game.previewClipUrl ? (
-        <ClipStage url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} poster={game.thumbnailUrl} game={game} />
-      ) : current?.kind === "trailer" && trailer ? (
-        <iframe
-          src={trailer.embedUrl}
-          title={`${game.title} trailer`}
-          className="absolute inset-0 h-full w-full border-0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      ) : (
-        <GameThumb
-          game={game}
-          src={current?.src}
-          priority
-          quality={90}
-          sizes={PROJECT_STAGE_IMAGE_SIZES}
-          fit={current?.kind === "shot" ? "contain" : "cover"}
-        />
+      id="game-stage"
+      className={cn(
+        "project-stage dark relative flex flex-col overflow-hidden border border-[color-mix(in_srgb,var(--pw-sky)_18%,transparent)] bg-pw-night-950 shadow-pw-3",
+        pseudo
+          ? "fixed inset-0 z-[100] rounded-none border-0 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
+          : "rounded-[22px]",
       )}
-
-      {tags.length > 0 && !playing ? (
-        <ul className="absolute left-3 top-3 z-10 flex max-w-[70%] flex-wrap gap-1.5">
-          {tags.slice(0, 4).map((tag) => (
-            <li key={tag} className="rounded-md bg-bg/75 px-2 py-0.5 text-badge font-medium uppercase text-text">
-              {tag}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {playing ? (
-        <div className="absolute right-3 top-3 z-10 flex gap-1.5">
-          <Button
-            variant="secondary"
-            size="icon-sm"
-            // Wide view only rearranges the lg grid, so below lg the button has
-            // nothing to change. Hidden rather than inert so it isn't dead UI.
-            className="bg-bg/75 max-lg:hidden"
-            onClick={() => (expanded ? void collapse() : expand())}
-            aria-label={expanded ? "Exit wide view" : "Wide view"}
-          >
-            {expanded ? <IconShrink className="h-3.5 w-3.5" /> : <IconExpand className="h-3.5 w-3.5" />}
-          </Button>
-          <Button
-            variant="secondary"
-            size="icon-sm"
-            className="bg-bg/75"
-            onClick={() => void toggleFullscreen()}
-            aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
-          >
-            {fullscreen ? <IconFullscreenExit className="h-3.5 w-3.5" /> : <IconFullscreen className="h-3.5 w-3.5" />}
-          </Button>
-        </div>
-      ) : null}
-
-      {playLocked ? (
-        <div className="absolute inset-0 z-20 grid place-items-center bg-bg/85 p-6 backdrop-blur-sm">
-          <div className="max-w-sm text-center">
-            <p className="text-heading font-semibold">Sign in to keep playing</p>
-            <p className="mt-2 text-body text-text-muted">
-              Guest play is limited to{" "}
-              {GUEST_PLAY_LIMIT_MS >= 60_000
-                ? `${Math.round(GUEST_PLAY_LIMIT_MS / 60_000)} minutes`
-                : `${Math.round(GUEST_PLAY_LIMIT_MS / 1000)} seconds`}
-              . Create an account or sign in to continue.
-            </p>
-            {onLoginRequest ? (
-              <Button type="button" variant="primary" className="mt-5" onClick={onLoginRequest}>
-                Sign in
-              </Button>
+    >
+      <div className={cn("stage-media relative w-full overflow-hidden", pseudo ? "min-h-0 flex-1" : "aspect-video")}>
+        {running ? (
+          <>
+            <iframe
+              key={frameKey}
+              src={game.playUrl}
+              title={game.title}
+              className="absolute inset-0 h-full w-full border-0 bg-pw-night-950"
+              allow="fullscreen; gamepad; accelerometer; autoplay; pointer-lock; clipboard-write"
+              allowFullScreen
+              sandbox={playFrameSandbox()}
+              onLoad={() => setLoadedKey(frameKey)}
+            />
+            {timedOut ? (
+              <StageScreen
+                illustration="error"
+                title="This game didn't load"
+                body="It may be busy or offline. Try again in a moment."
+                actions={
+                  <>
+                    <Button variant="primary" onClick={restart}>
+                      Try again
+                    </Button>
+                    {onReport ? (
+                      <Button variant="ghost" className="text-pw-on-art" onClick={onReport}>
+                        Report a problem
+                      </Button>
+                    ) : null}
+                  </>
+                }
+              />
+            ) : !loaded ? (
+              <LoadingScreen title={game.title} />
             ) : null}
-          </div>
-        </div>
-      ) : !playing ? (
-        <>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[30%] bg-[linear-gradient(to_top,oklch(0_0_0/0.78)_0%,oklch(0_0_0/0.38)_55%,transparent_100%)]"
+          </>
+        ) : current?.kind === "clip" && game.previewClipUrl ? (
+          <ClipStage url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} poster={game.thumbnailUrl} game={game} />
+        ) : current?.kind === "trailer" && trailer ? (
+          <iframe
+            src={trailer.embedUrl}
+            title={`${game.title} trailer`}
+            className="absolute inset-0 h-full w-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
           />
-          <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-end gap-2 p-3 sm:p-4">
-            {canPlay ? (
-              <button
-                type="button"
-                onClick={startPlay}
-                className="group relative inline-flex h-[50px] select-none items-center overflow-hidden rounded-full border border-[#005bc4] bg-brand-blue pl-6 pr-12 text-sm font-bold uppercase tracking-[0.08em] text-white outline-none [text-shadow:0_1px_0_rgb(0_0_0/0.3)] shadow-[inset_0_30px_30px_-15px_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.3),0_3px_0_#005bc4,0_3px_2px_rgb(0_0_0/0.2),0_5px_10px_rgb(0_0_0/0.1),0_10px_20px_rgb(0_0_0/0.1)] transition-all duration-150 ease-in-out focus-visible:ring-2 focus-visible:ring-white active:translate-y-[3px] active:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.15),inset_0_1px_20px_rgb(0_0_0/0.1),0_0_0_#005bc4,0_0_0_2px_rgb(255_255_255/0.5)]"
+        ) : current?.src || game.thumbnailUrl ? (
+          <>
+            {current?.kind === "shot" && current.src ? <BlurBackdrop src={current.src} /> : null}
+            <GameThumb
+              game={game}
+              src={current?.src}
+              priority
+              quality={90}
+              sizes={PROJECT_STAGE_IMAGE_SIZES}
+              fit={current?.kind === "shot" ? "contain" : "cover"}
+            />
+          </>
+        ) : (
+          <BrandedPlaceholder title={game.title} />
+        )}
+
+        {playLocked ? (
+          <StageScreen
+            illustration="sign-in"
+            title="Sign in to keep playing"
+            body={`Guests can play for ${guestLimitLabel()}. Sign in to keep playing.`}
+            actions={
+              <>
+                {onSignupRequest ? (
+                  <Button variant="primary" onClick={onSignupRequest}>
+                    Sign up free
+                  </Button>
+                ) : null}
+                {onLoginRequest ? (
+                  <Button variant="secondary" onClick={onLoginRequest}>
+                    Sign in
+                  </Button>
+                ) : null}
+              </>
+            }
+          />
+        ) : !running ? (
+          <>
+            {game.embeddable ? (
+              <span
+                className={cn(
+                  "absolute top-3 left-3 z-10 inline-flex h-7 items-center gap-1.5 rounded-pw-pill px-2.5 text-pw-caption font-semibold",
+                  "bg-[color-mix(in_srgb,var(--pw-night-950)_72%,transparent)]",
+                  onArt,
+                )}
               >
-                <span className="transition-all duration-500 ease-in-out group-hover:translate-x-[160px] motion-reduce:transition-none">
-                  {playLabel ?? "Play"}
-                </span>
-                <IconPlay className="absolute right-6 h-4 w-4 transition-all duration-500 ease-in-out group-hover:right-1/2 group-hover:translate-x-1/2 group-hover:scale-150 motion-reduce:transition-none" />
-              </button>
+                <span aria-hidden className="size-1.5 rounded-full bg-pw-success" />
+                Instant play
+              </span>
             ) : null}
-          </div>
-        </>
+            {canPlay && poster ? (
+              <>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 z-[5] bg-[radial-gradient(60%_60%_at_50%_50%,color-mix(in_srgb,var(--pw-night-950)_35%,transparent),transparent_70%),linear-gradient(to_top,color-mix(in_srgb,var(--pw-night-950)_70%,transparent),transparent_45%)]"
+                />
+                <div className="absolute inset-0 z-10 grid place-items-center p-4">
+                  {game.embeddable ? (
+                    <button
+                      type="button"
+                      onClick={startPlay}
+                      aria-label={`Play ${game.title}`}
+                      className={cn("group flex flex-col items-center gap-2 rounded-pw-xl", focusRing)}
+                    >
+                      <span className="grid size-16 place-items-center rounded-full bg-linear-to-b from-pw-primary-hi to-pw-primary-lo text-pw-on-primary shadow-pw-glow transition-transform duration-150 ease-pw-out group-hover:scale-105 group-active:scale-95 motion-reduce:transition-none md:size-[72px]">
+                        <IconPlay aria-hidden className="ml-1 size-7" />
+                      </span>
+                      <span className={cn("text-pw-body font-bold", onArt)}>Play</span>
+                    </button>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <Button variant="primary" size="lg" onClick={startPlay}>
+                        <IconPlay aria-hidden className="fill-current" />
+                        Play on {playDomain(game.playUrl) || "the creator's site"}
+                        <IconExternal aria-hidden />
+                      </Button>
+                      <span className={cn("text-pw-body-sm", onArt)}>Opens in a new tab</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : canPlay ? (
+              // A clip or trailer is showing: keep it watchable and put Play in the corner.
+              <div className="absolute right-3 bottom-3 z-10">
+                <Button variant="primary" size="sm" onClick={startPlay}>
+                  <IconPlay aria-hidden className="fill-current" />
+                  {game.embeddable ? "Play game" : "Play"}
+                </Button>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+
+      {running ? (
+        <div className="flex shrink-0 items-center gap-2 border-t border-[color-mix(in_srgb,var(--pw-sky)_12%,transparent)] bg-pw-night-900 px-3 py-2">
+          <p className="mr-auto flex min-w-0 items-center gap-2 text-pw-body-sm text-pw-on-art">
+            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-pw-success" />
+            <span className="truncate">
+              Playing <span className="font-semibold">{game.title}</span>
+            </span>
+          </p>
+          {isFull ? null : (
+            <button
+              type="button"
+              // Wide view only rearranges the lg grid, so below lg it has nothing to change.
+              className={cn(stageIconButton, "max-lg:hidden")}
+              onClick={() => (expanded ? void collapse() : expand())}
+              aria-pressed={expanded}
+            >
+              {expanded ? <IconShrink aria-hidden className="size-4" /> : <IconExpand aria-hidden className="size-4" />}
+              {expanded ? "Exit wide view" : "Wide view"}
+            </button>
+          )}
+          <button type="button" className={stageIconButton} onClick={() => void toggleFullscreen()}>
+            {isFull ? <IconFullscreenExit aria-hidden className="size-4" /> : <IconFullscreen aria-hidden className="size-4" />}
+            <span className="max-sm:sr-only">{isFull ? "Exit fullscreen" : "Fullscreen"}</span>
+          </button>
+          <button type="button" className={stageIconButton} onClick={stop}>
+            <IconClose aria-hidden className="size-4" />
+            <span className="max-sm:sr-only">Exit</span>
+          </button>
+        </div>
       ) : null}
     </div>
   );
 }
 
-export function ProjectHeroGrid({ children }: { children: ReactNode }) {
-  return <div className="grid min-w-0 grid-cols-1">{children}</div>;
+/** A screen over the stage: loading failed, guest limit reached. */
+function StageScreen({
+  illustration,
+  title,
+  body,
+  actions,
+}: {
+  illustration: "error" | "sign-in";
+  title: string;
+  body: string;
+  actions: ReactNode;
+}) {
+  return (
+    <div
+      role="status"
+      className="absolute inset-0 z-20 grid place-items-center overflow-y-auto bg-[radial-gradient(70%_70%_at_50%_40%,color-mix(in_srgb,var(--pw-deep)_45%,var(--pw-night-950)),var(--pw-night-950))] p-4 text-center"
+    >
+      <div className="flex max-w-sm flex-col items-center gap-3">
+        <Illustration name={illustration} size="s" className="max-sm:hidden" />
+        <p className="font-pw-display text-[clamp(22px,3vw,30px)] leading-none font-extrabold text-pw-on-art uppercase italic">
+          {title}
+        </p>
+        <p className="text-pw-body-sm text-pw-on-art-soft">{body}</p>
+        <div className="mt-1 flex flex-wrap justify-center gap-2">{actions}</div>
+      </div>
+    </div>
+  );
 }
 
-export function ProjectHeroTitle({ children }: { children: ReactNode }) {
-  const { slides } = useHero();
+function LoadingScreen({ title }: { title: string }) {
   return (
-    <h1 className={cn(slides.length > 1 ? "mt-6" : "mt-3", "text-display font-semibold")}>{children}</h1>
+    <div
+      role="status"
+      className="absolute inset-0 z-20 grid place-items-center bg-[radial-gradient(70%_70%_at_50%_45%,var(--pw-deep),var(--pw-night-950))] p-4 text-center"
+    >
+      <div className="flex w-full max-w-[240px] flex-col items-center gap-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/playinweb-mark.webp" alt="" width={56} height={56} className="size-14 rounded-pw-lg" />
+        <span aria-hidden className="relative h-1 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--pw-white)_14%,transparent)]">
+          <span className="pw-indeterminate absolute inset-y-0 w-1/3 rounded-full bg-pw-primary" />
+        </span>
+        <p className="truncate text-pw-body-sm font-semibold text-pw-on-art">Loading {title}…</p>
+      </div>
+    </div>
+  );
+}
+
+/** Game without a cover: its first letters on the brand gradient, never an empty box. */
+function BrandedPlaceholder({ title }: { title: string }) {
+  return (
+    <div aria-hidden className="absolute inset-0 grid place-items-center bg-linear-to-br from-pw-deep to-pw-navy">
+      <span className="font-pw-display text-[clamp(64px,14vw,160px)] leading-none font-extrabold text-[color-mix(in_srgb,var(--pw-sky)_35%,transparent)] uppercase italic">
+        {title.trim().slice(0, 2) || "PW"}
+      </span>
+    </div>
+  );
+}
+
+/** Screenshots show whole (contain); a blurred copy of the same image fills the bars around them. */
+function BlurBackdrop({ src }: { src: string }) {
+  const className = "absolute inset-0 size-full scale-110 object-cover opacity-60 blur-2xl";
+  return canOptimizeImage(src) ? (
+    <Image src={src} alt="" fill sizes="64px" className={className} aria-hidden />
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" aria-hidden className={className} />
   );
 }
 
 export function ProjectHeroThumbs() {
-  const { game, slides, slide, playing, pickSlide } = useHero();
+  const { game, slides, slide, playing, pickSlide } = useProjectHero();
   if (slides.length <= 1) return null;
+  const index = Math.max(0, slides.findIndex((s) => s.id === slide));
 
+  let shot = 0;
   return (
-    <div className="scrollbar-hide mt-2 flex gap-2 overflow-x-auto p-1">
-      {slides.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          onClick={() => pickSlide(item.id)}
-          className={cn(
-            "relative aspect-video h-16 shrink-0 overflow-hidden rounded-lg bg-surface-2",
-            slide === item.id && !playing ? "outline outline-2 outline-offset-2 outline-accent" : "",
-          )}
-          aria-label={item.kind === "trailer" ? "Trailer" : "Screenshot"}
-        >
-          {item.kind === "clip" ? (
-            <GameThumb game={game} src={item.src} sizes="128px" />
-          ) : item.kind === "trailer" && item.src ? (
-            // YouTube thumbnail host isn't in images.remotePatterns, so it stays a plain <img>.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          ) : item.kind === "shot" || item.kind === "cover" ? (
-            <GameThumb game={game} src={item.src} sizes="128px" fit={item.kind === "shot" ? "contain" : "cover"} />
-          ) : (
-            <span className="absolute inset-0 bg-surface-3" />
-          )}
-          {item.kind === "trailer" ? (
-            <span className="absolute inset-0 grid place-items-center bg-bg/35">
-              <IconPlay className="h-4 w-4 text-text" />
-            </span>
-          ) : null}
-        </button>
-      ))}
+    <div className="flex items-center gap-3">
+      <div className="scrollbar-hide -m-1 flex min-w-0 flex-1 gap-2 overflow-x-auto p-1">
+        {slides.map((item) => {
+          const label =
+            item.kind === "clip"
+              ? "Preview clip"
+              : item.kind === "trailer"
+                ? "Trailer"
+                : item.kind === "cover"
+                  ? "Cover"
+                  : `Screenshot ${++shot}`;
+          const selected = slide === item.id && !playing;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => pickSlide(item.id)}
+              aria-label={label}
+              aria-pressed={selected}
+              className={cn(
+                "relative aspect-video w-24 shrink-0 overflow-hidden rounded-[10px] border border-pw-line bg-pw-surface-3 transition-[box-shadow,opacity] duration-150",
+                selected
+                  ? "ring-2 ring-pw-primary ring-offset-2 ring-offset-pw-bg"
+                  : "opacity-80 hover:opacity-100",
+                focusRing,
+              )}
+            >
+              {item.kind === "trailer" && item.src ? (
+                // YouTube thumbnail host isn't in images.remotePatterns, so it stays a plain <img>.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : item.src ? (
+                <GameThumb game={game} src={item.src} sizes="96px" fit="cover" />
+              ) : (
+                <span className="absolute inset-0 bg-pw-surface-3" />
+              )}
+              {item.kind === "trailer" || item.kind === "clip" ? (
+                <span className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--pw-night-950)_35%,transparent)]">
+                  <span className="grid size-7 place-items-center rounded-full bg-[color-mix(in_srgb,var(--pw-night-950)_75%,transparent)] text-pw-white">
+                    <IconPlay aria-hidden className="ml-0.5 size-3.5" />
+                  </span>
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+      <p className="shrink-0 text-pw-caption text-pw-muted tabular-nums max-sm:hidden" aria-hidden>
+        {index + 1} / {slides.length}
+      </p>
     </div>
   );
 }
@@ -433,11 +684,11 @@ function ClipStage({
   const [on, setOn] = useState(false);
   if (!on) {
     return (
-      <button type="button" className="absolute inset-0" onClick={() => setOn(true)} aria-label="Play preview">
+      <button type="button" className={cn("absolute inset-0", focusRing)} onClick={() => setOn(true)} aria-label="Play preview">
         <GameThumb game={game} src={poster} sizes={PROJECT_STAGE_IMAGE_SIZES} />
         <span className="absolute inset-0 grid place-items-center">
-          <span className="grid size-12 place-items-center rounded-full bg-black/70 text-white">
-            <IconPlay className="h-5 w-5" />
+          <span className="grid size-12 place-items-center rounded-full bg-[color-mix(in_srgb,var(--pw-night-950)_75%,transparent)] text-pw-white">
+            <IconPlay aria-hidden className="ml-0.5 size-5" />
           </span>
         </span>
       </button>
@@ -446,7 +697,7 @@ function ClipStage({
   return (
     <div className="absolute inset-0">
       <PreviewClip url={url} kind={kind} />
-      <button type="button" className="absolute right-3 top-3 z-10 rounded-full bg-black/70 px-3 py-1 text-caption text-white" onClick={() => setOn(false)}>
+      <button type="button" className={cn(stageIconButton, "absolute top-3 right-3 z-10")} onClick={() => setOn(false)}>
         Pause
       </button>
     </div>

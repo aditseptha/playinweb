@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { GameDetail } from "@/components/GameDetail";
-import { WithAppShell } from "@/components/WithAppShell";
+import { HomeShell } from "@/components/home/HomeShell";
 import { gameCanonicalUrl, gameMetadata, getGameById } from "@/lib/game-page";
 import { withSearch } from "@/lib/game-seo";
 
@@ -30,8 +30,8 @@ export default async function GamePage({ params, searchParams }: Props) {
   if (canonical) redirect(withSearch(canonical, await searchParams));
 
   return (
-    <WithAppShell>
+    <HomeShell>
       <GameDetail project={project} />
-    </WithAppShell>
+    </HomeShell>
   );
 }

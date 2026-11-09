@@ -2,19 +2,20 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
+import { Chip } from "@/components/ds/badge";
+import { Button } from "@/components/ds/button";
+import { TextInput } from "@/components/ds/field";
+import { IconHeart } from "@/components/icons";
 import { useLoginDialog } from "@/components/LoginDialog";
-import { Button } from "@/components/ui/button";
-import { TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
-import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
 import { CHECKOUT_MAX_AMOUNT } from "@/lib/polar";
 import { isPersistedId, type ProjectRecord } from "@/lib/projects";
 
 const DONATE_PRESETS = [1, 3, 5, 10, 25];
 
-export function ProjectCheckout({ project }: { project: ProjectRecord }) {
+export function ProjectCheckout({ project, creatorName }: { project: ProjectRecord; creatorName: string }) {
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
   const { feature: donationsFeature, loading: donationsLoading } = useFeature("donations");
@@ -129,53 +130,71 @@ export function ProjectCheckout({ project }: { project: ProjectRecord }) {
   const selected = Number(amount);
 
   return (
-    <form id="support" onSubmit={(e) => void onSubmit(e)} className="rounded-panel bg-surface-2/80 p-3">
-      <p className="text-title font-semibold">{paid ? "Get this project" : "Fuel the next build"}</p>
+    <form
+      id="support"
+      onSubmit={(e) => void onSubmit(e)}
+      aria-labelledby="support-title"
+      className="flex flex-col gap-3 rounded-pw-xl border border-pw-line bg-pw-surface-1 p-4"
+    >
+      <div>
+        <h2 id="support-title" className="flex items-center gap-2 text-pw-body font-bold text-pw-text">
+          <IconHeart aria-hidden className="size-4 text-pw-gold" />
+          {paid ? "Get this game" : `Support ${creatorName}`}
+        </h2>
+        <p className="mt-0.5 text-pw-body-sm text-pw-text-soft">
+          {paid
+            ? `Pay what you want, from ${formatMoney(min)}.`
+            : `Name your price, ${formatMoney(1)}–${formatMoney(CHECKOUT_MAX_AMOUNT)}.`}{" "}
+          Paid securely with Polar.
+        </p>
+      </div>
       {presets.length > 1 ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div role="group" aria-label="Amount" className="flex flex-wrap gap-2">
           {presets.map((value) => {
             const active = Number.isFinite(selected) && Math.abs(selected - value) < 0.001;
             return (
-              <button
+              <Chip
                 key={value}
-                type="button"
+                size="sm"
+                pressed={active}
                 onClick={() => {
                   setAmount(value.toFixed(2));
                   setNotice("");
                 }}
-                className={cn(
-                  "h-7 rounded-md px-2 text-caption font-medium transition-colors duration-150 ease-out-quint",
-                  active ? "bg-accent text-accent-fg" : "bg-surface text-text-muted hover:text-text",
-                )}
               >
                 ${value.toFixed(value % 1 === 0 ? 0 : 2)}
-              </button>
+              </Chip>
             );
           })}
         </div>
       ) : null}
-      <div className="mt-3 flex gap-2">
-        <div className="relative min-w-0 flex-1">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ui text-text-subtle">$</span>
-          <TextInput
-            type="number"
-            min={min}
-            max={CHECKOUT_MAX_AMOUNT}
-            step="1"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="pl-7"
-          />
-        </div>
-        <Button type="submit" variant="primary" className="active:translate-y-px" disabled={busy}>
-          {busy ? "Redirecting…" : paid ? "Buy" : "Donate"}
-        </Button>
+      <div className="relative">
+        <label htmlFor="support-amount" className="sr-only">
+          Amount in US dollars
+        </label>
+        <span aria-hidden className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-pw-body text-pw-muted">
+          $
+        </span>
+        <TextInput
+          id="support-amount"
+          type="number"
+          inputMode="decimal"
+          min={min}
+          max={CHECKOUT_MAX_AMOUNT}
+          step="1"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="pl-8 tabular-nums"
+        />
       </div>
-      <p className="mt-2 text-meta text-text-subtle">
-        {paid ? `Minimum $${min.toFixed(2)}. ` : `Name your price ($1–$${CHECKOUT_MAX_AMOUNT}). `}
-        Paid with Polar.
-      </p>
-      {notice ? <p className="mt-2 text-ui text-text-muted">{notice}</p> : null}
+      <Button type="submit" variant="primary" className="w-full" disabled={busy}>
+        {busy ? "Redirecting…" : paid ? "Buy" : "Support"}
+      </Button>
+      {notice ? (
+        <p role="status" className="text-pw-body-sm text-pw-text-soft">
+          {notice}
+        </p>
+      ) : null}
     </form>
   );
 }

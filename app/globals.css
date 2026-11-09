@@ -196,14 +196,21 @@
   }
 }
 
+/* Game stage in browser fullscreen: the frame fills the screen and the game area takes the space
+   left by the control bar (components/ProjectHero.tsx). */
 .project-stage:fullscreen,
 .project-stage:-webkit-full-screen {
   width: 100%;
   height: 100%;
   max-height: 100%;
-  aspect-ratio: auto;
+  border: 0;
   border-radius: 0;
-  background: var(--bg-inset);
+}
+.project-stage:fullscreen .stage-media,
+.project-stage:-webkit-full-screen .stage-media {
+  aspect-ratio: auto;
+  flex: 1 1 0%;
+  min-height: 0;
 }
 
 @keyframes chart-draw {
@@ -320,6 +327,27 @@
   from {
     opacity: 0;
     transform: translateY(12px);
+  }
+}
+
+/* Indeterminate progress (game loading): a short bar sweeping across. Under reduced motion it
+   stays still and fills the track, so it still reads as "working". */
+@keyframes pw-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.pw-indeterminate {
+  animation: pw-indeterminate 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
   }
 }
 
