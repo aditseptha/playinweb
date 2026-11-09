@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/lib/auth";
 import { FeaturesProvider } from "@/lib/features";
 import { GamesProvider } from "@/lib/store";
+import { apexOrigin } from "@/lib/host";
 import { THEME_BOOT } from "@/lib/theme";
 import { umamiEnabled, umamiScriptUrl, umamiWebsiteId } from "@/lib/umami";
 import "./globals.css";
@@ -16,6 +17,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
+  // Makes Open Graph image URLs absolute (link previews need a full URL).
+  metadataBase: new URL(apexOrigin()),
   applicationName: "PlayInWeb",
   title: {
     default: "PlayInWeb — indie web games",

@@ -1,0 +1,163 @@
+/* Rankings page: effect layers only (DS rule). Layout, colour and type live in Tailwind with
+   --pw-* tokens. Every animation here is decorative and stops under prefers-reduced-motion. */
+
+/* ---------- title ---------- */
+
+/* Same treatment as the homepage hero title: warm gold gradient with a deep-blue drop. */
+.title {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--pw-gold-soft) 22%, var(--pw-white)) 0%,
+    color-mix(in srgb, var(--pw-gold) 62%, var(--pw-white)) 45%,
+    var(--pw-orange) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 0 var(--pw-deep))
+    drop-shadow(0 0 22px color-mix(in srgb, var(--pw-orange-hot) 35%, transparent));
+  padding-right: 0.12em;
+}
+
+/* #1's game title on the podium card. */
+.goldText {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pw-gold-soft) 22%, var(--pw-white)), var(--pw-gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 var(--pw-deep));
+}
+
+/* ---------- entrances ---------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+.rise {
+  animation: rise 520ms var(--pw-ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Podium places climb in: #1 first, then #2 and #3. */
+@keyframes place {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.97);
+  }
+}
+.place {
+  animation: place 640ms var(--pw-ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* The plinth grows up from the floor after its card lands. */
+@keyframes plinth {
+  from {
+    transform: scaleY(0.4);
+    opacity: 0;
+  }
+}
+.plinth {
+  transform-origin: bottom;
+  animation: plinth 520ms var(--pw-ease-out) both;
+  animation-delay: calc(var(--d, 0ms) + 160ms);
+}
+
+/* The laurel pops once the plinth is up. */
+@keyframes laurel {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+.laurel {
+  animation: laurel 520ms var(--pw-ease-spring) both;
+  animation-delay: calc(var(--d, 0ms) + 360ms);
+}
+
+/* ---------- shimmer on the top three ---------- */
+
+/* A light sweep crosses each podium card every few seconds, in its medal colour. The sweep moves
+   with transform only; it idles for most of the cycle so it reads as a glint, not a strobe. */
+.shimmer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 55%;
+  /* A soft medal-coloured band with a thin bright core; screen only ever lightens the art. */
+  background: linear-gradient(
+    105deg,
+    transparent 22%,
+    var(--glint) 44%,
+    color-mix(in srgb, var(--pw-white) 55%, transparent) 50%,
+    var(--glint) 56%,
+    transparent 78%
+  );
+  mix-blend-mode: screen;
+  transform: translateX(-160%) skewX(-12deg);
+  animation: glint 4.6s var(--pw-ease-out) infinite;
+  animation-delay: var(--glint-delay, 1.2s);
+}
+@keyframes glint {
+  0% {
+    transform: translateX(-160%) skewX(-12deg);
+  }
+  30%,
+  100% {
+    transform: translateX(260%) skewX(-12deg);
+  }
+}
+.glint1 {
+  --glint: color-mix(in srgb, var(--pw-gold-soft) 60%, transparent);
+  --glint-delay: 1.1s;
+}
+.glint2 {
+  --glint: color-mix(in srgb, var(--pw-mist-50) 45%, transparent);
+  --glint-delay: 1.8s;
+}
+.glint3 {
+  --glint: color-mix(in srgb, var(--pw-orange-hot) 50%, transparent);
+  --glint-delay: 2.5s;
+}
+
+/* #1's frame breathes a soft gold glow. */
+@keyframes crown {
+  0%,
+  100% {
+    box-shadow:
+      0 0 40px color-mix(in srgb, var(--pw-gold) 22%, transparent),
+      0 24px 48px color-mix(in srgb, var(--pw-night-950) 60%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 64px color-mix(in srgb, var(--pw-gold) 36%, transparent),
+      0 24px 48px color-mix(in srgb, var(--pw-night-950) 60%, transparent);
+  }
+}
+.crown {
+  animation: crown 3.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .place,
+  .plinth,
+  .laurel,
+  .crown {
+    animation: none;
+  }
+  .shimmer {
+    display: none;
+  }
+}

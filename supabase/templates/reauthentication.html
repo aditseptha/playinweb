@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Confirm it’s you</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f8fd;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">Use this code to confirm it’s you.</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f4f8fd;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;">
+        <tr>
+          <td style="padding:0 8px 20px;">
+            <a href="{{ .SiteURL }}" style="text-decoration:none;">
+              <img src="{{ .SiteURL }}/playinweb-icon.png" width="40" height="40" alt="" style="vertical-align:middle;border-radius:10px;border:0;">
+              <img src="{{ .SiteURL }}/playinweb-lettermark-black.png" width="109" height="20" alt="PlayInWeb" style="vertical-align:middle;margin-left:10px;border:0;">
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#ffffff;border:1px solid #e1ebf6;border-radius:22px;padding:36px 32px;font-family:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;color:#031654;">
+            <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;font-weight:800;color:#031654;">Confirm it’s you</h1>
+            <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#22406c;">Enter this code on PlayInWeb to continue. We ask for it before changes like connecting PayPal.</p><p style="margin:20px 0 0;font-family:'Courier New',monospace;font-size:34px;letter-spacing:8px;font-weight:700;color:#031654;">{{ .Token }}</p>
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px;">
+              <tr><td style="border-radius:999px;background:#0871ed;"><a href="{{ .SiteURL }}" style="display:inline-block;padding:14px 26px;font-family:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:999px;">Back to PlayInWeb</a></td></tr>
+            </table>
+            <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:#4a6283;">Didn’t try to make a change? Ignore this email and consider changing your password.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 8px 0;font-family:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.5;color:#4a6283;">
+            PlayInWeb · Indie games you play right in your browser.<br>
+            You got this email because someone used {{ .Email }} on PlayInWeb.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

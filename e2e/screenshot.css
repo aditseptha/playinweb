@@ -1,0 +1,5 @@
+/* Applied while taking DS screenshots: the sticky header would cover demos, and the Next dev overlay isn't our UI. */
+header,
+nextjs-portal {
+  visibility: hidden !important;
+}

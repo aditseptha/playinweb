@@ -42,7 +42,7 @@ export function Hero({ game }: { game: Game | null }) {
     <section className={cn(s.hero, s.onDark)} aria-labelledby="hero-title">
       <div className={s.heroArtWrap} aria-hidden>
         {canOptimizeImage(art) ? (
-          <Image src={art} alt="" fill preload sizes="(max-width: 760px) 100vw, 62vw" className={s.heroArt} style={{ objectPosition: focus }} />
+          <Image src={art} alt="" fill preload sizes="(max-width: 767px) 100vw, 62vw" className={s.heroArt} style={{ objectPosition: focus }} />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={art} alt="" className={s.heroArt} style={{ objectPosition: focus }} />

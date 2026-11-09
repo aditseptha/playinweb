@@ -32,7 +32,7 @@ const PEEK_GAP = 14;
 function mq(q: string) {
   return typeof window !== "undefined" && window.matchMedia(q).matches;
 }
-const isMobileLayout = () => mq("(max-width: 760px)");
+const isMobileLayout = () => mq("(max-width: 767px)");
 
 type PeekState = { game: Game; rect: DOMRect } | null;
 

@@ -18,7 +18,7 @@ const indexStyle = (i: number) => ({ "--i": i }) as CSSProperties;
 
 function canTilt() {
   return (
-    window.matchMedia("(min-width: 761px) and (hover: hover) and (pointer: fine)").matches &&
+    window.matchMedia("(min-width: 768px) and (hover: hover) and (pointer: fine)").matches &&
     !window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
 }
@@ -83,7 +83,7 @@ export function FeatureCard({ game, i = 0, priority = false }: { game: Game; i?:
         clip.onLeave();
       }}
     >
-      <Art game={game} priority={priority} sizes="(min-width: 1025px) 30vw, (min-width: 761px) 48vw, 92vw" />
+      <Art game={game} priority={priority} sizes="(min-width: 1024px) 30vw, (min-width: 768px) 48vw, 92vw" />
       {clip.playing && game.previewClipUrl ? (
         <PreviewClip url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} onDisplace={clip.pause} />
       ) : null}
@@ -156,7 +156,7 @@ export function TallCard({
       onPointerMove={onMove}
       onPointerLeave={onLeave}
     >
-      <Art game={game} priority={priority} sizes="(min-width: 1181px) 15vw, (min-width: 761px) 24vw, 46vw" ratio="portrait" />
+      <Art game={game} priority={priority} sizes="(min-width: 1181px) 15vw, (min-width: 768px) 24vw, 46vw" ratio="portrait" />
       <span className={s.shine} />
       <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
       {label ? <span className={cn(s.badge, label === "top" && s.badgeTop)}>{label === "top" ? "TOP" : "NEW"}</span> : null}
@@ -191,7 +191,7 @@ export function WideCard({ game, i = 0 }: { game: Game; i?: number }) {
         clip.onLeave();
       }}
     >
-      <Art game={game} sizes="(min-width: 1025px) 30vw, (min-width: 761px) 48vw, 92vw" />
+      <Art game={game} sizes="(min-width: 1024px) 30vw, (min-width: 768px) 48vw, 92vw" />
       {clip.playing && game.previewClipUrl ? (
         <PreviewClip url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} onDisplace={clip.pause} />
       ) : null}

@@ -19,6 +19,7 @@ export type Game = {
   likeCount: number
   promotionBoost: number
   channelHandle?: string
+  /** Creator's profile photo, when they set one. */
   creatorAvatarUrl?: string
   projectSlug?: string
 };

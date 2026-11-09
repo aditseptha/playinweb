@@ -3,7 +3,9 @@
 import { IconLogout, IconMenu, IconMoon, IconPlus, IconSun, IconUser } from "@/components/icons";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { dsFontVars } from "@/app/fonts";
 import { Avatar } from "@/components/Avatar";
 import { MosaicGrid } from "@/components/ui/mosaic-grid";
 import { ReportDialog } from "@/components/ReportDialog";
@@ -11,7 +13,6 @@ import { LegalProvider } from "@/components/LegalModal";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { Notices } from "@/components/Notices";
 import { SignupProvider, useSignupDialog } from "@/components/SignupDialog";
-import { homeFontVars } from "@/components/home/fonts";
 import s from "@/components/home/home.module.css";
 import { isAdminEmail } from "@/lib/admin";
 import { BRAND_MARKS, BRAND_MARK_INTERVAL_MS } from "@/lib/brand";
@@ -97,7 +98,7 @@ export function HomeShell({ children }: { children: ReactNode }) {
   return (
     <LegalProvider>
       <SignupProvider>
-        <div data-scroll-root className={cn(s.root, homeFontVars)}>
+        <div data-scroll-root className={cn(s.root, dsFontVars)}>
           <a
             href="#content"
             className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-black"
@@ -144,7 +145,9 @@ function Logo({ animated = false }: { animated?: boolean }) {
       ) : (
         <Image src="/playinweb-icon.png" alt="" width={40} height={40} className={s.logoStill} />
       )}
-      PlayInWeb
+      {/* Official lettermark (~1KB files: resized variants wouldn't be any smaller). */}
+      <Image src="/playinweb-lettermark-white.webp" alt="PlayInWeb" width={109} height={20} unoptimized className={cn(s.word, s.wordDark)} />
+      <Image src="/playinweb-lettermark-black.webp" alt="PlayInWeb" width={109} height={20} unoptimized className={cn(s.word, s.wordLight)} />
     </span>
   );
 }
@@ -187,6 +190,7 @@ function Nav({ onReport }: { onReport: () => void }) {
   const { openLogin } = useLoginDialog();
   const { openSignup } = useSignupDialog();
   const visible = useVisible();
+  const pathname = usePathname();
   const { open: accountOpen, setOpen: setAccountOpen, ref: accountRef } = usePopover();
   const [sheet, setSheet] = useState(false);
 
@@ -199,7 +203,7 @@ function Nav({ onReport }: { onReport: () => void }) {
           </Link>
           <nav className={s.navlinks} aria-label="Primary">
             {NAV.filter((l) => visible(l.href)).map((l) => (
-              <Link key={l.href} href={hrefFor(l.href)}>
+              <Link key={l.href} href={hrefFor(l.href)} aria-current={pathname === l.href ? "page" : undefined}>
                 {l.label}
               </Link>
             ))}

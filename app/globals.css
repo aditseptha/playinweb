@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Design system tokens (generated from lib/tokens.ts). */
+@import "./tokens.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -288,6 +290,36 @@
   }
   50% {
     transform: translate3d(-10px, -8px, 0);
+  }
+}
+
+/* Design system entrances (components/ds). They animate `transform`/`opacity`, never the
+   `translate` property Tailwind uses for positioning, so the two don't fight. */
+@keyframes pw-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pw-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes pw-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes pw-sheet-left {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes pw-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
   }
 }
 
