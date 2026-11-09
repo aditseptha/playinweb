@@ -1,3 +1,5 @@
+import type { Curation } from "./curation";
+
 export type Game = {
   id: string
   title: string
@@ -22,6 +24,8 @@ export type Game = {
   /** Creator's profile photo, when they set one. */
   creatorAvatarUrl?: string
   projectSlug?: string
+  /** Set for a curated game by another creator (#9); developer then holds that creator's name. */
+  curated?: Curation
 };
 
 export type Profile = {

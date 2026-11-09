@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { gameDescription, gameJsonLd, gameTitle, jsonLdHtml, type GameSeoInput } from "@/lib/game-seo";
 import { apexHref, apexOrigin, projectPublicUrl, siteOrigin } from "@/lib/host";
-import { PROJECT_SELECT, isPersistedId, projectToGame, type ProjectRecord } from "@/lib/projects";
+import { PROJECT_SELECT, isPersistedId, projectToGame, withCuration, type ProjectRecord } from "@/lib/projects";
 import { createClient } from "@/lib/supabase/server";
 
 // Data and metadata for the game page (/{handle}/{slug}, and /game/[id] which redirects there).
@@ -19,6 +19,13 @@ function toRecord(row: unknown): ProjectRecord | null {
   return { ...rest, comment_count: comments?.[0]?.count ?? 0 };
 }
 
+/** Adds curated-game credit (#9) when the game has any. */
+async function withCredit(supabase: Awaited<ReturnType<typeof createClient>>, record: ProjectRecord | null) {
+  if (!record) return null;
+  const [withRow] = await withCuration(supabase, [record]);
+  return withRow;
+}
+
 export const getGameById = cache(async (id: string) => {
   if (!isPersistedId(id)) return null;
   const supabase = await createClient();
@@ -27,7 +34,7 @@ export const getGameById = cache(async (id: string) => {
     console.error(error);
     return null;
   }
-  return toRecord(data);
+  return withCredit(supabase, toRecord(data));
 });
 
 /** How many published games the creator has, for "{n} games" on the creator card. */
@@ -59,7 +66,7 @@ export const getGameByHandleSlug = cache(async (handle: string, slug: string) =>
     console.error(error);
     return null;
   }
-  return toRecord(data);
+  return withCredit(supabase, toRecord(data));
 });
 
 /** The game's one public address, or null for a game without a creator handle or slug. */

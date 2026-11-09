@@ -190,6 +190,54 @@ export type Database = {
         }
         Relationships: []
       }
+      project_curation: {
+        Row: {
+          claimed_at: string | null
+          creator_name: string
+          creator_url: string | null
+          license: string
+          license_url: string | null
+          listed_at: string
+          listed_by: string | null
+          modified: boolean
+          play_mode: string
+          project_id: string
+          source_code_url: string | null
+          source_url: string | null
+          status: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          creator_name: string
+          creator_url?: string | null
+          license: string
+          license_url?: string | null
+          listed_at?: string
+          listed_by?: string | null
+          modified?: boolean
+          play_mode?: string
+          project_id: string
+          source_code_url?: string | null
+          source_url?: string | null
+          status?: string
+        }
+        Update: {
+          claimed_at?: string | null
+          creator_name?: string
+          creator_url?: string | null
+          license?: string
+          license_url?: string | null
+          listed_at?: string
+          listed_by?: string | null
+          modified?: boolean
+          play_mode?: string
+          project_id?: string
+          source_code_url?: string | null
+          source_url?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       project_screenshots: {
         Row: {
           height: number | null
@@ -524,6 +572,8 @@ export type Database = {
       }
       bump_play_count: { Args: { pid: string }; Returns: undefined }
       bump_view_count: { Args: { pid: string }; Returns: undefined }
+      can_manage_curated: { Args: { owner: string }; Returns: boolean }
+      curated_owner_id: { Args: Record<string, never>; Returns: string }
       is_admin: { Args: Record<string, never>; Returns: boolean }
     }
     Enums: {
