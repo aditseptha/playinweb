@@ -512,6 +512,47 @@ create policy project_stat_days_owner_select on public.project_stat_days
 
 grant select on public.project_stat_days to authenticated;
 
+-- Old /{handle}/{slug} addresses after a slug or owner change; the game page answers them with a 308.
+create table public.project_slug_redirects (
+  owner_id uuid not null references public.profiles (id) on delete cascade,
+  slug text not null,
+  project_id uuid not null references public.projects (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (owner_id, slug)
+);
+
+create index project_slug_redirects_project_id_idx on public.project_slug_redirects (project_id);
+
+alter table public.project_slug_redirects enable row level security;
+
+create policy project_slug_redirects_select on public.project_slug_redirects
+  for select to anon, authenticated using (true);
+
+grant select on public.project_slug_redirects to anon, authenticated;
+
+create or replace function private.record_slug_redirect()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'UPDATE' and (old.slug is distinct from new.slug or old.owner_id is distinct from new.owner_id) then
+    insert into public.project_slug_redirects (owner_id, slug, project_id)
+    values (old.owner_id, old.slug, new.id)
+    on conflict (owner_id, slug) do update
+      set project_id = excluded.project_id, created_at = now();
+  end if;
+  delete from public.project_slug_redirects
+  where owner_id = new.owner_id and slug = new.slug;
+  return new;
+end;
+$$;
+
+create trigger projects_record_slug_redirect
+  after insert or update of slug, owner_id on public.projects
+  for each row execute function private.record_slug_redirect();
+
 create or replace function public.bump_play_count(pid uuid)
 returns void
 language plpgsql

@@ -260,6 +260,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["project_screenshots"]["Insert"]>
         Relationships: []
       }
+      project_slug_redirects: {
+        Row: { created_at: string; owner_id: string; project_id: string; slug: string }
+        Insert: { created_at?: string; owner_id: string; project_id: string; slug: string }
+        Update: { created_at?: string; owner_id?: string; project_id?: string; slug?: string }
+        Relationships: []
+      }
       project_stat_days: {
         Row: { day: string; plays: number; project_id: string; views: number }
         Insert: { day: string; plays?: number; project_id: string; views?: number }
