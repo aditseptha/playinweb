@@ -45,8 +45,8 @@ export function ManageStats({
           return (
             <li key={project.id} className="min-w-0 rounded-panel bg-surface-2 px-4 py-4 sm:px-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
-                <div className="relative aspect-video w-full max-w-[226px] overflow-hidden rounded-lg bg-surface-2 lg:h-[127px] lg:w-[226px] lg:shrink-0">
-                  <GameThumb game={game} sizes="(min-width: 1024px) 226px, 226px" />
+                <div className="relative aspect-[3/4] w-[96px] shrink-0 overflow-hidden rounded-lg bg-surface-2">
+                  <GameThumb game={game} sizes="96px" ratio="portrait" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">

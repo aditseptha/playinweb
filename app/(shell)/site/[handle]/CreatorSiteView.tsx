@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { ChannelHero } from "@/components/ChannelHero";
-import { GameCard } from "@/components/GameCard";
+import { TallCard } from "@/components/home/cards";
+import s from "@/components/home/home.module.css";
+import { HomeUiProvider } from "@/components/home/Peek";
 import { useAuth } from "@/lib/auth";
 import { publicMediaUrl } from "@/lib/media";
-import { maxPopularity } from "@/lib/popularity";
 import { useGames } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/database.types";
@@ -44,12 +45,12 @@ export function CreatorSiteView({
       });
   }, [user, profile.bio, profile.handle, me, local?.bio, refresh]);
 
-  const max = maxPopularity(games.length ? games : [{ playCount: 1, promotionBoost: 0 } as Game]);
   const views = games.reduce((n, game) => n + (game.viewCount ?? 0), 0);
   const plays = games.reduce((n, game) => n + game.playCount, 0);
 
   return (
-    <div className="flex min-w-0 flex-col">
+    <HomeUiProvider>
+      <>
       <ChannelHero
         name={profile.display_name}
         handle={profile.handle}
@@ -62,15 +63,28 @@ export function CreatorSiteView({
         bannerUrl={publicMediaUrl(profile.banner_path) || undefined}
         bannerPosition={profile.banner_position}
       />
-      {games.length === 0 ? (
-        <p className="mt-10 rounded-panel bg-surface-2 px-5 py-10 text-center text-sm text-muted">No published games yet.</p>
-      ) : (
-        <div className="mt-10 grid grid-cols-1 gap-x-5 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
-          {games.map((game) => (
-            <GameCard key={game.id} game={game} maxScore={max} />
-          ))}
+      <section className={s.channelGames}>
+        <div className={s.frame}>
+          <div className={s.wrap}>
+            <div className={s.channelHead}>
+              <h2>Games</h2>
+            </div>
+            {games.length === 0 ? (
+              <div className={s.empty}>
+                <h3>No published games yet</h3>
+                <p>Games this creator publishes will show up here.</p>
+              </div>
+            ) : (
+              <div className={s.grid}>
+                {games.map((game, index) => (
+                  <TallCard key={game.id} game={game} i={index} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    </div>
+      </section>
+      </>
+    </HomeUiProvider>
   );
 }

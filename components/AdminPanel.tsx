@@ -289,8 +289,7 @@ export function AdminPanel() {
 
   return (
     <div className="min-w-0 pt-4">
-      <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-display font-semibold tracking-tight">Admin</h1>
+      <div className="flex min-w-0 justify-end">
         <Segmented
           aria-label="Admin menu"
           value={tab}

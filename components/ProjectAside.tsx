@@ -114,8 +114,8 @@ function MoreGames({ games, root }: { games: Game[]; root: RefObject<HTMLElement
         {visible.map((item) => (
           <li key={item.id}>
             <Link href={gamePath(item)} className="group flex gap-2">
-              <div className="relative aspect-video w-[168px] shrink-0 overflow-hidden rounded-lg bg-surface-2">
-                <GameThumb game={item} sizes="168px" />
+              <div className="relative aspect-[3/4] w-[72px] shrink-0 overflow-hidden rounded-lg bg-surface-2">
+                <GameThumb game={item} sizes="72px" ratio="portrait" />
               </div>
               <div className="min-w-0">
                 <p className="line-clamp-2 text-ui font-medium leading-snug group-hover:text-text-muted">

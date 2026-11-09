@@ -1,19 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  IconBook,
-  IconCompass,
-  IconGhost,
-  IconGrid,
-  IconHeart,
-  IconHistory,
-  IconPuzzle,
-  IconSearch,
-  IconSliders,
-  IconSpark,
-  type AppIcon,
-} from "@/components/icons";
+import { IconSearch, IconSliders } from "@/components/icons";
 import { capitalize, type HomeFilters } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
@@ -21,17 +9,7 @@ import { cn } from "@/lib/cn";
 const TAB_TAGS = 4;
 const SEARCH_DEBOUNCE_MS = 250;
 
-/** Icons for common genres; anything else gets sparkles. */
-function tagIcon(tag: string): AppIcon {
-  const t = tag.toLowerCase();
-  if (/horror|horor|scary|ghost/.test(t)) return IconGhost;
-  if (/story|folk|narrative|visual novel|cerita/.test(t)) return IconBook;
-  if (/adventure|explor|petualangan/.test(t)) return IconCompass;
-  if (/puzzle/.test(t)) return IconPuzzle;
-  return IconSpark;
-}
-
-type Tab = { key: string; label: string; icon: AppIcon; active: boolean; onClick: () => void };
+type Tab = { key: string; label: string; active: boolean; onClick: () => void };
 
 export function TabBar({
   filters,
@@ -66,28 +44,13 @@ export function TabBar({
   const nothing = !filters.view && !filters.tags.length && !filters.creators.length;
 
   const tabs: Tab[] = [
-    { key: "all", label: "All games", icon: IconGrid, active: nothing, onClick: onReset },
+    { key: "all", label: "All games", active: nothing, onClick: onReset },
     ...tags.slice(0, TAB_TAGS).map((tag) => ({
       key: `tag:${tag}`,
       label: capitalize(tag),
-      icon: tagIcon(tag),
       active: onlyTag === tag,
       onClick: () => onChange({ view: null, creators: [], tags: [tag] }),
     })),
-    {
-      key: "saved",
-      label: "Favorites",
-      icon: IconHeart,
-      active: filters.view === "saved",
-      onClick: () => onChange({ view: "saved" }),
-    },
-    {
-      key: "recent",
-      label: "Recently played",
-      icon: IconHistory,
-      active: filters.view === "recent",
-      onClick: () => onChange({ view: "recent" }),
-    },
   ];
   const activeKey = tabs.find((t) => t.active)?.key ?? null;
 
@@ -144,7 +107,6 @@ export function TabBar({
         />
         {tabs.map((t) => (
           <button key={t.key} type="button" className={s.tab} aria-pressed={t.active} onClick={t.onClick}>
-            <t.icon className={cn(s.ic, s.sm)} />
             {t.label}
           </button>
         ))}

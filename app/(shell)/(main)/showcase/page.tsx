@@ -635,12 +635,12 @@ function ShowcaseRow({ game, rank }: { game: Game; rank: number; bid: number }) 
   const play = game.embeddable && game.playUrl ? `${href}?play=1` : href;
 
   return (
-    <article className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-panel border border-border bg-surface/90 px-4 py-3.5 shadow-panel backdrop-blur-sm hover:bg-surface sm:grid-cols-[3rem_140px_minmax(0,1fr)_auto]">
+    <article className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-panel border border-border bg-surface/90 px-4 py-3.5 shadow-panel backdrop-blur-sm hover:bg-surface sm:grid-cols-[3rem_72px_minmax(0,1fr)_auto]">
       <Link href={href} className="text-center text-body font-semibold tabular text-text-muted">
         #{rank}
       </Link>
-      <Link href={href} className="relative hidden aspect-video overflow-hidden rounded-lg bg-surface-2 sm:block">
-        <GameThumb game={game} sizes="140px" />
+      <Link href={href} className="relative hidden aspect-[3/4] overflow-hidden rounded-lg bg-surface-2 sm:block">
+        <GameThumb game={game} sizes="72px" ratio="portrait" />
       </Link>
       <div className="min-w-0">
         <h3 className="truncate text-ui font-medium">

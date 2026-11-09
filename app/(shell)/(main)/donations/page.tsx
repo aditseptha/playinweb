@@ -57,6 +57,7 @@ type DonationRow = {
   handle: string | null;
   slug: string;
   cover: string;
+  portrait: string;
   total: number;
   lastAt: string;
   detail: string;
@@ -65,7 +66,7 @@ type DonationRow = {
 };
 
 const SELECT =
-  "id, amount, commission_pct, created_at, project_id, donor_email, donor_handle, creator_name, creator_handle, game_title, game_slug, projects ( title, slug, cover_path, profiles!projects_owner_id_fkey ( handle, display_name ) )";
+  "id, amount, commission_pct, created_at, project_id, donor_email, donor_handle, creator_name, creator_handle, game_title, game_slug, projects ( title, slug, cover_path, cover_portrait_path, profiles!projects_owner_id_fkey ( handle, display_name ) )";
 
 export default function DonationsPage() {
   return (
@@ -304,8 +305,8 @@ function DonationSection({
             return (
               <li key={row.projectId} className="overflow-hidden rounded-panel bg-surface-2">
                 <div className="flex items-center gap-4 px-4 py-3">
-                  <Link href={href} className="relative h-16 w-28 shrink-0 overflow-hidden rounded-lg bg-surface-2">
-                    <GameThumb game={asGame(row)} sizes="112px" />
+                  <Link href={href} className="relative aspect-[3/4] h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-2">
+                    <GameThumb game={asGame(row)} sizes="48px" ratio="portrait" />
                   </Link>
                   <div className="min-w-0 flex-1">
                     <Link href={href} className="block truncate font-medium hover:text-text-muted">
@@ -354,8 +355,8 @@ function DonationSection({
               row.handle && row.slug ? projectPublicUrl(row.handle, row.slug) : gamePath(asGame(row));
             return (
               <li key={row.projectId} className="flex items-center gap-4 px-4 py-3">
-                <Link href={href} className="relative h-16 w-28 shrink-0 overflow-hidden rounded-lg bg-surface-2">
-                  <GameThumb game={asGame(row)} sizes="112px" />
+                <Link href={href} className="relative aspect-[3/4] h-16 w-12 shrink-0 overflow-hidden rounded-lg bg-surface-2">
+                  <GameThumb game={asGame(row)} sizes="48px" ratio="portrait" />
                 </Link>
                 <div className="min-w-0 flex-1">
                   <Link href={href} className="block truncate font-medium hover:text-text-muted">
@@ -882,6 +883,7 @@ function asGame(row: DonationRow): Game {
     description: row.title,
     playUrl: "",
     thumbnailUrl: row.cover,
+    portraitUrl: row.portrait || undefined,
     screenshots: [],
     embeddable: false,
     tags: [],
@@ -961,6 +963,7 @@ function groupDonations(raw: unknown, mode: Mode): DonationRow[] {
       handle,
       slug,
       cover: publicMediaUrl(typeof project?.cover_path === "string" ? project.cover_path : null),
+      portrait: publicMediaUrl(typeof project?.cover_portrait_path === "string" ? project.cover_portrait_path : null),
       total: add,
       lastAt: createdAt,
       detail: mode === "earn" ? "Supporters" : person?.label ?? "Creator",

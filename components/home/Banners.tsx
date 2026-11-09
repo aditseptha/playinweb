@@ -90,7 +90,7 @@ export function CreatorCTA({ games }: { games: Game[] }) {
         <div className={s.thumbs} aria-hidden>
           {games.slice(0, 3).map((game) => (
             <div key={game.id} className={s.thumb}>
-              <GameThumb game={game} sizes="122px" />
+              <GameThumb game={game} sizes="122px" ratio="portrait" />
             </div>
           ))}
         </div>

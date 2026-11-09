@@ -10,7 +10,8 @@ import {
   useChannelImageUpload,
 } from "@/components/ChannelMedia";
 import { IconPencil, IconShield } from "@/components/icons";
-import { Button, LinkButton } from "@/components/ui/button";
+import s from "@/components/home/home.module.css";
+import { Button } from "@/components/ui/button";
 import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
@@ -116,15 +117,27 @@ export function ChannelHero({
     }
   }
 
+  const avatar = canEdit && !reposition ? (
+    <ImageEdit
+      kind="avatar"
+      hasImage={Boolean(avatarUrl)}
+      pending={pending === "avatar"}
+      busy={pending != null}
+      onPick={(file) => onPick("avatar", file)}
+      onRemove={() => void remove("avatar")}
+      className={s.channelAvatar}
+    >
+      <Avatar name={name} src={avatarUrl} size={96} />
+    </ImageEdit>
+  ) : (
+    <Avatar name={name} src={avatarUrl} size={96} className={s.channelAvatar} />
+  );
+
   return (
-    <div>
-      <div className="relative h-[200px] rounded-panel bg-surface-2 sm:h-[260px] lg:h-[320px]">
-        <div className="absolute inset-0 overflow-hidden rounded-panel">
+    <section className={s.channel}>
+      <div className={s.channelMedia}>
+        <div className={s.channelArt}>
           <BannerImage src={shownBanner} position={shownPos} />
-          <div
-            className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/80 via-black/45 to-black/10"
-            aria-hidden
-          />
         </div>
         {canEdit && !reposition ? (
           <ImageEdit
@@ -149,103 +162,71 @@ export function ChannelHero({
             onConfirm={() => void confirmBanner()}
           />
         ) : null}
-        <div className="absolute inset-x-0 bottom-0 z-40 flex flex-col gap-3 p-4 sm:flex-row sm:items-end sm:gap-5 sm:p-5 lg:p-6">
-          {canEdit && !reposition ? (
-            <ImageEdit
-              kind="avatar"
-              hasImage={Boolean(avatarUrl)}
-              pending={pending === "avatar"}
-              busy={pending != null}
-              onPick={(file) => onPick("avatar", file)}
-              onRemove={() => void remove("avatar")}
-              className="size-[92px] shrink-0 self-start translate-x-1 translate-y-1 rounded-full ring-2 ring-white"
-            >
-              <Avatar name={name} src={avatarUrl} size={92} />
-            </ImageEdit>
-          ) : (
-            <Avatar name={name} src={avatarUrl} size={92} className="self-start translate-x-1 translate-y-1 ring-2 ring-white" />
-          )}
-          <div className="min-w-0 flex-1">
-            <h1 className="text-[24px] font-semibold tracking-tight text-white sm:text-[32px]">{name || "You"}</h1>
-            {subtitle ? (
-              <p className="mt-1 text-sm text-white/75">{subtitle}</p>
-            ) : (
-              <>
-                <p className="mt-1 text-sm text-white/75">
-                  <span className="text-white">@{handle}</span>
-                  <span aria-hidden> · </span>
-                  {formatPlays(followers ?? 0)} {(followers ?? 0) === 1 ? "follower" : "followers"}
-                  <span aria-hidden> · </span>
-                  {gameCount} {gameCount === 1 ? "game" : "games"}
-                  <span aria-hidden> · </span>
-                  {formatPlays(views ?? 0)} {(views ?? 0) === 1 ? "view" : "views"}
-                  <span aria-hidden> · </span>
-                  {formatPlays(plays)} plays
-                </p>
-                {bio ? (
-                  <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-white/70">
-                    {shortBio}{" "}
-                    {truncated && moreHref ? (
-                      <Link href={moreHref} className="font-medium text-white hover:text-white/80">
-                        more
+      </div>
+      <div className={cn(s.frame, s.channelBody)}>
+        <div className={s.wrap}>
+          <div className={s.channelRow}>
+            <div className={s.channelWho}>
+              {avatar}
+              <div className="min-w-0">
+                <p className={s.eyebrow}>@{handle || "you"}</p>
+                <h1 className={s.channelTitle}>{name || "You"}</h1>
+                {subtitle ? (
+                  <p className={s.channelBio}>{subtitle}</p>
+                ) : (
+                  <>
+                    <p className={s.channelStats}>
+                      <b>{formatPlays(followers ?? 0)}</b> {(followers ?? 0) === 1 ? "follower" : "followers"}
+                      <span aria-hidden> · </span>
+                      <b>{gameCount}</b> {gameCount === 1 ? "game" : "games"}
+                      <span aria-hidden> · </span>
+                      <b>{formatPlays(views ?? 0)}</b> {(views ?? 0) === 1 ? "view" : "views"}
+                      <span aria-hidden> · </span>
+                      <b>{formatPlays(plays)}</b> plays
+                    </p>
+                    {bio ? (
+                      <p className={s.channelBio}>
+                        {shortBio}{" "}
+                        {truncated && moreHref ? (
+                          <Link href={moreHref} className={s.linkGold}>
+                            more
+                          </Link>
+                        ) : null}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+                {showOwnerActions ? (
+                  <div className={s.channelActions}>
+                    {admin ? (
+                      <Link href={apexHref("/admin")} className={cn(s.btn, s.btnGhost)} aria-label="Admin" title="Admin">
+                        <IconShield className="h-4 w-4" />
                       </Link>
                     ) : null}
-                  </p>
+                    <Link href={apexHref("/profile?edit=1")} className={cn(s.btn, s.btnGhost)}>
+                      Profile setting
+                    </Link>
+                    <Link href={apexHref("/manage")} className={cn(s.btn, s.btnGhost)}>
+                      Manage games
+                    </Link>
+                    {showSiteLink ? (
+                      <Link href={siteOrigin(handle)} className={cn(s.btn, s.btnPrimary)}>
+                        View site
+                      </Link>
+                    ) : null}
+                  </div>
                 ) : null}
-              </>
-            )}
-          </div>
-          {showOwnerActions ? (
-            <div className="flex flex-wrap items-center gap-1 rounded-xl bg-black/35 p-1 backdrop-blur-sm sm:justify-end">
-              {admin ? (
-                <HeroIconLink href={apexHref("/admin")} label="Admin">
-                  <IconShield className="h-4 w-4" />
-                </HeroIconLink>
-              ) : null}
-              <LinkButton href={apexHref("/profile?edit=1")} variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white">
-                Profile setting
-              </LinkButton>
-              <LinkButton href={apexHref("/manage")} variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white">
-                Manage games
-              </LinkButton>
-              {showSiteLink ? (
-                <LinkButton href={siteOrigin(handle)} variant="ghost" size="sm" className="text-white hover:bg-white/10 hover:text-white">
-                  View site
-                </LinkButton>
-              ) : null}
+              </div>
             </div>
+          </div>
+          {canEdit && error ? (
+            <p className="mt-3 text-sm text-red-300" role="alert">
+              {error}
+            </p>
           ) : null}
         </div>
       </div>
-      {canEdit && error ? (
-        <p className="mt-2 text-caption text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function HeroIconLink({
-  href,
-  label,
-  children,
-}: {
-  href: string;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <LinkButton
-      href={href}
-      variant="ghost"
-      size="sm"
-      aria-label={label}
-      title={label}
-      className="w-8 !px-0 text-white hover:bg-white/10 hover:text-white"
-    >
-      {children}
-    </LinkButton>
+    </section>
   );
 }
 
@@ -288,11 +269,7 @@ function ImageEdit({
   return (
     <div
       ref={rootRef}
-      className={cn(
-        "group/edit",
-        cover ? "pointer-events-auto absolute top-3 right-3 z-50" : "relative z-30",
-        className,
-      )}
+      className={cn("group/edit", cover ? s.channelEdit : "relative z-30", className)}
     >
       {children}
       {cover ? (
@@ -331,7 +308,7 @@ function ImageEdit({
         <div
           className={cn(
             "pointer-events-auto absolute z-50 w-32",
-            cover ? "right-0 top-full mt-2" : "bottom-full left-1/2 mb-2 -translate-x-1/2",
+            cover ? "right-0 top-full mt-2" : "top-full left-1/2 mt-2 -translate-x-1/2",
           )}
         >
           <div className="rounded-xl bg-black/85 p-1 text-white shadow-panel backdrop-blur-sm">

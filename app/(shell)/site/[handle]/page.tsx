@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { WithAppShell } from "@/components/WithAppShell";
+import { HomeShell } from "@/components/home/HomeShell";
 import { fetchProjectsForHandle, projectToGame } from "@/lib/projects";
 import { CreatorSiteView } from "./CreatorSiteView";
+
+export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
+  const { handle } = await params;
+  return { title: `@${handle}` };
+}
 
 export default async function CreatorSitePage({ params }: { params: Promise<{ handle: string }> }) {
   const { handle } = await params;
@@ -10,8 +16,8 @@ export default async function CreatorSitePage({ params }: { params: Promise<{ ha
 
   const games = projects.map(projectToGame);
   return (
-    <WithAppShell>
+    <HomeShell>
       <CreatorSiteView profile={profile} games={games} />
-    </WithAppShell>
+    </HomeShell>
   );
 }

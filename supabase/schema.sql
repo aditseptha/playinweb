@@ -616,7 +616,7 @@ create table private.admins (
 
 insert into private.admins (email) values
   ('aditseptha@gmail.com'),
-  ('rizkyerdiansyah@gmail.com');
+  ('rizkyedriansyah@gmail.com');
 
 create or replace function public.is_admin()
 returns boolean

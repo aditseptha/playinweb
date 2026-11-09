@@ -20,7 +20,6 @@ import {
   IconTrophy,
   IconUsers,
 } from "@/components/icons";
-import { MosaicGrid } from "@/components/ui/mosaic-grid";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { canOpenFeature, useFeature } from "@/lib/features";
@@ -213,16 +212,6 @@ function Podium({ games }: { games: Game[] }) {
   const [first, second, third] = games;
   return (
     <section aria-label="Top three" className="relative px-4 pt-6">
-      {/* Footer-style mosaic rising behind the plinths. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[512px] overflow-hidden text-[var(--brand-blue,#0073f8)] [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]"
-      >
-        <div className="absolute bottom-0 left-1/2 w-[1440px] -translate-x-1/2">
-          <MosaicGrid cols={90} rows={24} solidRows={5} fade={8} />
-        </div>
-      </div>
-
       <ol className="mx-auto grid max-w-[896px] grid-cols-2 items-end gap-x-3 gap-y-8 md:flex md:justify-center md:gap-7">
         {first ? (
           <Place game={first} rank={1} className="col-span-2 mx-auto w-full max-w-[340px] md:order-2 md:w-[320px] md:max-w-none" />
@@ -258,12 +247,21 @@ function Place({ game, rank, className }: { game: Game; rank: Rank; className?: 
   );
 }
 
+function coverArt(game: Game) {
+  const portrait = Boolean(game.portraitUrl);
+  return {
+    src: game.portraitUrl || game.thumbnailUrl,
+    position: portrait
+      ? "50% 50%"
+      : focalToObjectPosition(
+          game.focalX !== undefined && game.focalY !== undefined ? { x: game.focalX, y: game.focalY } : null,
+        ),
+  };
+}
+
 function PodiumCard({ game, rank }: { game: Game; rank: Rank }) {
   const big = rank === 1;
-  const cover = game.portraitUrl || game.thumbnailUrl;
-  const position = game.portraitUrl
-    ? "50% 50%"
-    : focalToObjectPosition(game.focalX !== undefined && game.focalY !== undefined ? { x: game.focalX, y: game.focalY } : null);
+  const { src: cover, position } = coverArt(game);
 
   return (
     <article
@@ -410,10 +408,11 @@ function Stats({ game, className }: { game: Game; className: string }) {
 }
 
 function RankedRow({ game, rank }: { game: Game; rank: number }) {
+  const cover = coverArt(game);
   return (
     <article
       className={cn(
-        "group relative grid grid-cols-[34px_72px_minmax(0,1fr)_auto] items-center gap-3 rounded-pw-lg border border-pw-line bg-pw-surface-1 py-2.5 pr-3 pl-2.5 sm:grid-cols-[44px_112px_minmax(0,1fr)_auto_auto] sm:gap-[18px] sm:py-3 sm:pr-3.5 sm:pl-3",
+        "group relative grid grid-cols-[34px_48px_minmax(0,1fr)_auto] items-center gap-3 rounded-pw-lg border border-pw-line bg-pw-surface-1 py-2.5 pr-3 pl-2.5 sm:grid-cols-[44px_64px_minmax(0,1fr)_auto_auto] sm:gap-[18px] sm:py-3 sm:pr-3.5 sm:pl-3",
         "transition-[background-color,border-color,box-shadow,translate] duration-200 ease-pw-out",
         "hover:-translate-y-px hover:border-pw-line-strong hover:bg-pw-surface-3 hover:shadow-pw-2 motion-reduce:hover:translate-y-0",
         "has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-pw-focus-ring",
@@ -423,15 +422,9 @@ function RankedRow({ game, rank }: { game: Game; rank: number }) {
         <span className="sr-only">Rank </span>
         {rank}
       </span>
-      <div className="relative isolate aspect-video overflow-hidden rounded-[10px] border border-pw-line bg-pw-surface-3">
-        {game.thumbnailUrl ? (
-          <CoverImage
-            src={game.thumbnailUrl}
-            position={focalToObjectPosition(
-              game.focalX !== undefined && game.focalY !== undefined ? { x: game.focalX, y: game.focalY } : null,
-            )}
-            sizes="112px"
-          />
+      <div className="relative isolate aspect-[3/4] overflow-hidden rounded-[10px] border border-pw-line bg-pw-surface-3">
+        {cover.src ? (
+          <CoverImage src={cover.src} position={cover.position} sizes="64px" />
         ) : (
           <span aria-hidden className="grid size-full place-items-center bg-linear-to-br from-pw-deep to-pw-navy font-pw-display text-[22px] font-extrabold text-pw-sky uppercase italic">
             {game.title.trim().slice(0, 2)}

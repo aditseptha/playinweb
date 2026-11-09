@@ -11,8 +11,8 @@ import s from "./game-card.module.css";
 import { Skeleton } from "./skeleton";
 import { focusRing, onArt } from "./styles";
 
-// One card for every game listing. Ratios follow the media standard (#5): 16:9 for feature,
-// wide and row; 3:4 for tall. Crops follow the creator's focal point (cover_focal_x/y, 0–1).
+// One card for every game listing. Ratios follow the media standard (#5): 16:9 for feature
+// and wide cards, and for the game page. 3:4 for tall cards and row thumbnails.
 
 export type GameCardData = {
   title: string;
@@ -58,12 +58,13 @@ const SIZES: Record<Variant, string> = {
   feature: "(min-width: 1024px) 30vw, (min-width: 768px) 48vw, 92vw",
   wide: "(min-width: 1024px) 30vw, (min-width: 768px) 48vw, 92vw",
   tall: "(min-width: 1024px) 15vw, (min-width: 768px) 24vw, 46vw",
-  row: "112px",
+  row: "64px",
 };
 
 function Cover({ data, variant, priority }: { data: GameCardData; variant: Variant; priority?: boolean }) {
-  const src = variant === "tall" ? data.coverPortrait || data.cover : data.cover;
-  const position = variant === "tall" && data.coverPortrait ? "50% 50%" : focalToObjectPosition(data.focal);
+  const portrait = variant === "tall" || variant === "row";
+  const src = portrait ? data.coverPortrait || data.cover : data.cover;
+  const position = portrait && data.coverPortrait ? "50% 50%" : focalToObjectPosition(data.focal);
   const img =
     "object-cover transition-transform duration-500 ease-pw-out group-hover:scale-[1.04] motion-reduce:transition-none";
 
@@ -194,7 +195,7 @@ export function GameCard({
             {rank}
           </span>
         ) : null}
-        <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-pw-md bg-pw-surface-3">
+        <div className="relative aspect-[3/4] w-16 shrink-0 overflow-hidden rounded-pw-md bg-pw-surface-3">
           <Cover data={data} variant="row" priority={priority} />
         </div>
         <div className="min-w-0 flex-1">
@@ -349,7 +350,7 @@ export function GameCardSkeleton({ variant = "wide", className }: { variant?: Va
   if (variant === "row") {
     return (
       <div className={cn("flex items-center gap-4 p-2", className)} aria-hidden>
-        <Skeleton className="aspect-video w-28 rounded-pw-md" />
+        <Skeleton className="aspect-[3/4] w-16 rounded-pw-md" />
         <div className="flex-1 space-y-2">
           <Skeleton className="h-4 w-2/3" />
           <Skeleton className="h-3 w-1/3" />

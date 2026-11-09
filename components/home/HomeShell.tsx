@@ -3,8 +3,8 @@
 import { IconLogout, IconMenu, IconMoon, IconPlus, IconSun, IconUser } from "@/components/icons";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { dsFontVars } from "@/app/fonts";
 import { Avatar } from "@/components/Avatar";
 import { MosaicGrid } from "@/components/ui/mosaic-grid";
@@ -27,8 +27,17 @@ import { switchTheme } from "@/lib/theme";
 /** Top-level links: only pages that exist; feature-flagged ones follow the admin flags. */
 const NAV = [
   { href: "/top", label: "Rankings" },
+  { href: "/?view=saved", label: "Favorites" },
+  { href: "/?view=recent", label: "Recently played" },
   { href: "/showcase", label: "Showcase" },
 ];
+
+function navCurrent(href: string, pathname: string, view: string | null) {
+  if (href.startsWith("/?")) {
+    return pathname === "/" && new URLSearchParams(href.slice(2)).get("view") === view;
+  }
+  return pathname === href;
+}
 
 /** What the sidebar offers on other pages, so it stays one click away from the homepage. */
 const ACCOUNT_LINKS = [
@@ -185,12 +194,26 @@ function usePopover() {
   return { open, setOpen, ref };
 }
 
+function PrimaryNav() {
+  const pathname = usePathname();
+  const view = useSearchParams().get("view");
+  const visible = useVisible();
+  return (
+    <nav className={s.navlinks} aria-label="Primary">
+      {NAV.filter((l) => visible(l.href)).map((l) => (
+        <Link key={l.href} href={hrefFor(l.href)} aria-current={navCurrent(l.href, pathname, view) ? "page" : undefined}>
+          {l.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 function Nav({ onReport }: { onReport: () => void }) {
   const { user, profile, loading, signOut } = useAuth();
   const { openLogin } = useLoginDialog();
   const { openSignup } = useSignupDialog();
   const visible = useVisible();
-  const pathname = usePathname();
   const { open: accountOpen, setOpen: setAccountOpen, ref: accountRef } = usePopover();
   const [sheet, setSheet] = useState(false);
 
@@ -201,13 +224,9 @@ function Nav({ onReport }: { onReport: () => void }) {
           <Link href="/" aria-label="PlayInWeb home">
             <Logo animated />
           </Link>
-          <nav className={s.navlinks} aria-label="Primary">
-            {NAV.filter((l) => visible(l.href)).map((l) => (
-              <Link key={l.href} href={hrefFor(l.href)} aria-current={pathname === l.href ? "page" : undefined}>
-                {l.label}
-              </Link>
-            ))}
-          </nav>
+          <Suspense fallback={null}>
+            <PrimaryNav />
+          </Suspense>
           <div className={s.navTools}>
             <ThemeButton />
             {user ? (

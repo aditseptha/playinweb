@@ -124,7 +124,7 @@ export function ProfileForm({
                   : "Used in your public channel URL."
         }
       >
-        <div className="flex h-10 items-center rounded-lg bg-surface-2 px-3 sm:h-9">
+        <div className="flex h-10 items-center overflow-hidden rounded-lg bg-surface-2 px-3 sm:h-9">
           <span className="text-text-subtle">@</span>
           <TextInput
             name="handle"

@@ -92,9 +92,9 @@ export function GameCard({
       <article className="flex gap-2 rounded-lg p-1.5 -ml-1.5 hover:bg-surface-2">
         <Link
           href={gamePath(game)}
-          className="relative h-[94px] w-[168px] shrink-0 overflow-hidden rounded-lg bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="relative aspect-[3/4] w-[70px] shrink-0 overflow-hidden rounded-lg bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
-          <GameThumb game={game} sizes="168px" />
+          <GameThumb game={game} sizes="70px" ratio="portrait" />
         </Link>
         <div className="min-w-0 py-0.5">
           <h3 className="line-clamp-2 text-sm font-medium leading-snug">
@@ -116,12 +116,12 @@ export function GameCard({
 
   if (variant === "mini") {
     return (
-      <article className="w-[140px] shrink-0 snap-start">
+      <article className="w-[112px] shrink-0 snap-start">
         <Link
           href={gamePath(game)}
-          className="group relative block aspect-video overflow-hidden rounded-lg bg-surface-2"
+          className="group relative block aspect-[3/4] overflow-hidden rounded-lg bg-surface-2"
         >
-          <GameThumb game={game} sizes="140px" />
+          <GameThumb game={game} sizes="112px" ratio="portrait" />
         </Link>
         <h3 className="mt-2 truncate text-caption font-medium">
           <Link href={gamePath(game)} className="text-text hover:text-text-muted">
@@ -164,16 +164,17 @@ export function GameCard({
 
   if (variant === "featured") {
     return (
-      <article className="relative grid gap-3 rounded-panel bg-surface-2 p-3 sm:gap-4 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
+      <article className="relative grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-panel bg-surface-2 p-3 sm:gap-4">
         <Link
           href={playHref(game)}
           aria-label={`Play ${game.title}`}
-          className="group relative aspect-[16/9] w-full overflow-hidden rounded-lg bg-surface md:aspect-auto md:h-[100px] md:w-[160px] lg:h-[112px] lg:w-[200px]"
+          className="group relative aspect-[3/4] w-[84px] shrink-0 overflow-hidden rounded-lg bg-surface"
         >
           <GameThumb
             game={game}
             priority={priority}
-            sizes="(min-width: 768px) 200px, 100vw"
+            sizes="84px"
+            ratio="portrait"
           />
           <Badges game={game} />
         </Link>
