@@ -27,7 +27,7 @@ import { Field, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { cn } from "@/lib/cn";
-import { CURATION_LICENSES } from "@/lib/curation";
+import { CURATION_LICENSES, LINK_OUT_LICENSE } from "@/lib/curation";
 import type { Database } from "@/lib/database.types";
 import { slugify } from "@/lib/format";
 import { taglineFrom, type LinkPreview } from "@/lib/link-preview";
@@ -112,7 +112,7 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
   const [description, setDescription] = useState(project?.description ?? "");
   const [slug, setSlug] = useState(project?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
-  // Curated games are always hosted here (link-out curated games come later, #9 F2).
+  // A curated game is hosted here (open license or permission) or links out to the creator's page (#9 F2).
   const [kind, setKind] = useState<ProjectKind | null>(project ? asKind(project.kind) : curated ? "html" : null);
   const [curation, setCuration] = useState<CurationDraft>(() => curationDraft(curated?.row));
   const [detailsOpen, setDetailsOpen] = useState(editing);
@@ -143,7 +143,9 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
   const [pending, setPending] = useState(false);
 
   const playChoices = useMemo(() => {
-    const choices = curated ? KIND_CHOICES.filter((choice) => choice.id === "html") : [...KIND_CHOICES];
+    const choices = curated
+      ? KIND_CHOICES.filter((choice) => choice.id === "html" || choice.id === "external")
+      : [...KIND_CHOICES];
     if (project && !choices.some((choice) => choice.id === project.kind)) {
       choices.push({ id: project.kind as ProjectKind, title: project.kind, hint: "Current type" });
     }
@@ -270,12 +272,15 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
         setError("Add the creator's name.");
         return;
       }
-      if (!(CURATION_LICENSES as readonly string[]).includes(curation.license)) {
-        setError("Choose the license that lets us host this game.");
-        return;
-      }
       if (links.some((link) => link.trim() && !isHttpUrl(link.trim()))) {
         setError("Links must start with http:// or https://.");
+        return;
+      }
+    }
+    // Hosting someone else's build needs a license; a link-out game hosts nothing, so it skips these.
+    if (curated && kind !== "external") {
+      if (!(CURATION_LICENSES as readonly string[]).includes(curation.license)) {
+        setError("Choose the license that lets us host this game.");
         return;
       }
       if (["GPL-2.0", "GPL-3.0", "LGPL-3.0", "AGPL-3.0", "MPL-2.0"].includes(curation.license) && !curation.sourceCodeUrl.trim()) {
@@ -532,16 +537,17 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
 
       if (curated) {
         setStatus("Saving credit…");
+        const linkOut = kind === "external";
         const credit = {
           project_id: projectId,
-          play_mode: "hosted",
+          play_mode: linkOut ? "link_out" : "hosted",
           creator_name: curation.creatorName.trim(),
           creator_url: curation.creatorUrl.trim() || null,
           source_url: curation.sourceUrl.trim() || null,
           source_code_url: curation.sourceCodeUrl.trim() || null,
-          license: curation.license,
-          license_url: curation.licenseUrl.trim() || null,
-          modified: curation.modified,
+          license: linkOut ? LINK_OUT_LICENSE : curation.license,
+          license_url: linkOut ? null : curation.licenseUrl.trim() || null,
+          modified: linkOut ? false : curation.modified,
           ...(curated.row ? {} : { listed_by: user.id }),
         };
         const { error: creditError } = await supabase.from("project_curation").upsert(credit, { onConflict: "project_id" });
@@ -741,7 +747,14 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
         </SelectField>
       </section>
 
-      {curated ? <CurationFields draft={curation} onChange={setCuration} requireConfirm={!editing} /> : null}
+      {curated ? (
+        <CurationFields
+          draft={curation}
+          onChange={setCuration}
+          requireConfirm={!editing}
+          linkOut={kind === "external"}
+        />
+      ) : null}
 
       <section className={f.block}>
         <header className={f.head}>

@@ -48,6 +48,12 @@ export const CURATION_LICENSES = [
   "Permission",
 ] as const;
 
+/**
+ * The license value for a link-out curated game (#9 F2). We only link to the creator's own page and
+ * host nothing, so no hosting license applies. Not in CURATION_LICENSES, which are for hosted builds.
+ */
+export const LINK_OUT_LICENSE = "Link only";
+
 const LICENSE_LABELS: Record<string, string> = {
   MIT: "MIT License",
   "Apache-2.0": "Apache License 2.0",
@@ -65,6 +71,7 @@ const LICENSE_LABELS: Record<string, string> = {
   "CC-BY-SA-4.0": "CC BY-SA 4.0",
   Unlicense: "The Unlicense",
   Permission: "Shared with the creator's permission",
+  [LINK_OUT_LICENSE]: "Played on the creator's site",
 };
 
 export function licenseLabel(license: string) {
