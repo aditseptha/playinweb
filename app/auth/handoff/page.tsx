@@ -2,14 +2,26 @@
 
 import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { HomeShell } from "@/components/home/HomeShell";
+import s from "@/components/home/home.module.css";
 import { safeReturnTo } from "@/lib/host";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthHandoffPage() {
   return (
-    <Suspense fallback={<p className="text-ui text-text-muted">Signing you in…</p>}>
-      <Handoff />
-    </Suspense>
+    <HomeShell>
+      <div className={s.create}>
+        <div className={s.frame}>
+          <div className={s.wrap}>
+            <p className={s.eyebrow}>Account</p>
+            <h1 className={s.createTitle}>Signing you in</h1>
+            <Suspense fallback={<p className={s.legalIntro}>Signing you in…</p>}>
+              <Handoff />
+            </Suspense>
+          </div>
+        </div>
+      </div>
+    </HomeShell>
   );
 }
 
@@ -42,5 +54,5 @@ function Handoff() {
     void run();
   }, [params]);
 
-  return <p className="text-ui text-text-muted">Signing you in…</p>;
+  return <p className={s.legalIntro}>Signing you in…</p>;
 }

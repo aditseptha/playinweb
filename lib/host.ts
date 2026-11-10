@@ -148,7 +148,6 @@ export const APEX_PATHS = [
   "/top",
   "/showcase",
   "/downloads",
-  "/report",
   "/privacy",
   "/terms",
   "/tip",

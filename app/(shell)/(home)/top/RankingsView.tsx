@@ -35,9 +35,9 @@ const MAX_RANK = 50;
 const PAGE = 20;
 
 const RANGES: Array<{ value: PlayRange; label: string; icon: typeof IconTrophy; note: string }> = [
-  { value: "all", label: "All time", icon: IconTrophy, note: "Ranked by plays · All time" },
   { value: "day", label: "Today", icon: IconCalendar, note: "Trending today" },
   { value: "week", label: "This week", icon: IconClock, note: "Trending this week" },
+  { value: "all", label: "All time", icon: IconTrophy, note: "Ranked by plays · All time" },
 ];
 
 const MEDAL = {
@@ -82,7 +82,7 @@ export function RankingsView({ initialGames }: { initialGames: Game[] }) {
 
 function Rankings({ initialGames }: { initialGames: Game[] }) {
   const store = useGames();
-  const [range, setRange] = useState<PlayRange>("all");
+  const [range, setRange] = useState<PlayRange>("week");
   const [shown, setShown] = useState(PAGE);
 
   const ranked = useMemo(() => {

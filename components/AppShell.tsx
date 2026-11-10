@@ -7,6 +7,7 @@ import { Fragment, useEffect, useId, useState, useSyncExternalStore, type FormEv
 import { Notices } from "@/components/Notices";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { LegalProvider } from "@/components/LegalModal";
+import { ReportDialog } from "@/components/ReportDialog";
 import { SignupProvider } from "@/components/SignupDialog";
 import {
   IconChevron,
@@ -91,6 +92,7 @@ function subscribeStorage(onChange: () => void) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const collapsed = useSyncExternalStore(
     subscribeStorage,
     () => localStorage.getItem(SIDEBAR_KEY) === "1",
@@ -122,7 +124,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       <div className="hidden h-full min-h-0 shrink-0 md:flex">
-        <Sidebar className="flex" collapsed={collapsed} onToggleCollapse={toggleCollapsed} />
+        <Sidebar
+          className="flex"
+          collapsed={collapsed}
+          onToggleCollapse={toggleCollapsed}
+          onReport={() => setReportOpen(true)}
+        />
       </div>
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-4 sm:px-6 lg:px-10">
         {open ? (
@@ -136,6 +143,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sidebar
               className="relative z-10 m-3 flex max-h-[calc(100%-1.5rem)]"
               onNavigate={() => setOpen(false)}
+              onReport={() => {
+                setOpen(false);
+                setReportOpen(true);
+              }}
             />
           </div>
         ) : null}
@@ -154,6 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      {reportOpen ? <ReportDialog onClose={() => setReportOpen(false)} /> : null}
     </div>
     </SignupProvider>
     </LegalProvider>
@@ -440,11 +452,13 @@ function Sidebar({
   onNavigate,
   collapsed = false,
   onToggleCollapse,
+  onReport,
 }: {
   className?: string;
   onNavigate?: () => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  onReport?: () => void;
 }) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
@@ -558,8 +572,9 @@ function Sidebar({
                 <NavLink
                   key={item.href}
                   item={item}
-                  active={isActive(item.href)}
+                  active={false}
                   onNavigate={onNavigate}
+                  onSelect={item.href === "/report" ? onReport : undefined}
                   quiet
                   collapsed={collapsed}
                   footer
@@ -646,6 +661,7 @@ function NavLink({
   footer,
   authGated,
   onAuthGate,
+  onSelect,
 }: {
   item: { href: string; label: string; icon: (props: NavIconProps) => React.JSX.Element };
   active: boolean;
@@ -659,6 +675,7 @@ function NavLink({
   footer?: boolean;
   authGated?: boolean;
   onAuthGate?: () => void;
+  onSelect?: () => void;
 }) {
   const Icon = item.icon;
   const iconOnly = Boolean(collapsed);
@@ -780,6 +797,22 @@ function NavLink({
         type="button"
         onClick={() => {
           onAuthGate?.();
+          onNavigate?.();
+        }}
+        className={className}
+        aria-label={iconOnly ? item.label : undefined}
+        title={iconOnly ? item.label : undefined}
+      >
+        {inner}
+      </button>
+    );
+  }
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          onSelect();
           onNavigate?.();
         }}
         className={className}

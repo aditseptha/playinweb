@@ -1,12 +1,15 @@
 "use client";
 
 import { ErrorState } from "@/components/RouteStates";
-import { WithAppShell } from "@/components/WithAppShell";
+import { HomeShell } from "@/components/home/HomeShell";
+import s from "@/components/home/home.module.css";
 
 export default function ShellError(props: { error: Error & { digest?: string }; retry: () => void }) {
   return (
-    <WithAppShell>
-      <ErrorState {...props} />
-    </WithAppShell>
+    <HomeShell>
+      <div className={s.create}>
+        <ErrorState {...props} />
+      </div>
+    </HomeShell>
   );
 }

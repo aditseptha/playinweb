@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { GameThumb } from "@/components/GameThumb";
-import { LinkButton } from "@/components/ui/button";
+import s from "@/components/home/home.module.css";
 import { Segmented } from "@/components/ui/segmented";
+import { cn } from "@/lib/cn";
 import { formatPlays } from "@/lib/format";
 import { projectPublicUrl } from "@/lib/host";
 import { coverBelowStandard } from "@/lib/media-standard";
@@ -25,9 +26,9 @@ export function ManageStats({
   const buckets = useMemo(() => (range === "daily" ? lastDays(14) : lastWeeks(8)), [range]);
 
   return (
-    <div className="mt-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-caption text-text-subtle">Page visits and play-button clicks, per game</p>
+    <div>
+      <div className={s.manageTools}>
+        <p className={s.manageNote}>Page visits and play-button clicks, per game</p>
         <Segmented
           aria-label="Stats range"
           value={range}
@@ -38,47 +39,47 @@ export function ManageStats({
           ]}
         />
       </div>
-      <ul className="mt-4 flex flex-col gap-4">
+      <ul className={s.manageList}>
         {projects.map((project) => {
           const game = projectToGame(project);
           const series = bucketSeries(project.id, days, buckets, range === "weekly");
           return (
-            <li key={project.id} className="min-w-0 rounded-panel bg-surface-2 px-4 py-4 sm:px-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
-                <div className="relative aspect-[3/4] w-[96px] shrink-0 overflow-hidden rounded-lg bg-surface-2">
+            <li key={project.id} className={s.manageCard}>
+              <div className={s.manageHead}>
+                <div className={s.manageThumb}>
                   <GameThumb game={game} sizes="96px" ratio="portrait" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <h2 className="truncate text-title font-semibold tracking-tight">{project.title}</h2>
+                      <h2 className={s.manageTitle}>{project.title}</h2>
                       <CoverQualityNote src={game.thumbnailUrl} href={`/manage/${project.id}`} />
-                      <p className="truncate text-caption text-text-subtle">
+                      <p className={s.manageSlug}>
                         @{handle}/{project.slug}
                         {project.published ? "" : " · Private"}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2 sm:shrink-0">
-                      <LinkButton href={`/manage/${project.id}`} variant="secondary" size="sm">
+                    <div className={s.manageActions}>
+                      <Link href={`/manage/${project.id}`} className={cn(s.btn, s.btnGhost)}>
                         Edit details
-                      </LinkButton>
-                      <LinkButton href={projectPublicUrl(handle, project.slug)} variant="ghost" size="sm">
+                      </Link>
+                      <Link href={projectPublicUrl(handle, project.slug)} className={cn(s.btn, s.btnPrimary)}>
                         View page
-                      </LinkButton>
+                      </Link>
                     </div>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:max-w-xl">
+                  <div className={s.manageStats}>
                     <StatTile
                       value={project.view_count ?? 0}
                       label="Views"
                       hint="Page visits"
-                      tone="text-sky-300"
+                      tone="views"
                     />
                     <StatTile
                       value={Math.min(project.play_count, project.view_count ?? 0)}
                       label="Plays"
                       hint="Play button clicks"
-                      tone="text-emerald-300"
+                      tone="plays"
                     />
                     <StatTile value={project.like_count} label="Likes" hint="Thumbs up" />
                     <StatTile
@@ -134,15 +135,41 @@ function StatTile({
   value: number;
   label: string;
   hint: string;
-  tone?: string;
+  tone?: "views" | "plays";
 }) {
   return (
-    <div className="min-w-0 rounded-xl bg-surface-3 px-2 py-2 sm:px-3">
-      <p className={`text-title font-semibold tabular leading-none ${tone ?? "text-text"}`}>{formatPlays(value)}</p>
-      <p className="mt-1 truncate text-caption font-medium">{label}</p>
-      <p className="truncate text-meta text-text-subtle">{hint}</p>
+    <div className={s.manageStat}>
+      <b className={tone === "views" ? "text-sky-300" : tone === "plays" ? "text-emerald-300" : undefined}>
+        {formatPlays(value)}
+      </b>
+      <span>{label}</span>
+      <small>{hint}</small>
     </div>
   );
+}
+
+function chartPoints(
+  values: number[],
+  slot: number,
+  pad: { l: number; t: number },
+  innerH: number,
+  max: number,
+) {
+  return values.map((value, i) => {
+    const x = pad.l + slot * i + slot / 2;
+    const y = pad.t + innerH - (value / max) * innerH;
+    return { x, y };
+  });
+}
+
+function linePath(points: { x: number; y: number }[]) {
+  return points.map((point, i) => `${i === 0 ? "M" : "L"}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
+}
+
+function labelShift(ownY: number, otherY: number) {
+  const close = Math.abs(ownY - otherY) < 18;
+  if (!close) return "-140%";
+  return ownY <= otherY ? "-140%" : "35%";
 }
 
 function GameChart({
@@ -152,25 +179,28 @@ function GameChart({
   series: { key: string; views: number; plays: number }[];
   range: Range;
 }) {
+  const [focus, setFocus] = useState<"views" | "plays" | null>(null);
   const max = Math.max(1, ...series.flatMap((p) => [p.views, p.plays]));
   const w = 640;
-  const h = 140;
-  const pad = { l: 8, r: 8, t: 8, b: 4 };
+  const h = 160;
+  const pad = { l: 8, r: 8, t: 20, b: 16 };
   const innerW = w - pad.l - pad.r;
   const innerH = h - pad.t - pad.b;
-  const slot = innerW / series.length;
-  const bar = Math.max(4, slot * 0.28);
+  const slot = innerW / Math.max(series.length, 1);
   const ticks = [1, 0.75, 0.5, 0.25, 0];
+  const views = chartPoints(series.map((point) => point.views), slot, pad, innerH, max);
+  const plays = chartPoints(series.map((point) => point.plays), slot, pad, innerH, max);
+  const dim = (seriesName: "views" | "plays") => focus !== null && focus !== seriesName;
 
   return (
     <div className="mt-4 min-w-0">
       <div className="mb-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-meta text-text-subtle">
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-2 rounded-sm bg-sky-400" /> Views
+          <span className="h-0.5 w-4 rounded-full bg-sky-400" /> Views
           <span className="hidden sm:inline">· page visits</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-2 rounded-sm bg-emerald-400" /> Plays
+          <span className="h-0.5 w-4 rounded-full bg-emerald-400" /> Plays
           <span className="hidden sm:inline">· play clicks</span>
         </span>
         <span>{range === "daily" ? "Last 14 days" : "Last 8 weeks"}</span>
@@ -188,12 +218,25 @@ function GameChart({
           ))}
         </div>
         <div className="min-w-0 flex-1">
+          <div className="relative">
           <svg
             viewBox={`0 0 ${w} ${h}`}
             className="block h-32 w-full max-w-full sm:h-40"
             preserveAspectRatio="none"
             role="img"
             aria-label={`${range} views and plays`}
+            onMouseMove={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              if (!rect.width || !rect.height) return;
+              const x = ((event.clientX - rect.left) / rect.width) * w;
+              const y = ((event.clientY - rect.top) / rect.height) * h;
+              const index = Math.max(0, Math.min(series.length - 1, Math.round((x - pad.l - slot / 2) / slot)));
+              const viewsDist = Math.abs(y - views[index].y);
+              const playsDist = Math.abs(y - plays[index].y);
+              const nearest = Math.min(viewsDist, playsDist);
+              setFocus(nearest > 24 ? null : viewsDist <= playsDist ? "views" : "plays");
+            }}
+            onMouseLeave={() => setFocus(null)}
           >
             {ticks.map((t) => (
               <line
@@ -208,37 +251,69 @@ function GameChart({
                 vectorEffect="non-scaling-stroke"
               />
             ))}
-            {series.map((point, i) => {
-              const cx = pad.l + slot * i + slot / 2;
-              const vh = (point.views / max) * innerH;
-              const ph = (point.plays / max) * innerH;
-              const label = range === "daily" ? dayLabel(point.key) : weekLabel(point.key);
-              return (
-                <g key={point.key}>
-                  <rect
-                    x={cx - bar - 1}
-                    y={pad.t + innerH - vh}
-                    width={bar}
-                    height={Math.max(point.views ? 2 : 0, vh)}
-                    rx="2"
-                    className="fill-sky-400"
-                  >
-                    <title>{`${label}: ${point.views} views`}</title>
-                  </rect>
-                  <rect
-                    x={cx + 1}
-                    y={pad.t + innerH - ph}
-                    width={bar}
-                    height={Math.max(point.plays ? 2 : 0, ph)}
-                    rx="2"
-                    className="fill-emerald-400"
-                  >
-                    <title>{`${label}: ${point.plays} plays`}</title>
-                  </rect>
-                </g>
-              );
-            })}
+            <g className={cn("transition-opacity duration-150", dim("views") && "opacity-20")}>
+              <path
+                d={linePath(views)}
+                fill="none"
+                className="stroke-sky-400"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </g>
+            <g className={cn("transition-opacity duration-150", dim("plays") && "opacity-20")}>
+              <path
+                d={linePath(plays)}
+                fill="none"
+                className="stroke-emerald-400"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </g>
           </svg>
+          {series.map((point, i) => {
+            const label = range === "daily" ? dayLabel(point.key) : weekLabel(point.key);
+            return (
+              <span key={point.key}>
+                {point.views > 0 ? (
+                  <span
+                    className={cn(
+                      "pointer-events-none absolute -translate-x-1/2 text-[11px] font-semibold tabular leading-none text-sky-300 transition-opacity duration-150",
+                      dim("views") && "opacity-20",
+                    )}
+                    style={{
+                      left: `${(views[i].x / w) * 100}%`,
+                      top: `${(views[i].y / h) * 100}%`,
+                      transform: `translate(-50%, ${labelShift(views[i].y, plays[i].y)})`,
+                    }}
+                    title={`${label}: ${point.views} views`}
+                  >
+                    {formatPlays(point.views)}
+                  </span>
+                ) : null}
+                {point.plays > 0 ? (
+                  <span
+                    className={cn(
+                      "pointer-events-none absolute -translate-x-1/2 text-[11px] font-semibold tabular leading-none text-emerald-300 transition-opacity duration-150",
+                      dim("plays") && "opacity-20",
+                    )}
+                    style={{
+                      left: `${(plays[i].x / w) * 100}%`,
+                      top: `${(plays[i].y / h) * 100}%`,
+                      transform: `translate(-50%, ${labelShift(plays[i].y, views[i].y)})`,
+                    }}
+                    title={`${label}: ${point.plays} plays`}
+                  >
+                    {formatPlays(point.plays)}
+                  </span>
+                ) : null}
+              </span>
+            );
+          })}
+          </div>
           <div className="mt-1 flex text-[10px] text-text-subtle">
             {series.map((point, i) => {
               const label = range === "daily" ? dayLabel(point.key) : weekLabel(point.key);

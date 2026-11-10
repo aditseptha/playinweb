@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Field, TextInput } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
 import { FeatureGate } from "@/components/FeatureGate";
+import s from "@/components/home/home.module.css";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { money, paidOutAmount, reservedPayoutAmount } from "@/lib/cashout";
 import {
   payoutCycleLabel,
@@ -70,11 +72,17 @@ const SELECT =
 
 export default function DonationsPage() {
   return (
-    <FeatureGate id="donations">
-      <Suspense fallback={<p className="text-ui text-text-muted">Loading account…</p>}>
-        <DonationsView />
-      </Suspense>
-    </FeatureGate>
+    <div className={cn(s.create, s.pageSkin)}>
+      <div className={s.frame}>
+        <div className={s.wrap}>
+          <FeatureGate id="donations">
+            <Suspense fallback={<p className={s.legalIntro}>Loading account…</p>}>
+              <DonationsView />
+            </Suspense>
+          </FeatureGate>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -155,13 +163,14 @@ function DonationsView() {
     };
   }, [loading, user]);
 
-  if (loading) return <p className="text-ui text-text-muted">Loading account…</p>;
+  if (loading) return <p className={s.legalIntro}>Loading account…</p>;
 
   if (!user) {
     return (
-      <div className="min-w-0 pt-4">
-        <h1 className="text-display font-semibold tracking-tight">Wallet</h1>
-        <p className="mt-1.5 text-body text-text-muted">Sign in to see games you gave to and earned from.</p>
+      <div>
+        <p className={s.eyebrow}>Account</p>
+        <h1 className={s.createTitle}>Wallet</h1>
+        <p className={s.legalIntro}>Sign in to see games you gave to and earned from.</p>
         <div className="mt-6 flex gap-3">
           <Button type="button" variant="primary" size="sm" onClick={() => openLogin()}>
             Sign in
@@ -175,9 +184,12 @@ function DonationsView() {
   }
 
   return (
-    <div className="min-w-0 pt-4">
-      <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-display font-semibold tracking-tight">Wallet</h1>
+    <div>
+      <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className={s.eyebrow}>Account</p>
+          <h1 className={s.createTitle}>Wallet</h1>
+        </div>
         <Segmented
           aria-label="Wallet menu"
           value={tab}

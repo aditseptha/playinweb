@@ -4,7 +4,6 @@ import {
   IconBell,
   IconBookmark,
   IconDownload,
-  IconFlag,
   IconGrid,
   IconHeart,
   IconHome,
@@ -628,7 +627,6 @@ const CREATOR_NAV: NavGroup[] = [
     ],
   },
   { title: "Explore", items: [{ href: "/top", label: "Top played", icon: IconLineGraph }] },
-  { title: "Help", items: [{ href: "/report", label: "Report an issue", icon: IconFlag }] },
 ];
 
 function Navigation() {

@@ -27,7 +27,7 @@ import { switchTheme } from "@/lib/theme";
 /** Top-level links: only pages that exist; feature-flagged ones follow the admin flags. */
 const NAV = [
   { href: "/top", label: "Rankings" },
-  { href: "/?view=saved", label: "Favorites" },
+  { href: "/library", label: "Library" },
   { href: "/?view=recent", label: "Recently played" },
   { href: "/showcase", label: "Showcase" },
 ];
@@ -36,6 +36,7 @@ function navCurrent(href: string, pathname: string, view: string | null) {
   if (href.startsWith("/?")) {
     return pathname === "/" && new URLSearchParams(href.slice(2)).get("view") === view;
   }
+  if (href === "/library") return pathname === "/library" || pathname.startsWith("/collection/");
   return pathname === href;
 }
 
@@ -358,7 +359,9 @@ function MenuSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const links = [...NAV, ...(signedIn ? [{ href: "/register", label: "Add game" }, ...ACCOUNT_LINKS] : [])];
+  const links = [...NAV, ...(signedIn ? [{ href: "/register", label: "Add game" }, ...ACCOUNT_LINKS] : [])].filter(
+    (link, index, all) => all.findIndex((item) => item.href === link.href) === index,
+  );
 
   return (
     <>
@@ -400,7 +403,7 @@ function Footer({ onReport }: { onReport: () => void }) {
   return (
     <footer className={cn(s.footer, s.frame)}>
       <div className={s.footerGrid} style={{ "--mosaic-crest": "116px" } as CSSProperties} aria-hidden>
-        <MosaicGrid cols={160} omitBefore={16} omitFrom={192} />
+        <MosaicGrid cols={160} omitBefore={16} omitFrom={192} shadeSolid={false} />
       </div>
       <div className={s.wrap}>
         <div className={s.fTop}>

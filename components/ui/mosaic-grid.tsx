@@ -40,7 +40,7 @@ const EDGE_ZONE_SHADE = [-0.1, 0.2];
 type Cell = { x: number; y: number; shade: number };
 
 /** Deterministic so server and client markup match. */
-function buildCells(cols: number, fade: number, rowCount = ROWS, solidRows = SOLID_ROWS) {
+function buildCells(cols: number, fade: number, rowCount = ROWS, solidRows = SOLID_ROWS, shadeSolid = true) {
   const rows = rowCount + fade;
   const random = mulberry32(0x5eed);
   const cells: Cell[] = [];
@@ -63,7 +63,7 @@ function buildCells(cols: number, fade: number, rowCount = ROWS, solidRows = SOL
 
     for (const row of filled) {
       if (row >= rows) continue;
-      const [min, max] = row < solidRows ? TEXT_ZONE_SHADE : EDGE_ZONE_SHADE;
+      const [min, max] = shadeSolid && row < solidRows ? TEXT_ZONE_SHADE : EDGE_ZONE_SHADE;
       cells.push({
         x: col * CELL,
         y: (rows - 1 - row) * CELL,
@@ -83,6 +83,7 @@ export function MosaicGrid({
   solidRows = SOLID_ROWS,
   omitBefore = 0,
   omitFrom = Number.POSITIVE_INFINITY,
+  shadeSolid = true,
 }: {
   className?: string;
   cols?: number;
@@ -96,10 +97,12 @@ export function MosaicGrid({
   omitBefore?: number;
   /** Drop cells at this y and below. */
   omitFrom?: number;
+  /** Darken the solid rows so text on them stays readable. Off keeps every cell in the lighter range. */
+  shadeSolid?: boolean;
 }) {
   const cells = useMemo(
-    () => buildCells(cols, fade, rows, solidRows).filter((cell) => cell.y >= omitBefore && cell.y < omitFrom),
-    [cols, fade, rows, solidRows, omitBefore, omitFrom],
+    () => buildCells(cols, fade, rows, solidRows, shadeSolid).filter((cell) => cell.y >= omitBefore && cell.y < omitFrom),
+    [cols, fade, rows, solidRows, shadeSolid, omitBefore, omitFrom],
   );
   const height = (rows + fade) * CELL;
   const rawId = useId();

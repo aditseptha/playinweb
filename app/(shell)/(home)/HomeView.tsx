@@ -81,14 +81,16 @@ export function HomeView({ initialGames }: { initialGames: Game[] }) {
         <div className={cn(s.wrap, s.layout, !hasRail && s.layoutNoRail)}>
           {hasRail ? <FilterRail filters={filters} tags={tags} creators={creators} onChange={go} onReset={reset} /> : null}
           <div className={s.main}>
-            <TabBar
-              filters={filters}
-              tags={tags}
-              filterCount={filterCount}
-              onChange={go}
-              onReset={reset}
-              onOpenFilter={hasRail ? () => setFilterSheet(true) : undefined}
-            />
+            {filters.view === "recent" ? null : (
+              <TabBar
+                filters={filters}
+                tags={tags}
+                filterCount={filterCount}
+                onChange={go}
+                onReset={reset}
+                onOpenFilter={hasRail ? () => setFilterSheet(true) : undefined}
+              />
+            )}
             {browsing ? (
               <Results games={results} filters={filters} creators={creators} onChange={go} onReset={reset} />
             ) : (

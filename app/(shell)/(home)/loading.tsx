@@ -1,8 +1,9 @@
 import { LoadingState } from "@/components/RouteStates";
+import s from "@/components/home/home.module.css";
 
 export default function HomeLoading() {
   return (
-    <div className="pt-[96px]">
+    <div className={s.create}>
       <LoadingState />
     </div>
   );

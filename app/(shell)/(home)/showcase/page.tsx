@@ -12,6 +12,7 @@ import { useLoginDialog } from "@/components/LoginDialog";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/segmented";
 import { FeatureGate } from "@/components/FeatureGate";
+import s from "@/components/home/home.module.css";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatMoney, formatPlays, gamePath } from "@/lib/format";
@@ -233,6 +234,7 @@ export default function ShowcasePage() {
   }
 
   return (
+    <div className={cn(s.create, s.pageSkin)}>
     <FeatureGate id="showcase">
     <div className="flex min-w-0 flex-col gap-8 rounded-t-2xl bg-[linear-gradient(180deg,var(--surface-3)_0%,var(--bg)_36rem)]">
       <div>
@@ -412,6 +414,7 @@ export default function ShowcasePage() {
       </div>
     </div>
     </FeatureGate>
+    </div>
   );
 }
 

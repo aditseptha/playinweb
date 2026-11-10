@@ -2,15 +2,25 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ds/button";
 import { Field, TextInput } from "@/components/ui/field";
+import { HomeShell } from "@/components/home/HomeShell";
+import s from "@/components/home/home.module.css";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<p className="text-ui text-text-muted">Loading…</p>}>
-      <ResetPasswordForm />
-    </Suspense>
+    <HomeShell>
+      <div className={s.create}>
+        <div className={s.frame}>
+          <div className={s.wrap}>
+            <Suspense fallback={<p className={s.legalIntro}>Loading…</p>}>
+              <ResetPasswordForm />
+            </Suspense>
+          </div>
+        </div>
+      </div>
+    </HomeShell>
   );
 }
 
@@ -106,10 +116,11 @@ function ResetPasswordForm() {
 
   if (error && !ready) {
     return (
-      <div className="min-w-0 pt-4">
-        <h1 className="text-display font-semibold tracking-tight">Reset password</h1>
-        <p className="mt-3 text-body text-danger">{error}</p>
-        <Button type="button" variant="secondary" size="sm" className="mt-6" onClick={() => router.push("/")}>
+      <div>
+        <p className={s.eyebrow}>Account</p>
+        <h1 className={s.createTitle}>Reset password</h1>
+        <p className={s.legalIntro}>{error}</p>
+        <Button type="button" variant="secondary" className="mt-6" onClick={() => router.push("/")}>
           Back home
         </Button>
       </div>
@@ -117,14 +128,15 @@ function ResetPasswordForm() {
   }
 
   if (!ready) {
-    return <p className="pt-4 text-ui text-text-muted">Preparing password reset…</p>;
+    return <p className={s.legalIntro}>Preparing password reset…</p>;
   }
 
   return (
-    <div className="min-w-0 pt-4">
-      <h1 className="text-display font-semibold tracking-tight">Choose a new password</h1>
-      <p className="mt-1.5 text-body text-text-muted">Enter a new password for your account.</p>
-      <form onSubmit={onSubmit} className="mt-8 flex max-w-md flex-col gap-5 rounded-panel bg-surface-2 p-5">
+    <div>
+      <p className={s.eyebrow}>Account</p>
+      <h1 className={s.createTitle}>Choose a new password</h1>
+      <p className={s.legalIntro}>Enter a new password for your account.</p>
+      <form onSubmit={onSubmit} className={`${s.createForm} flex max-w-md flex-col gap-5`}>
         <Field label="New password">
           <TextInput name="password" type="password" required minLength={8} autoComplete="new-password" />
         </Field>

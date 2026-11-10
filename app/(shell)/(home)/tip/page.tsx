@@ -5,6 +5,7 @@ import { Suspense, useEffect, useRef, useState, type FormEvent, type PointerEven
 import { useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { FeatureGate } from "@/components/FeatureGate";
+import s from "@/components/home/home.module.css";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
@@ -16,11 +17,17 @@ const PRESETS = [1, 3, 5, 10, 25, 100];
 
 export default function TipPage() {
   return (
-    <FeatureGate id="tip">
-      <Suspense fallback={<p className="text-ui text-text-muted">Loading…</p>}>
-        <TipView />
-      </Suspense>
-    </FeatureGate>
+    <div className={cn(s.create, s.pageSkin)}>
+      <div className={s.frame}>
+        <div className={s.wrap}>
+          <FeatureGate id="tip">
+            <Suspense fallback={<p className={s.legalIntro}>Loading…</p>}>
+              <TipView />
+            </Suspense>
+          </FeatureGate>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -116,10 +123,10 @@ function TipView() {
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-9.75rem)] min-w-0 items-center justify-center">
     <div className="mx-auto w-full max-w-3xl text-center">
-      <h1 className="text-[40px] font-semibold tracking-tight sm:text-[48px]">Support the project</h1>
-      <p className="mx-auto mt-4 max-w-[52ch] text-body leading-relaxed text-text-muted">
+      <p className={s.eyebrow}>PlayInWeb</p>
+      <h1 className={s.createTitle}>Support the project</h1>
+      <p className={s.legalIntro}>
         This is a place to go beyond a thank you. A tip is optional. Anything you send goes to the team building
         PlayInWeb, not to a game listing.
       </p>
@@ -201,7 +208,6 @@ function TipView() {
         <p className="mt-3 text-meta text-text-subtle">Minimum $1.00. Paid with Polar.</p>
         {notice ? <p className="mt-2 text-ui text-warning">{notice}</p> : null}
       </form>
-    </div>
     </div>
   );
 }
