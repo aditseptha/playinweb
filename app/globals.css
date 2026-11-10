@@ -9,11 +9,11 @@
 
 :root,
 .light {
-  --bg: oklch(100% 0 0);
-  --bg-inset: oklch(95.6% 0 0);
-  --surface: oklch(100% 0 0);
-  --surface-2: oklch(97% 0 0);
-  --surface-3: oklch(93.8% 0 0);
+  --bg: oklch(98.2% 0.012 250);
+  --bg-inset: oklch(96.2% 0.014 250);
+  --surface: oklch(98.8% 0.01 250);
+  --surface-2: oklch(97.2% 0.012 250);
+  --surface-3: oklch(94.8% 0.014 250);
   --border: oklch(90.5% 0 0);
   --border-strong: oklch(83% 0 0);
   --text: oklch(21% 0 0);

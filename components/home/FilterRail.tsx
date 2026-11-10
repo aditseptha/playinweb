@@ -7,7 +7,6 @@ import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
 import { initials } from "@/lib/format";
 
-const VISIBLE_TAGS = 6;
 const STACK = 6;
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
@@ -57,10 +56,9 @@ export function FilterRail({
   onChange: (next: Partial<HomeFilters>) => void;
   onReset: () => void;
 }) {
-  const [allTags, setAllTags] = useState(false);
   const [pick, setPick] = useState(false);
   const dirty = filters.tags.length > 0 || filters.creators.length > 0 || Boolean(filters.q.trim()) || Boolean(filters.view);
-  const shownTags = allTags ? tags : tags.slice(0, VISIBLE_TAGS);
+  const allCategories = filters.tags.length === 0;
 
   return (
     <aside className={s.rail} aria-label="Filter games">
@@ -74,9 +72,20 @@ export function FilterRail({
         </button>
       </div>
 
+      <Group title="Library">
+        <CheckRow
+          label="Recently played"
+          checked={filters.view === "recent"}
+          onChange={() =>
+            filters.view === "recent" ? onChange({ view: null, browse: false }) : onChange({ view: "recent", browse: false })
+          }
+        />
+      </Group>
+
       {tags.length > 0 ? (
         <Group title="Category">
-          {shownTags.map((tag) => (
+          <CheckRow label="All" checked={allCategories} onChange={() => onChange({ tags: [] })} />
+          {tags.map((tag) => (
             <CheckRow
               key={tag}
               label={capitalize(tag)}
@@ -84,11 +93,6 @@ export function FilterRail({
               onChange={() => onChange({ tags: toggle(filters.tags, tag) })}
             />
           ))}
-          {tags.length > VISIBLE_TAGS ? (
-            <button type="button" className={s.more2} onClick={() => setAllTags((v) => !v)}>
-              {allTags ? "Show fewer" : `Show all ${tags.length}`}
-            </button>
-          ) : null}
         </Group>
       ) : null}
 

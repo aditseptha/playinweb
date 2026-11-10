@@ -19,9 +19,9 @@ export const primitives = {
   "gold-ink": "#2a1a00",
   orange: "#ffb02f",
   "orange-hot": "#ff7d45",
-  // Dark surfaces: near-black with a blue cast.
-  "night-950": "#010a04",
-  "night-900": "#020f06",
+  // Dark surfaces: near-black with a blue cast (not green-black).
+  "night-950": "#02060e",
+  "night-900": "#050d18",
   "night-800": "#08141c",
   "night-700": "#0a1722",
   "night-600": "#0c1a26",
@@ -35,7 +35,7 @@ export const primitives = {
   "mist-300": "#93a7bd",
   "mist-400": "#5f758b",
   // Light surfaces.
-  "day-0": "#ffffff",
+  "day-0": "#f6faff",
   "day-50": "#f4f8fd",
   "day-100": "#eef4fb",
   "day-200": "#e1ebf6",
@@ -90,7 +90,7 @@ export const themes: { dark: ColorTokens; light: ColorTokens } = {
     success: p["green-300"],
     warning: p["yellow-300"],
     "focus-ring": p.bright,
-    overlay: "rgba(1, 10, 5, 0.72)",
+    overlay: "rgba(3, 8, 18, 0.72)",
     "on-art": p["mist-50"],
     "on-art-soft": p["mist-100"],
     "chart-1": p.bright,
@@ -102,8 +102,8 @@ export const themes: { dark: ColorTokens; light: ColorTokens } = {
   light: {
     bg: p["day-50"],
     "bg-deep": p["day-300"],
-    "surface-1": p["day-0"],
-    "surface-2": p["day-100"],
+    "surface-1": p["day-100"],
+    "surface-2": p["day-50"],
     "surface-3": p["day-200"],
     "surface-raised": p["day-0"],
     line: "rgba(3, 22, 84, 0.1)",
@@ -171,9 +171,9 @@ export const radius = {
 
 export const shadows = {
   dark: {
-    1: "0 2px 8px rgba(0, 6, 3, 0.35)",
-    2: "0 10px 30px rgba(0, 6, 3, 0.55)",
-    3: "0 26px 60px rgba(0, 6, 3, 0.7)",
+    1: "0 2px 8px rgba(0, 10, 24, 0.35)",
+    2: "0 10px 30px rgba(0, 10, 24, 0.55)",
+    3: "0 26px 60px rgba(0, 10, 24, 0.7)",
     glow: "0 8px 20px rgba(8, 113, 237, 0.35)",
   },
   light: {

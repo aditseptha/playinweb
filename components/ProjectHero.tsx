@@ -68,15 +68,6 @@ export function useProjectHero() {
   return ctx;
 }
 
-/** "itch.io" from "https://www.itch.io/…", for "Play on itch.io". */
-export function playDomain(url: string) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return "";
-  }
-}
-
 export function ProjectHeroRoot({
   game,
   trailerUrl,
@@ -485,7 +476,7 @@ export function ProjectHeroStage() {
                     <div className="flex flex-col items-center gap-2">
                       <Button variant="primary" size="lg" onClick={startPlay}>
                         <IconPlay aria-hidden className="fill-current" />
-                        Play on {playDomain(game.playUrl) || "the creator's site"}
+                        Play
                         <IconExternal aria-hidden />
                       </Button>
                       <span className={cn("text-pw-body-sm", onArt)}>Opens in a new tab</span>

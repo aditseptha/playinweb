@@ -72,17 +72,16 @@ export function GuestBanner({ recent, popular }: { recent: { game: Game; at: num
 export function CreatorCTA({ games }: { games: Game[] }) {
   return (
     <section className={cn(s.cta, s.revealSelf)} aria-labelledby="cta-title">
-      <div>
-        <div className={cn(s.pixEyebrow, s.pixPlain)}>Become a creator</div>
-        <h2 id="cta-title">Got a story? Make your first game</h2>
-        <p>Publishing is free. Upload an HTML build and it&apos;s playable in the browser right away.</p>
+      <div className={s.ctaCopy}>
+        <h2 id="cta-title">Publish your first game</h2>
+        <p className={s.ctaLead}>Free listing. Plays in the browser.</p>
         <div className={s.ctaBtns}>
           <Link href={apexHref("/register")} className={cn(s.btn, s.btnInk)}>
             <IconPlus className={cn(s.ic, s.sm)} />
-            Start a game
+            Add game
           </Link>
           <Link href={apexHref("/manage")} className={cn(s.btn, s.btnGlassO)}>
-            Manage your games
+            Manage
           </Link>
         </div>
       </div>

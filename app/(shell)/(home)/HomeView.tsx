@@ -1,6 +1,6 @@
 "use client";
 
-import { IconBook, IconClose, IconFlame, IconHeart, IconHistory, IconRocket, IconSearch, IconSpark, IconUsers } from "@/components/icons";
+import { IconBook, IconClose, IconFlame, IconHeart, IconHistory, IconRocket, IconSearch, IconSliders, IconSpark, IconUsers } from "@/components/icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ds/button";
@@ -11,6 +11,7 @@ import { FilterRail } from "@/components/home/FilterRail";
 import {
   CREATOR_COLORS,
   VIEW_TITLES,
+  byHotThisWeek,
   byNewest,
   byPopularity,
   capitalize,
@@ -29,17 +30,29 @@ import { Hero } from "@/components/home/Hero";
 import s from "@/components/home/home.module.css";
 import { HomeUiProvider } from "@/components/home/Peek";
 import { Arrows, Row, SectionHead, SeeAll, useScroller } from "@/components/home/Section";
-import { TabBar } from "@/components/home/TabBar";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatPlays, initials } from "@/lib/format";
 import { catalogueTags, useGames, withInitialGames } from "@/lib/store";
+import { pickFeaturedGames } from "@/lib/featured-games";
+import { useHomePickIds } from "@/lib/home-picks.client";
+import { pickHeroGames } from "@/lib/hero-spotlights";
 import type { Game } from "@/lib/types";
 
 /** Below this many games the page uses the compact layout ("From the community" + slot card). */
 const SPARSE_LIMIT = 8;
 
-export function HomeView({ initialGames }: { initialGames: Game[] }) {
+export function HomeView({
+  initialGames,
+  heroSpotlightIds = [],
+  featuredGameIds = [],
+  weeklyPlays = {},
+}: {
+  initialGames: Game[];
+  heroSpotlightIds?: string[];
+  featuredGameIds?: string[];
+  weeklyPlays?: Record<string, number>;
+}) {
   const store = useGames();
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -48,16 +61,18 @@ export function HomeView({ initialGames }: { initialGames: Game[] }) {
   const [filterSheet, setFilterSheet] = useState(false);
 
   const games = useMemo(() => withInitialGames(store.games, initialGames), [store.games, initialGames]);
-  // Curated games (#9) get their own "Curated picks" row. The hero and the other rows stay with
-  // games creators published here, so a large curated catalogue never pushes them down.
+  // Curated games (#9) get their own "Curated picks" row (after featured, before hottest this week).
   const own = useMemo(() => games.filter((g) => !g.curated), [games]);
   const curated = useMemo(() => byPopularity(games.filter((g) => g.curated)), [games]);
   const tags = useMemo(() => catalogueTags(games), [games]);
   const creators = useMemo(() => creatorsOf(own), [own]);
   const popular = useMemo(() => byPopularity(own), [own]);
+  const { heroIds, featuredIds } = useHomePickIds(heroSpotlightIds, featuredGameIds);
+  const heroGames = useMemo(() => pickHeroGames(heroIds, games), [heroIds, games]);
+  const featuredGames = useMemo(() => pickFeaturedGames(featuredIds, games, heroIds), [featuredIds, heroIds, games]);
   const browsing = isBrowsing(filters);
   const hasRail = tags.length > 0 || creators.length > 0;
-  const filterCount = filters.tags.length + filters.creators.length;
+  const filterCount = filters.tags.length + filters.creators.length + (filters.view ? 1 : 0);
 
   const go = useCallback(
     (next: Partial<HomeFilters>) => router.replace(filtersHref({ ...filters, ...next }), { scroll: false }),
@@ -65,8 +80,18 @@ export function HomeView({ initialGames }: { initialGames: Game[] }) {
   );
   const reset = useCallback(() => router.replace("/", { scroll: false }), [router]);
 
-  const ctx = { library: store.library, history: store.history };
-  const results = browsing ? viewGames(filters.view, games, ctx).filter((g) => matchesFilters(g, filters)) : [];
+  const ctx = { library: store.library, history: store.history, weeklyPlays };
+  const results = browsing
+    ? (filters.view === "featured" ? featuredGames : viewGames(filters.view, games, ctx)).filter((g) =>
+        matchesFilters(g, filters),
+      )
+    : [];
+  const showRecentRow = filters.view === "recent" && !browsing;
+  const recentRowGames = useMemo(() => {
+    if (!showRecentRow) return [];
+    const panel = { ...filters, view: null };
+    return viewGames("recent", games, ctx).filter((g) => matchesFilters(g, panel));
+  }, [showRecentRow, games, ctx, filters]);
 
   const recent = useMemo(() => {
     const byId = new Map(games.map((g) => [g.id, g]));
@@ -78,32 +103,54 @@ export function HomeView({ initialGames }: { initialGames: Game[] }) {
 
   return (
     <HomeUiProvider>
-      <Hero game={popular[0] ?? null} />
+      <Hero games={heroGames} />
       <div className={s.frame}>
         <div className={cn(s.wrap, s.layout, !hasRail && s.layoutNoRail)}>
           {hasRail ? <FilterRail filters={filters} tags={tags} creators={creators} onChange={go} onReset={reset} /> : null}
           <div className={s.main}>
-            {filters.view === "recent" ? null : (
-              <TabBar
-                filters={filters}
-                tags={tags}
-                filterCount={filterCount}
-                onChange={go}
-                onReset={reset}
-                onOpenFilter={hasRail ? () => setFilterSheet(true) : undefined}
-              />
-            )}
+            {hasRail ? (
+              <button
+                type="button"
+                className={cn(s.btn, s.btnSoft, s.mobileFilter)}
+                onClick={() => setFilterSheet(true)}
+                aria-label="Open filters"
+              >
+                <IconSliders className={cn(s.ic, s.sm)} />
+                Filters
+                {filterCount > 0 ? <b className={s.tnum}>{filterCount}</b> : null}
+              </button>
+            ) : null}
             {browsing ? (
               <Results games={results} filters={filters} creators={creators} onChange={go} onReset={reset} />
             ) : (
               <>
-                {!loading && !user ? <GuestBanner recent={recent} popular={popular} /> : null}
+                {showRecentRow ? <RecentRow games={recentRowGames} /> : null}
                 {own.length < SPARSE_LIMIT ? (
-                  <Sparse popular={popular} signedIn={Boolean(user)} />
+                  <Sparse
+                    games={own}
+                    featured={featuredGames}
+                    popular={popular}
+                    weeklyPlays={weeklyPlays}
+                    curated={curated}
+                    signedIn={Boolean(user)}
+                    recent={recent}
+                    authReady={!loading}
+                  />
                 ) : (
-                  <Full games={own} popular={popular} tags={tags} creators={creators} filters={filters} onChange={go} />
+                  <Full
+                    games={own}
+                    featured={featuredGames}
+                    popular={popular}
+                    weeklyPlays={weeklyPlays}
+                    curated={curated}
+                    tags={tags}
+                    creators={creators}
+                    filters={filters}
+                    onChange={go}
+                    recent={recent}
+                    showGuestBanner={!loading && !user}
+                  />
                 )}
-                {curated.length > 0 ? <CuratedPicks games={curated} /> : null}
               </>
             )}
           </div>
@@ -133,37 +180,94 @@ export function HomeView({ initialGames }: { initialGames: Game[] }) {
   );
 }
 
+function NewestRow({ games }: { games: Game[] }) {
+  const list = byNewest(games).slice(0, 12);
+  if (list.length === 0) return null;
+  return (
+    <Row icon={IconRocket} title="Newest games" href="/?view=new" kind="tall" sideArrows>
+      {list.map((g, i) => (
+        <TallCard key={g.id} game={g} i={i} priority={i < 3} />
+      ))}
+    </Row>
+  );
+}
+
+function FeaturedRow({ games }: { games: Game[] }) {
+  if (games.length === 0) return null;
+  return (
+    <Row icon={IconSpark} title="Featured games" href="/?view=featured" kind="tall" sideArrows>
+      {games.map((g, i) => (
+        <TallCard key={g.id} game={g} i={i} priority={i < 3} />
+      ))}
+    </Row>
+  );
+}
+
+function HotThisWeekRow({ games, weeklyPlays }: { games: Game[]; weeklyPlays: Record<string, number> }) {
+  const list = byHotThisWeek(games, weeklyPlays).slice(0, 12);
+  if (list.length === 0) return null;
+  return (
+    <Row icon={IconFlame} title="Hottest this week" href="/?view=hot" kind="tall" sideArrows>
+      {list.map((g, i) => (
+        <TallCard key={g.id} game={g} i={i} badge={i < 2 ? "top" : null} />
+      ))}
+    </Row>
+  );
+}
+
+function RecentRow({ games }: { games: Game[] }) {
+  if (games.length === 0) {
+    return (
+      <section className={s.reveal}>
+        <SectionHead icon={IconHistory} title="Recently played" />
+        <EmptyState kind="user" title="Nothing here yet" body="Games you open will show up in this row." className={s.empty} />
+      </section>
+    );
+  }
+  return (
+    <Row icon={IconHistory} title="Recently played" href={filtersHref({ view: "recent", browse: true })} kind="tall" sideArrows>
+      {games.slice(0, 12).map((g, i) => (
+        <TallCard key={g.id} game={g} i={i} priority={i < 3} />
+      ))}
+    </Row>
+  );
+}
+
 function Full({
   games,
+  featured,
   popular,
+  weeklyPlays,
+  curated,
   tags,
   creators,
   filters,
   onChange,
+  recent,
+  showGuestBanner,
 }: {
   games: Game[];
+  featured: Game[];
   popular: Game[];
+  weeklyPlays: Record<string, number>;
+  curated: Game[];
   tags: string[];
   creators: Creator[];
   filters: HomeFilters;
   onChange: (next: Partial<HomeFilters>) => void;
+  recent: { game: Game; at: number }[];
+  showGuestBanner: boolean;
 }) {
-  const newest = byNewest(games).slice(0, 12);
   const tag = shelfTag(tags, games);
   const tagged = tag ? popular.filter((g) => g.tags.includes(tag)).slice(0, 6) : [];
 
   return (
     <>
-      <Row icon={IconSpark} title="Featured games" href="/?view=featured" kind="tall" sideArrows>
-        {popular.slice(0, 6).map((g, i) => (
-          <TallCard key={g.id} game={g} i={i} priority={i < 3} />
-        ))}
-      </Row>
-      <Row icon={IconRocket} title="New releases" href="/?view=new" kind="tall">
-        {newest.map((g, i) => (
-          <TallCard key={g.id} game={g} i={i} />
-        ))}
-      </Row>
+      <FeaturedRow games={featured} />
+      {curated.length > 0 ? <CuratedPicks games={curated} /> : null}
+      <HotThisWeekRow games={games} weeklyPlays={weeklyPlays} />
+      {showGuestBanner ? <GuestBanner recent={recent} popular={popular} /> : null}
+      <NewestRow games={games} />
       <Row icon={IconFlame} title="Most played" href="/?view=popular" kind="tall">
         {popular.slice(0, 12).map((g, i) => (
           <TallCard key={g.id} game={g} i={i} badge={i < 2 ? "top" : null} />
@@ -198,18 +302,35 @@ function CuratedPicks({ games }: { games: Game[] }) {
   );
 }
 
-function Sparse({ popular, signedIn }: { popular: Game[]; signedIn: boolean }) {
-  const featured = popular.slice(0, 3);
-  const community = popular.slice(3);
+function Sparse({
+  games,
+  featured,
+  popular,
+  weeklyPlays,
+  curated,
+  signedIn,
+  recent,
+  authReady,
+}: {
+  games: Game[];
+  featured: Game[];
+  popular: Game[];
+  weeklyPlays: Record<string, number>;
+  curated: Game[];
+  signedIn: boolean;
+  recent: { game: Game; at: number }[];
+  authReady: boolean;
+}) {
+  const featuredIds = new Set(featured.map((g) => g.id));
+  const community = popular.filter((g) => !featuredIds.has(g.id));
   return (
     <>
-      {featured.length > 0 ? (
-        <Row icon={IconSpark} title="Featured games" kind="tall" sideArrows>
-          {featured.map((g, i) => (
-            <TallCard key={g.id} game={g} i={i} priority />
-          ))}
-        </Row>
-      ) : null}
+      <FeaturedRow games={featured} />
+      {curated.length > 0 ? <CuratedPicks games={curated} /> : null}
+      <HotThisWeekRow games={games} weeklyPlays={weeklyPlays} />
+      {authReady && !signedIn ? <GuestBanner recent={recent} popular={popular} /> : null}
+      {signedIn ? <CreatorCTA games={popular} /> : null}
+      <NewestRow games={games} />
       <section id="creators" className={s.reveal}>
         <SectionHead icon={IconRocket} title="From the community" />
         <div className={s.community}>
@@ -219,7 +340,6 @@ function Sparse({ popular, signedIn }: { popular: Game[]; signedIn: boolean }) {
           <SlotCard slot={community.length + 1} />
         </div>
       </section>
-      {signedIn ? <CreatorCTA games={popular} /> : null}
     </>
   );
 }

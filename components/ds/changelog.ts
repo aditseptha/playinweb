@@ -12,6 +12,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-10",
+    title: "Phosphor Fill icon set",
+    changes: [
+      "Icons: components/icons.tsx now wraps @phosphor-icons/react (weight fill). Same export names as before; toggle states use regular weight.",
+      "Dependency: @phosphor-icons/react (MIT). Icons8 PNG assets under public/assets/icons/ios-filled are unused but left in the repo for now.",
+    ],
+  },
+  {
     date: "2026-11-09",
     title: "Remaining components, link previews and auth emails (D3, part 1)",
     changes: [

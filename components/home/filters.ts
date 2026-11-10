@@ -1,25 +1,28 @@
 import type { Game, HistoryItem } from "@/lib/types";
 
 /** Results views: personal lists, or the "See all" of a homepage row. */
-export type HomeView = "saved" | "recent" | "featured" | "new" | "popular";
+export type HomeView = "saved" | "recent" | "featured" | "new" | "popular" | "hot";
 
 export type HomeFilters = {
   q: string;
   tags: string[];
   creators: string[];
   view: HomeView | null;
+  /** Full grid for `view=recent` (See all). The rail checkbox uses `view=recent` without browse. */
+  browse: boolean;
 };
 
 type Params = { get(name: string): string | null; getAll(name: string): string[] };
 
-const VIEWS: HomeView[] = ["saved", "recent", "featured", "new", "popular"];
+const VIEWS: HomeView[] = ["saved", "recent", "featured", "new", "popular", "hot"];
 
 export const VIEW_TITLES: Record<HomeView, string> = {
   saved: "Favorites",
   recent: "Recently played",
   featured: "Featured games",
-  new: "New releases",
+  new: "Newest games",
   popular: "Most played",
+  hot: "Hottest this week",
 };
 
 function unique(values: string[]) {
@@ -33,12 +36,16 @@ export function parseFilters(params: Params): HomeFilters {
     tags: unique(params.getAll("tag")),
     creators: unique(params.getAll("creator").map((c) => c.toLowerCase())),
     view: VIEWS.includes(view as HomeView) ? (view as HomeView) : null,
+    browse: params.get("browse") === "1",
   };
 }
 
 /** True when the homepage should show a results grid instead of the curated rows. */
 export function isBrowsing(f: HomeFilters) {
-  return Boolean(f.q.trim() || f.tags.length || f.creators.length || f.view);
+  if (f.q.trim() || f.tags.length || f.creators.length) return true;
+  if (!f.view) return false;
+  if (f.view === "recent") return f.browse;
+  return true;
 }
 
 export function filtersHref(f: Partial<HomeFilters>) {
@@ -47,6 +54,7 @@ export function filtersHref(f: Partial<HomeFilters>) {
   for (const tag of f.tags ?? []) sp.append("tag", tag);
   for (const creator of f.creators ?? []) sp.append("creator", creator);
   if (f.view) sp.set("view", f.view);
+  if (f.browse) sp.set("browse", "1");
   const s = sp.toString();
   return s ? `/?${s}` : "/";
 }
@@ -65,6 +73,18 @@ export function byPopularity(games: Game[]) {
 
 export function byNewest(games: Game[]) {
   return [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Plays in the last 7 days when `weekly` is populated; otherwise falls back to all-time popularity. */
+export function byHotThisWeek(games: Game[], weekly: Record<string, number>) {
+  const hasWeekly = Object.keys(weekly).length > 0;
+  return [...games].sort((a, b) => {
+    if (hasWeekly) {
+      const d = (weekly[b.id] ?? 0) - (weekly[a.id] ?? 0);
+      if (d !== 0) return d;
+    }
+    return popularityScore(b) - popularityScore(a) || b.createdAt.localeCompare(a.createdAt);
+  });
 }
 
 export function isNewThisWeek(iso: string) {
@@ -100,7 +120,7 @@ export function shelfTag(tags: string[], games: Game[], min = 3) {
 export function viewGames(
   view: HomeView | null,
   games: Game[],
-  ctx: { library: string[]; history: HistoryItem[] },
+  ctx: { library: string[]; history: HistoryItem[]; weeklyPlays?: Record<string, number> },
 ) {
   switch (view) {
     case "saved":
@@ -111,6 +131,8 @@ export function viewGames(
     }
     case "new":
       return byNewest(games);
+    case "hot":
+      return byHotThisWeek(games, ctx.weeklyPlays ?? {});
     case "featured":
     case "popular":
     case null:

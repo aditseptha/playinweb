@@ -456,6 +456,36 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["payouts"]["Insert"]>
         Relationships: []
       }
+      home_hero_spotlights: {
+        Row: {
+          project_id: string
+          sort_order: number
+        }
+        Insert: {
+          project_id: string
+          sort_order?: number
+        }
+        Update: {
+          project_id?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      home_featured_games: {
+        Row: {
+          project_id: string
+          sort_order: number
+        }
+        Insert: {
+          project_id: string
+          sort_order?: number
+        }
+        Update: {
+          project_id?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           id: string
@@ -548,6 +578,14 @@ export type Database = {
       }
       admin_set_feature: {
         Args: { fid: string; hide: boolean; is_soon: boolean }
+        Returns: undefined
+      }
+      admin_set_home_hero_spotlights: {
+        Args: { p_project_ids: string[] }
+        Returns: undefined
+      }
+      admin_set_home_featured_games: {
+        Args: { p_project_ids: string[] }
         Returns: undefined
       }
       admin_upsert_site_settings: {

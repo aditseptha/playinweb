@@ -65,6 +65,14 @@ export function CuratedGames() {
           The <code>listed</code> account is missing. Run the curated games migration in Supabase first
           (<code>20261110130000_curated_games.sql</code>).
         </p>
+        <p className="mt-4 text-ui text-text-muted">
+          To configure the homepage <strong>hero carousel</strong> or <strong>Featured games</strong> row, use the{" "}
+          <Link href="/admin?tab=homepage" className="text-primary underline underline-offset-2">
+            Homepage
+          </Link>{" "}
+          tab (migrations <code>20261110150000_home_hero_spotlights.sql</code> and{" "}
+          <code>20261110170000_home_featured_games.sql</code>).
+        </p>
       </div>
     );
   }

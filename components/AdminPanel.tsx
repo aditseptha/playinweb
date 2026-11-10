@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CuratedGames } from "@/components/admin/CuratedGames";
+import { HomepagePicks } from "@/components/admin/HomepagePicks";
 import { FeatureList } from "@/components/admin/FeatureList";
 import { OverviewSummary } from "@/components/admin/Overview";
 import { DonationRecords, PayoutRecords, TipRecords } from "@/components/admin/Records";
@@ -43,7 +44,9 @@ export function AdminPanel() {
   const searchParams = useSearchParams();
   const rawTab = searchParams.get("tab");
   const tab =
-    rawTab === "reports" || rawTab === "features" || rawTab === "wallet" || rawTab === "curated" ? rawTab : "overview";
+    rawTab === "reports" || rawTab === "features" || rawTab === "wallet" || rawTab === "curated" || rawTab === "homepage"
+      ? rawTab
+      : "overview";
   const { features, setFlags } = useFeatures();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
@@ -297,6 +300,7 @@ export function AdminPanel() {
           options={[
             { value: "overview", label: "Overview", href: "/admin" },
             { value: "curated", label: "Curated games", href: "/admin?tab=curated" },
+            { value: "homepage", label: "Homepage", href: "/admin?tab=homepage" },
             { value: "wallet", label: "Wallet", href: "/admin?tab=wallet" },
             { value: "reports", label: "Reported issue", href: "/admin?tab=reports" },
             { value: "features", label: "Feature list", href: "/admin?tab=features" },
@@ -308,6 +312,7 @@ export function AdminPanel() {
       {error ? <p className="mt-6 text-ui text-danger">{error}</p> : null}
 
       {tab === "curated" ? <CuratedGames /> : null}
+      {tab === "homepage" ? <HomepagePicks games={games} /> : null}
       {tab === "reports" ? <ReportsTable reports={reports} /> : null}
       {tab === "features" ? <FeatureList features={features} setFlags={setFlags} /> : null}
       {tab === "wallet" ? (

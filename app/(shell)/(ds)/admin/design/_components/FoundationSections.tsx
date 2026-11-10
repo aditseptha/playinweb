@@ -446,10 +446,10 @@ function Icons() {
       id="icons"
       eyebrow="Language"
       title="Icons"
-      description="One set everywhere: Icons8 iOS Filled, drawn for 16, 20 and 24px, in components/icons.tsx. Icons are decorative (aria-hidden); icon-only buttons need an aria-label. Need a new glyph? Add it from the same set (ios-filled, 100px PNG) to public/assets/icons/ios-filled and components/icons.tsx. The free Icons8 licence asks for a link to icons8.com."
+      description="One set everywhere: Phosphor Icons (Fill weight) via @phosphor-icons/react, re-exported from components/icons.tsx for 16, 20 and 24px. Icons are decorative (aria-hidden); icon-only buttons need an aria-label. Need a new glyph? Pick the matching icon on phosphoricons.com, import it in components/icons.tsx, and add it to ICON_GALLERY."
     >
       <Demo
-        title="App icon set: Icons8 iOS Filled"
+        title="App icon set: Phosphor (fill)"
         note="components/icons.tsx, shipped on main. Icons take their colour from the surface (currentColor)."
         code={`import { IconHeart } from "@/components/icons";\n<IconHeart width={20} height={20} />`}
       >

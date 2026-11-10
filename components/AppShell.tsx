@@ -638,8 +638,8 @@ function Sidebar({
           >
             © 2026 PlayInWeb
             {" · "}
-            <a href="https://icons8.com" className="underline" target="_blank" rel="noreferrer">
-              Icons by Icons8
+            <a href="https://phosphoricons.com" className="underline" target="_blank" rel="noreferrer">
+              Icons by Phosphor
             </a>
           </p>
         </div>

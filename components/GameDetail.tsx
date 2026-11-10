@@ -25,7 +25,6 @@ import { useLoginDialog } from "@/components/LoginDialog";
 import { ProjectCheckout } from "@/components/ProjectCheckout";
 import { ProjectComments } from "@/components/ProjectComments";
 import {
-  playDomain,
   ProjectHeroRoot,
   ProjectHeroStage,
   ProjectHeroThumbs,
@@ -478,7 +477,7 @@ export function GameDetail({
                     : project.kind === "downloadable"
                       ? "Download"
                       : game.playUrl
-                        ? `On ${playDomain(game.playUrl) || "the creator's site"}`
+                        ? "Opens in a new tab"
                         : "—"
                 }
               />
@@ -687,7 +686,6 @@ type Actions = {
 function PlayCard({ className, actions }: { className?: string; actions: Actions }) {
   const { game, canPlay, playing, playLocked, startPlay, restart } = useProjectHero();
   const running = playing && game.embeddable && !playLocked;
-  const domain = playDomain(game.playUrl);
   return (
     <section aria-label="Play and share" className={cn(card, "flex flex-col gap-3", className)}>
       {canPlay ? (
@@ -699,7 +697,7 @@ function PlayCard({ className, actions }: { className?: string; actions: Actions
           ) : (
             <Button variant="primary" size="lg" className="h-14 w-full text-[17px]" onClick={startPlay}>
               <IconPlay aria-hidden className="fill-current" />
-              {game.embeddable ? "Play" : `Play on ${domain || "the creator's site"}`}
+              Play
               {game.embeddable ? <span className="sr-only"> {game.title}</span> : <IconExternal aria-hidden />}
             </Button>
           )}

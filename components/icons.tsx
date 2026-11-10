@@ -1,268 +1,191 @@
-import { useId, type SVGProps } from "react";
+"use client";
+
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowSquareOut,
+  ArrowsIn,
+  ArrowsOut,
+  Bell,
+  Book,
+  Bookmark,
+  Calendar,
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  CaretUp,
+  ChartLine,
+  ChatCircle,
+  Check,
+  CheckCircle,
+  Clock,
+  ClockCounterClockwise,
+  CloudSlash,
+  Coins,
+  Compass,
+  Confetti,
+  Copy,
+  CornersIn,
+  CornersOut,
+  DotsThree,
+  DownloadSimple,
+  Envelope,
+  Eye,
+  EyeSlash,
+  FileText,
+  FileZip,
+  Fire,
+  Flag,
+  FolderOpen,
+  GameController,
+  Gear,
+  Ghost,
+  GridFour,
+  Heart,
+  House,
+  Image as ImageIcon,
+  Info,
+  List,
+  Lock,
+  MagnifyingGlass,
+  Megaphone,
+  Moon,
+  Pause,
+  PencilSimple,
+  Play,
+  Plus,
+  PuzzlePiece,
+  Question,
+  Rocket,
+  ShareNetwork,
+  Shield,
+  SignIn,
+  SignOut,
+  SlidersHorizontal,
+  Sparkle,
+  Star,
+  Sun,
+  ThumbsDown,
+  ThumbsUp,
+  Trash,
+  Tray,
+  Trophy,
+  UploadSimple,
+  User,
+  Users,
+  Wallet,
+  Warning,
+  WarningCircle,
+  X,
+} from "@phosphor-icons/react";
+import type { SVGProps } from "react";
 
 export type IconProps = SVGProps<SVGSVGElement> & { active?: boolean };
 
 /** 16, 20, and 24 are the sizes the set is drawn for. 24 is the master. */
 export const ICON_SIZES = [16, 20, 24] as const;
 
-type GlyphProps = IconProps & { slug: string; filled?: boolean };
+type WrapOpts = { filled?: boolean };
 
 /**
- * Icons8 iOS Filled, free tier (PNG, 100px). A mask turns the black
- * silhouette into currentColor. https://icons8.com
+ * Phosphor Icons, Fill weight (MIT). https://phosphoricons.com
+ * `filled={false}` uses the regular weight at reduced opacity for toggle states.
  */
-function Glyph({ slug, filled = true, active, ...props }: GlyphProps) {
-  void active;
-  const id = `i8${useId().replace(/:/g, "")}`;
-  const maskProps = {
-    id,
-    maskUnits: "userSpaceOnUse",
-    maskContentUnits: "userSpaceOnUse",
-    maskType: "alpha",
-  } as SVGProps<SVGMaskElement>;
-  return (
-    <svg viewBox="0 0 24 24" width="1em" height="1em" {...props} aria-hidden opacity={filled ? undefined : 0.45}>
-      <mask {...maskProps}>
-        <image href={`/assets/icons/ios-filled/${slug}.png`} width="24" height="24" preserveAspectRatio="xMidYMid meet" />
-      </mask>
-      <rect width="24" height="24" fill="currentColor" mask={`url(#${id})`} />
-    </svg>
-  );
+function wrap(Phosphor: PhosphorIcon, defaults?: WrapOpts) {
+  return function Wrapped({ active, filled, opacity, ...props }: IconProps & { filled?: boolean }) {
+    void active;
+    const on = filled ?? defaults?.filled ?? true;
+    const weight = on ? "fill" : "regular";
+    return (
+      <Phosphor
+        weight={weight}
+        opacity={on ? opacity : (opacity ?? 0.45)}
+        aria-hidden={props["aria-hidden"] ?? true}
+        {...props}
+      />
+    );
+  };
 }
 
-export function IconMenu(props: IconProps) {
-  return <Glyph slug="menu" {...props} />;
-}
-export function IconHome(props: IconProps) {
-  return <Glyph slug="home" {...props} />;
-}
-export function IconSearch(props: IconProps) {
-  return <Glyph slug="search" {...props} />;
-}
-export function IconPlus(props: IconProps) {
-  return <Glyph slug="plus" {...props} />;
-}
-export function IconClose(props: IconProps) {
-  return <Glyph slug="multiply" {...props} />;
-}
-export function IconChevron(props: IconProps) {
-  return <Glyph slug="chevron-right" {...props} />;
-}
-export function IconChevronLeft(props: IconProps) {
-  return <Glyph slug="chevron-left" {...props} />;
-}
-export function IconChevronRight(props: IconProps) {
-  return <Glyph slug="chevron-right" {...props} />;
-}
-export function IconChevronUp(props: IconProps) {
-  return <Glyph slug="chevron-up" {...props} />;
-}
-export function IconChevronDown(props: IconProps) {
-  return <Glyph slug="chevron-down" {...props} />;
-}
-export function IconCheck(props: IconProps) {
-  return <Glyph slug="checkmark" {...props} />;
-}
-export function IconPlay(props: IconProps) {
-  return <Glyph slug="play" {...props} />;
-}
-export function IconPause(props: IconProps) {
-  return <Glyph slug="pause" {...props} />;
-}
-export function IconExternal(props: IconProps) {
-  return <Glyph slug="external-link" {...props} />;
-}
-export function IconUser(props: IconProps) {
-  return <Glyph slug="user" {...props} />;
-}
-export function IconLogout(props: IconProps) {
-  return <Glyph slug="exit" {...props} />;
-}
-export function IconSun(props: IconProps) {
-  return <Glyph slug="sun" {...props} />;
-}
-export function IconMoon(props: IconProps) {
-  return <Glyph slug="moon-symbol" {...props} />;
-}
-export function IconEye(props: IconProps) {
-  return <Glyph slug="visible" {...props} />;
-}
-export function IconEyeOff(props: IconProps) {
-  return <Glyph slug="hide" {...props} />;
-}
-export function IconBell(props: IconProps) {
-  return <Glyph slug="bell" {...props} />;
-}
-export function IconMail(props: IconProps) {
-  return <Glyph slug="mail" {...props} />;
-}
-export function IconPencil(props: IconProps) {
-  return <Glyph slug="edit" {...props} />;
-}
-export function IconShare(props: IconProps) {
-  return <Glyph slug="share" {...props} />;
-}
-export function IconHeart({ filled, ...props }: IconProps & { filled?: boolean }) {
-  return <Glyph slug="like" filled={filled} {...props} />;
-}
-export function IconBookmark({ filled = true, ...props }: IconProps & { filled?: boolean }) {
-  return <Glyph slug="bookmark" filled={filled} {...props} />;
-}
-export function IconStar({ filled, ...props }: IconProps & { filled?: boolean }) {
-  return <Glyph slug="star" filled={filled} {...props} />;
-}
-export function IconThumbUp({ filled = false, ...props }: IconProps & { filled?: boolean }) {
-  return <Glyph slug="thumb-up" filled={filled} {...props} />;
-}
-export function IconThumbDown({ filled = false, ...props }: IconProps & { filled?: boolean }) {
-  return <Glyph slug="thumbs-down" filled={filled} {...props} />;
-}
-export function IconDownload(props: IconProps) {
-  return <Glyph slug="download" {...props} />;
-}
-export function IconFlag(props: IconProps) {
-  return <Glyph slug="flag" {...props} />;
-}
-export function IconShield(props: IconProps) {
-  return <Glyph slug="shield" {...props} />;
-}
-export function IconInfo(props: IconProps) {
-  return <Glyph slug="info" {...props} />;
-}
-export function IconClock(props: IconProps) {
-  return <Glyph slug="clock" {...props} />;
-}
-export function IconHistory(props: IconProps) {
-  return <Glyph slug="time-machine" {...props} />;
-}
-export function IconExpand(props: IconProps) {
-  return <Glyph slug="expand" {...props} />;
-}
-export function IconShrink(props: IconProps) {
-  return <Glyph slug="collapse" {...props} />;
-}
-export function IconFullscreen(props: IconProps) {
-  return <Glyph slug="full-screen" {...props} />;
-}
-export function IconFullscreenExit(props: IconProps) {
-  return <Glyph slug="normal-screen" {...props} />;
-}
-export function IconTrophy(props: IconProps) {
-  return <Glyph slug="trophy" {...props} />;
-}
-export function IconCalendar(props: IconProps) {
-  return <Glyph slug="calendar" {...props} />;
-}
-export function IconWallet(props: IconProps) {
-  return <Glyph slug="wallet" {...props} />;
-}
-export function IconCoin(props: IconProps) {
-  return <Glyph slug="coins" {...props} />;
-}
-export function IconDoc(props: IconProps) {
-  return <Glyph slug="document" {...props} />;
-}
-export function IconMegaphone(props: IconProps) {
-  return <Glyph slug="megaphone" {...props} />;
-}
-export function IconGrid(props: IconProps) {
-  return <Glyph slug="grid" {...props} />;
-}
-export function IconSpark(props: IconProps) {
-  return <Glyph slug="sparkling" {...props} />;
-}
-export function IconFlame(props: IconProps) {
-  return <Glyph slug="fire-element" {...props} />;
-}
-export function IconRocket(props: IconProps) {
-  return <Glyph slug="rocket" {...props} />;
-}
-export function IconUsers(props: IconProps) {
-  return <Glyph slug="conference" {...props} />;
-}
-export function IconBook(props: IconProps) {
-  return <Glyph slug="book" {...props} />;
-}
-export function IconCompass(props: IconProps) {
-  return <Glyph slug="compass" {...props} />;
-}
-export function IconGhost(props: IconProps) {
-  return <Glyph slug="ghost" {...props} />;
-}
-export function IconPuzzle(props: IconProps) {
-  return <Glyph slug="puzzle" {...props} />;
-}
-export function IconSliders(props: IconProps) {
-  return <Glyph slug="sorting-options" {...props} />;
-}
-export function IconArrow(props: IconProps) {
-  return <Glyph slug="arrow" {...props} />;
-}
-export function IconArrowLeft(props: IconProps) {
-  return <Glyph slug="arrow" {...props} style={{ ...props.style, transform: "scaleX(-1)" }} />;
-}
-export function IconLineGraph(props: IconProps) {
-  return <Glyph slug="line-chart" {...props} />;
-}
-export function IconCloudOff(props: IconProps) {
-  return <Glyph slug="cloud-cross" {...props} />;
-}
+export const IconMenu = wrap(List);
+export const IconHome = wrap(House);
+export const IconSearch = wrap(MagnifyingGlass);
+export const IconPlus = wrap(Plus);
+export const IconClose = wrap(X);
+export const IconChevron = wrap(CaretRight);
+export const IconChevronLeft = wrap(CaretLeft);
+export const IconChevronRight = wrap(CaretRight);
+export const IconChevronUp = wrap(CaretUp);
+export const IconChevronDown = wrap(CaretDown);
+export const IconCheck = wrap(Check);
+export const IconPlay = wrap(Play);
+export const IconPause = wrap(Pause);
+export const IconExternal = wrap(ArrowSquareOut);
 
-// Added for the design system components (same Icons8 iOS Filled set).
-export function IconSettings(props: IconProps) {
-  return <Glyph slug="settings" {...props} />;
-}
-export function IconTrash(props: IconProps) {
-  return <Glyph slug="trash" {...props} />;
-}
-export function IconUpload(props: IconProps) {
-  return <Glyph slug="upload" {...props} />;
-}
-export function IconLock(props: IconProps) {
-  return <Glyph slug="lock" {...props} />;
-}
-export function IconGamepad(props: IconProps) {
-  return <Glyph slug="controller" {...props} />;
-}
-export function IconImage(props: IconProps) {
-  return <Glyph slug="image" {...props} />;
-}
-export function IconFileZip(props: IconProps) {
-  return <Glyph slug="zip" {...props} />;
-}
-export function IconInbox(props: IconProps) {
-  return <Glyph slug="inbox" {...props} />;
-}
-export function IconMore(props: IconProps) {
-  return <Glyph slug="more" {...props} />;
-}
-export function IconCopy(props: IconProps) {
-  return <Glyph slug="copy" {...props} />;
-}
-export function IconComment(props: IconProps) {
-  return <Glyph slug="speech-bubble" {...props} />;
-}
-export function IconAlertCircle(props: IconProps) {
-  return <Glyph slug="box-important" {...props} />;
-}
-export function IconCheckCircle(props: IconProps) {
-  return <Glyph slug="ok" {...props} />;
-}
-export function IconWarning(props: IconProps) {
-  return <Glyph slug="error" {...props} />;
-}
-export function IconFolderOpen(props: IconProps) {
-  return <Glyph slug="opened-folder" {...props} />;
-}
-export function IconSignIn(props: IconProps) {
-  return <Glyph slug="enter-2" {...props} />;
-}
-export function IconConfetti(props: IconProps) {
-  return <Glyph slug="confetti" {...props} />;
-}
-export function IconNoResults(props: IconProps) {
-  return <Glyph slug="nothing-found" {...props} />;
-}
+export const IconUser = wrap(User);
+export const IconLogout = wrap(SignOut);
+export const IconSun = wrap(Sun);
+export const IconMoon = wrap(Moon);
+export const IconEye = wrap(Eye);
+export const IconEyeOff = wrap(EyeSlash);
+export const IconBell = wrap(Bell);
+export const IconMail = wrap(Envelope);
+export const IconPencil = wrap(PencilSimple);
+export const IconShare = wrap(ShareNetwork);
+export const IconHeart = wrap(Heart);
+export const IconBookmark = wrap(Bookmark, { filled: true });
+export const IconStar = wrap(Star);
+export const IconThumbUp = wrap(ThumbsUp, { filled: false });
+export const IconThumbDown = wrap(ThumbsDown, { filled: false });
+export const IconDownload = wrap(DownloadSimple);
+export const IconFlag = wrap(Flag);
+export const IconShield = wrap(Shield);
+export const IconInfo = wrap(Info);
+export const IconClock = wrap(Clock);
+export const IconHistory = wrap(ClockCounterClockwise);
+export const IconExpand = wrap(ArrowsOut);
+export const IconShrink = wrap(ArrowsIn);
+export const IconFullscreen = wrap(CornersOut);
+export const IconFullscreenExit = wrap(CornersIn);
+export const IconTrophy = wrap(Trophy);
+export const IconCalendar = wrap(Calendar);
+export const IconWallet = wrap(Wallet);
+export const IconCoin = wrap(Coins);
+export const IconDoc = wrap(FileText);
+export const IconMegaphone = wrap(Megaphone);
+export const IconGrid = wrap(GridFour);
+export const IconSpark = wrap(Sparkle);
+export const IconFlame = wrap(Fire);
+export const IconRocket = wrap(Rocket);
+export const IconUsers = wrap(Users);
+export const IconBook = wrap(Book);
+export const IconCompass = wrap(Compass);
+export const IconGhost = wrap(Ghost);
+export const IconPuzzle = wrap(PuzzlePiece);
+export const IconSliders = wrap(SlidersHorizontal);
+export const IconArrow = wrap(ArrowRight);
+export const IconArrowLeft = wrap(ArrowLeft);
+export const IconLineGraph = wrap(ChartLine);
+export const IconCloudOff = wrap(CloudSlash);
+export const IconSettings = wrap(Gear);
+export const IconTrash = wrap(Trash);
+export const IconUpload = wrap(UploadSimple);
+export const IconLock = wrap(Lock);
+export const IconGamepad = wrap(GameController);
+export const IconImage = wrap(ImageIcon);
+export const IconFileZip = wrap(FileZip);
+export const IconInbox = wrap(Tray);
+export const IconMore = wrap(DotsThree);
+export const IconCopy = wrap(Copy);
+export const IconComment = wrap(ChatCircle);
+export const IconAlertCircle = wrap(WarningCircle);
+export const IconCheckCircle = wrap(CheckCircle);
+export const IconWarning = wrap(Warning);
+export const IconFolderOpen = wrap(FolderOpen);
+export const IconSignIn = wrap(SignIn);
+export const IconConfetti = wrap(Confetti);
+export const IconNoResults = wrap(Question);
 
 export type AppIcon = (props: IconProps) => React.JSX.Element;
 

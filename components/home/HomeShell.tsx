@@ -11,6 +11,7 @@ import { MosaicGrid } from "@/components/ui/mosaic-grid";
 import { ReportDialog } from "@/components/ReportDialog";
 import { LegalProvider } from "@/components/LegalModal";
 import { useLoginDialog } from "@/components/LoginDialog";
+import { HeaderSearch } from "@/components/home/HeaderSearch";
 import { Notices } from "@/components/Notices";
 import { SignupProvider, useSignupDialog } from "@/components/SignupDialog";
 import s from "@/components/home/home.module.css";
@@ -28,7 +29,6 @@ import { switchTheme } from "@/lib/theme";
 const NAV = [
   { href: "/top", label: "Rankings" },
   { href: "/library", label: "Library" },
-  { href: "/?view=recent", label: "Recently played" },
   { href: "/showcase", label: "Showcase" },
 ];
 
@@ -59,7 +59,8 @@ const FOOTER = [
     title: "Explore",
     links: [
       { href: "/?view=popular", label: "All games" },
-      { href: "/?view=new", label: "New releases" },
+      { href: "/?view=new", label: "Newest games" },
+      { href: "/?view=hot", label: "Hottest this week" },
       { href: "/top", label: "Rankings" },
       { href: "/showcase", label: "Showcase" },
     ],
@@ -103,19 +104,34 @@ function hrefFor(href: string) {
   return href.startsWith("mailto:") || href.startsWith("/?") || href.startsWith("/#") ? href : apexHref(href);
 }
 
+function useNavCompact(rootRef: ReturnType<typeof useRef<HTMLDivElement | null>>, threshold = 48) {
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const onScroll = () => setCompact(root.scrollTop > threshold);
+    onScroll();
+    root.addEventListener("scroll", onScroll, { passive: true });
+    return () => root.removeEventListener("scroll", onScroll);
+  }, [rootRef, threshold]);
+  return compact;
+}
+
 export function HomeShell({ children }: { children: ReactNode }) {
   const [reportOpen, setReportOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const compact = useNavCompact(rootRef);
   return (
     <LegalProvider>
       <SignupProvider>
-        <div data-scroll-root className={cn(s.root, dsFontVars)}>
+        <div ref={rootRef} data-scroll-root className={cn(s.root, dsFontVars, compact && s.navCompactRoot)}>
           <a
             href="#content"
             className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-black"
           >
             Skip to content
           </a>
-          <Nav onReport={() => setReportOpen(true)} />
+          <Nav compact={compact} onReport={() => setReportOpen(true)} />
           <main id="content">{children}</main>
           <Footer onReport={() => setReportOpen(true)} />
           {reportOpen ? <ReportDialog onClose={() => setReportOpen(false)} /> : null}
@@ -210,7 +226,7 @@ function PrimaryNav() {
   );
 }
 
-function Nav({ onReport }: { onReport: () => void }) {
+function Nav({ compact, onReport }: { compact: boolean; onReport: () => void }) {
   const { user, profile, loading, signOut } = useAuth();
   const { openLogin } = useLoginDialog();
   const { openSignup } = useSignupDialog();
@@ -220,13 +236,16 @@ function Nav({ onReport }: { onReport: () => void }) {
 
   return (
     <>
-      <header className={cn(s.nav, s.frame, s.onDark)}>
+      <header className={cn(s.nav, s.frame, s.onDark, compact && s.navCompact)}>
         <div className={s.wrap}>
           <Link href="/" aria-label="PlayInWeb home">
             <Logo animated />
           </Link>
           <Suspense fallback={null}>
             <PrimaryNav />
+          </Suspense>
+          <Suspense fallback={null}>
+            <HeaderSearch />
           </Suspense>
           <div className={s.navTools}>
             <ThemeButton />
@@ -254,7 +273,7 @@ function Nav({ onReport }: { onReport: () => void }) {
                     <Avatar
                       name={profile?.display_name ?? ""}
                       src={publicMediaUrl(profile?.avatar_path) || undefined}
-                      size={42}
+                      size={compact ? 36 : 42}
                     />
                   </button>
                   {accountOpen ? (
@@ -436,7 +455,7 @@ function Footer({ onReport }: { onReport: () => void }) {
           </div>
         </div>
         <div className={s.fBot}>
-          <span>© 2026 PlayInWeb</span>
+          <span className={cn(s.made, s.fBotCopy)}>© 2026 PlayInWeb</span>
           <span className={s.made}>MADE FOR INDIE STORYTELLERS</span>
         </div>
       </div>
