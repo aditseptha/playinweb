@@ -9,7 +9,11 @@ type CurationRow = Database["public"]["Tables"]["project_curation"]["Row"];
 /** Handle of the system account that owns unclaimed curated games. Hidden from every creator surface. */
 export const CURATED_HANDLE = "listed";
 
-export type PlayMode = "hosted" | "link_out";
+/**
+ * hosted: we host the build. link_out: players go to the creator's page.
+ * embed: the game plays here, loaded from the creator's page through the site's own embed player.
+ */
+export type PlayMode = "hosted" | "link_out" | "embed";
 
 export type Curation = {
   creatorName: string;
@@ -49,8 +53,8 @@ export const CURATION_LICENSES = [
 ] as const;
 
 /**
- * The license value for a link-out curated game (#9 F2). We only link to the creator's own page and
- * host nothing, so no hosting license applies. Not in CURATION_LICENSES, which are for hosted builds.
+ * The license value for a link-out or embedded curated game (#9 F2). We only link to or embed the
+ * creator's own page and host nothing, so no hosting license applies. Not in CURATION_LICENSES, which are for hosted builds.
  */
 export const LINK_OUT_LICENSE = "Link only";
 
@@ -102,9 +106,30 @@ export function curationFromRow(
     license: row.license,
     licenseUrl: optionalUrl(row.license_url),
     modified: Boolean(row.modified),
-    playMode: row.play_mode === "link_out" ? "link_out" : "hosted",
+    playMode: row.play_mode === "link_out" || row.play_mode === "embed" ? row.play_mode : "hosted",
     status: row.status,
   };
+}
+
+/**
+ * Embed players that game sites offer for use on other sites, so the game can play inside PlayInWeb
+ * without us hosting the build. Only these load in our play frame; other external links open a new tab.
+ */
+const OFFICIAL_EMBEDS: { host: string; path: RegExp }[] = [
+  // itch.io: the "embed-upload" player for an HTML5 upload, the one itch's own embed code uses.
+  { host: "itch.io", path: /^\/embed-upload\/\d+$/ },
+  // PICO-8: the Lexaloffle BBS cart player.
+  { host: "www.lexaloffle.com", path: /^\/bbs\/widget\.php$/ },
+];
+
+export function isOfficialEmbedUrl(value: string | null | undefined) {
+  let url: URL;
+  try {
+    url = new URL(value?.trim() ?? "");
+  } catch {
+    return false;
+  }
+  return url.protocol === "https:" && OFFICIAL_EMBEDS.some((e) => url.hostname === e.host && e.path.test(url.pathname));
 }
 
 /** "github.com/gabrielecirulli/2048" from a URL, for compact credit links. */

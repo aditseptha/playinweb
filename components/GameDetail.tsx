@@ -868,7 +868,9 @@ function CuratedCreditCard({
       <p className="text-pw-body-sm text-pw-text-soft">
         {credit.playMode === "link_out"
           ? "Listed by PlayInWeb with credit. You play it on the creator’s site."
-          : credit.license === "Permission"
+          : credit.playMode === "embed"
+            ? "Listed by PlayInWeb with credit. The game loads from the creator’s own page."
+            : credit.license === "Permission"
             ? "Shared on PlayInWeb with the creator’s permission."
             : "Curated by PlayInWeb under an open license."}
         {credit.modified ? " Modified for PlayInWeb." : ""}
