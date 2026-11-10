@@ -115,21 +115,34 @@ export function curationFromRow(
  * Embed players that game sites offer for use on other sites, so the game can play inside PlayInWeb
  * without us hosting the build. Only these load in our play frame; other external links open a new tab.
  */
-const OFFICIAL_EMBEDS: { host: string; path: RegExp }[] = [
+type FrameSize = { width: number; height: number };
+
+const OFFICIAL_EMBEDS: { host: string; path: RegExp; size?: FrameSize }[] = [
   // itch.io: the "embed-upload" player for an HTML5 upload, the one itch's own embed code uses.
   { host: "itch.io", path: /^\/embed-upload\/\d+$/ },
-  // PICO-8: the Lexaloffle BBS cart player.
-  { host: "www.lexaloffle.com", path: /^\/bbs\/widget\.php$/ },
+  // PICO-8: the Lexaloffle BBS cart player. It only lays out cleanly near the 621×513 box from
+  // Lexaloffle's own embed code (smaller frames crop the cart, larger ones pin it to the left).
+  { host: "www.lexaloffle.com", path: /^\/bbs\/widget\.php$/, size: { width: 621, height: 513 } },
 ];
 
-export function isOfficialEmbedUrl(value: string | null | undefined) {
+function officialEmbed(value: string | null | undefined) {
   let url: URL;
   try {
     url = new URL(value?.trim() ?? "");
   } catch {
-    return false;
+    return null;
   }
-  return url.protocol === "https:" && OFFICIAL_EMBEDS.some((e) => url.hostname === e.host && e.path.test(url.pathname));
+  if (url.protocol !== "https:") return null;
+  return OFFICIAL_EMBEDS.find((e) => url.hostname === e.host && e.path.test(url.pathname)) ?? null;
+}
+
+export function isOfficialEmbedUrl(value: string | null | undefined) {
+  return officialEmbed(value) !== null;
+}
+
+/** The fixed frame size an embed player needs (scale it to fit), or null when it fills any frame. */
+export function embedFrameSize(value: string | null | undefined): FrameSize | null {
+  return officialEmbed(value)?.size ?? null;
 }
 
 /** "github.com/gabrielecirulli/2048" from a URL, for compact credit links. */

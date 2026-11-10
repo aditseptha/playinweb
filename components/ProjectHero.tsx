@@ -17,6 +17,7 @@ import {
   IconShrink,
 } from "@/components/icons";
 import { cn } from "@/lib/cn";
+import { embedFrameSize } from "@/lib/curation";
 import { projectPublicUrl } from "@/lib/host";
 import { GUEST_PLAY_LIMIT_MS } from "@/lib/guest-play";
 import { playFrameSandbox } from "@/lib/html-game";
@@ -345,6 +346,7 @@ export function ProjectHeroStage() {
   }
 
   const isFull = fullscreen || pseudo;
+  const frameSize = embedFrameSize(game.playUrl);
   const poster = !current || current.kind === "cover" || current.kind === "shot";
 
   return (
@@ -361,14 +363,11 @@ export function ProjectHeroStage() {
       <div className={cn("stage-media relative w-full overflow-hidden", pseudo ? "min-h-0 flex-1" : "aspect-video")}>
         {running ? (
           <>
-            <iframe
+            <PlayFrame
               key={frameKey}
               src={game.playUrl}
               title={game.title}
-              className="absolute inset-0 h-full w-full border-0 bg-pw-night-950"
-              allow="fullscreen; gamepad; accelerometer; autoplay; pointer-lock; clipboard-write"
-              allowFullScreen
-              sandbox={playFrameSandbox()}
+              size={frameSize}
               onLoad={() => setLoadedKey(frameKey)}
             />
             {timedOut ? (
@@ -692,5 +691,58 @@ function ClipStage({
         Pause
       </button>
     </div>
+  );
+}
+
+/**
+ * The game iframe. Most games fill the stage. An embed player with a fixed size (PICO-8) renders at
+ * that size and is scaled to fit, centred, because it lays out badly at any other size.
+ */
+function PlayFrame({
+  src,
+  title,
+  size,
+  onLoad,
+}: {
+  src: string;
+  title: string;
+  size: { width: number; height: number } | null;
+  onLoad: () => void;
+}) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!size || !box) return;
+    const fit = () => setScale(Math.min(box.clientWidth / size.width, box.clientHeight / size.height) || 1);
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [size]);
+
+  const frame = (
+    <iframe
+      src={src}
+      title={title}
+      className={cn("border-0 bg-pw-night-950", size ? "absolute top-1/2 left-1/2" : "absolute inset-0 h-full w-full")}
+      style={
+        size
+          ? { width: size.width, height: size.height, transform: `translate(-50%, -50%) scale(${scale})` }
+          : undefined
+      }
+      allow="fullscreen; gamepad; accelerometer; autoplay; pointer-lock; clipboard-write"
+      allowFullScreen
+      sandbox={playFrameSandbox()}
+      onLoad={onLoad}
+    />
+  );
+  return size ? (
+    <div ref={boxRef} className="absolute inset-0 overflow-hidden">
+      {frame}
+    </div>
+  ) : (
+    frame
   );
 }
