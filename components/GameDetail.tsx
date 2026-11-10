@@ -470,7 +470,8 @@ export function GameDetail({
                 plays={plays}
                 status={project.release_status}
                 genre={genre}
-                license={curated ? licenseLabel(curated.license) : null}
+                // A link-out game hosts nothing here, so it has no hosting license to show.
+                license={curated?.playMode === "hosted" ? licenseLabel(curated.license) : null}
                 runs={
                   game.embeddable
                     ? "In your browser"
@@ -867,9 +868,11 @@ function CuratedCreditCard({
         </div>
       </div>
       <p className="text-pw-body-sm text-pw-text-soft">
-        {credit.license === "Permission"
-          ? "Shared on PlayInWeb with the creator’s permission."
-          : "Curated by PlayInWeb under an open license."}
+        {credit.playMode === "link_out"
+          ? "Listed by PlayInWeb with credit. You play it on the creator’s site."
+          : credit.license === "Permission"
+            ? "Shared on PlayInWeb with the creator’s permission."
+            : "Curated by PlayInWeb under an open license."}
         {credit.modified ? " Modified for PlayInWeb." : ""}
       </p>
       {links.length > 0 ? (
