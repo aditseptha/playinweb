@@ -16,8 +16,8 @@ import {
 import Image from "next/image";
 import { cn } from "@/lib/cn";
 
-// Pixel-art illustrations for page-level empty and status states. Until an asset is drawn,
-// a placeholder (large icon on a pixel grid) stands in, so pages never wait on artwork.
+// Soft 3D mascot illustrations for page-level empty and status states. Until an asset is drawn,
+// a placeholder (large icon on a grid) stands in, so pages never wait on artwork.
 // When an asset lands in public/illustrations/, add its file name to ASSETS.
 
 export const ILLUSTRATIONS = {
@@ -78,7 +78,7 @@ export function Illustration({
         alt=""
         width={px}
         height={px}
-        className={cn("[image-rendering:pixelated]", className)}
+        className={className}
       />
     );
   }
