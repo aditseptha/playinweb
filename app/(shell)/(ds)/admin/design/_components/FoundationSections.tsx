@@ -500,7 +500,7 @@ function Illustrations() {
       id="illustrations"
       eyebrow="Language"
       title="Illustrations"
-      description="Soft 3D, like a glossy vinyl toy, in the brand blues. The recurring character is the Playinweb mascot: the white box from the logo, with O X as its eyes, which change shape with the mood. Page-level empty and status states only; inline empties use an icon. Files are 480px transparent WebP in public/illustrations/, shown at L 240, M 160 or S 96. A name without a file falls back to a placeholder."
+      description="Soft 3D vinyl-toy style in the brand blues, with the Playinweb mascot (O X eyes) as the recurring character. Page-level empty and status states only; inline empties use an icon. Files are 480px transparent WebP in public/illustrations/, shown at L 240, M 160 or S 96. A name without a file falls back to a placeholder."
     >
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {(Object.keys(ILLUSTRATIONS) as IllustrationName[]).map((n) => (
