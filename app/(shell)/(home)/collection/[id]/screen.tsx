@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { TallCard } from "@/components/home/cards";
+import { Button } from "@/components/ds/button";
+import { EmptyState } from "@/components/ds/empty-state";
 import s from "@/components/home/home.module.css";
 import { HomeUiProvider } from "@/components/home/Peek";
-import { cn } from "@/lib/cn";
 import { apexHref } from "@/lib/host";
 import { gamesByIds, useGames } from "@/lib/store";
 
@@ -30,13 +31,17 @@ export function CollectionScreen() {
             {listed.length} {listed.length === 1 ? "game" : "games"}
           </p>
           {listed.length === 0 ? (
-            <div className={s.manageEmpty}>
-              <p>No games yet</p>
-              <p className={s.legalIntro}>Add games from a listing with Add to collection.</p>
-              <Link href={apexHref("/")} className={cn(s.btn, s.btnPrimary)} style={{ marginTop: 18 }}>
-                Browse games
-              </Link>
-            </div>
+            <EmptyState
+              kind="user"
+              illustration="empty-library"
+              title="No games yet"
+              body="Add games from a listing with Add to collection."
+              action={
+                <Button variant="primary" asChild>
+                  <Link href={apexHref("/")}>Browse games</Link>
+                </Button>
+              }
+            />
           ) : (
             <HomeUiProvider>
               <div className={s.grid} style={{ marginTop: 28 }}>

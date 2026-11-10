@@ -375,7 +375,8 @@ export function GameDetail({
       {/* The HomeShell nav floats over the top 64–80px, so the page starts below it. */}
       <div className="relative">
         <NavBackdrop />
-        <div className="mx-auto w-full max-w-[1232px] px-4 pt-[84px] pb-16 md:px-6 md:pt-[100px]">
+        <div className="px-4 md:px-6">
+        <div className="mx-auto w-full max-w-[1440px] pt-[84px] pb-16 md:pt-[100px]">
           {notice ? <div className="mb-4">{notice}</div> : null}
           {/* One grid. Below lg the two columns use display: contents and their blocks are ordered
             for phones; at lg they are real columns. The stage is its own item and never moves:
@@ -490,6 +491,7 @@ export function GameDetail({
             creatorName={creatorName}
             creatorUrl={curated ? null : creatorUrl}
           />
+        </div>
         </div>
       </div>
 

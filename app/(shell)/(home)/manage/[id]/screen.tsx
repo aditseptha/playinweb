@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ProjectForm } from "@/components/ProjectForm";
+import { Button } from "@/components/ds/button";
+import { StatusPage } from "@/components/ds/empty-state";
+import { FormSkeleton } from "@/components/ds/skeleton";
 import { useLoginDialog } from "@/components/LoginDialog";
 import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
@@ -29,7 +32,8 @@ export function EditGameScreen() {
   }, [id]);
 
   let title = "Edit game";
-  let body = <p className={s.legalIntro}>Loading game…</p>;
+  let missing = false;
+  let body = <FormSkeleton label="Loading game" fields={6} />;
 
   if (!loading && project !== undefined && !user) {
     body = (
@@ -44,15 +48,19 @@ export function EditGameScreen() {
     );
   } else if (!loading && project !== undefined && user && (!project || project.owner_id !== user.id)) {
     title = "Game not found";
+    missing = true;
     body = (
-      <>
-        <p className={s.legalIntro}>This listing is missing, or it isn’t yours.</p>
-        <div className={s.manageActions} style={{ marginTop: 22 }}>
-          <Link href={apexHref("/manage")} className={cn(s.btn, s.btnGhost)}>
-            Back to manage games
-          </Link>
-        </div>
-      </>
+      <StatusPage
+        status="not-found"
+        title="Game not found"
+        body="This listing is missing, or it isn’t yours."
+        fullHeight={false}
+        actions={
+          <Button variant="primary" asChild>
+            <Link href={apexHref("/manage")}>Back to manage games</Link>
+          </Button>
+        }
+      />
     );
   } else if (!loading && project && user && project.owner_id === user.id) {
     title = `Edit ${project.title}`;
@@ -71,12 +79,18 @@ export function EditGameScreen() {
   }
 
   return (
-    <div className={s.create}>
+    <div className={`${s.create} ${s.pageSkin}`}>
       <div className={s.frame}>
         <div className={s.wrap}>
-          <p className={s.eyebrow}>Creator</p>
-          <h1 className={s.createTitle}>{title}</h1>
-          {body}
+          {missing ? (
+            body
+          ) : (
+            <>
+              <p className={s.eyebrow}>Creator</p>
+              <h1 className={s.createTitle}>{title}</h1>
+              {body}
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { EmptyState } from "@/components/ds/empty-state";
+import { Button } from "@/components/ds/button";
+import { DashboardSkeleton } from "@/components/ds/skeleton";
 import { ManageStats } from "@/components/ManageStats";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { useSignupDialog } from "@/components/SignupDialog";
@@ -51,7 +54,7 @@ export function ManageScreen() {
   const totalViews = (projects ?? []).reduce((n, p) => n + (p.view_count ?? 0), 0);
   const totalPlays = (projects ?? []).reduce((n, p) => n + Math.min(p.play_count, p.view_count ?? 0), 0);
 
-  let body = <p className={s.legalIntro}>Loading account…</p>;
+  let body = <DashboardSkeleton label="Loading account" />;
   if (!loading && (!user || !profile)) {
     body = (
       <>
@@ -69,28 +72,34 @@ export function ManageScreen() {
   } else if (!loading && user && profile) {
     body = (
       <>
-        <p className={s.legalIntro}>
-          {projects === null
-            ? "Loading your listings…"
-            : `${projects.length} ${projects.length === 1 ? "game" : "games"} · ${formatPlays(totalViews)} views · ${formatPlays(totalPlays)} plays`}
-        </p>
-        {projects === null ? null : projects.length === 0 ? (
-          <div className={s.manageEmpty}>
-            <p>No games yet</p>
-            <p className={s.legalIntro}>Publish a listing and it will show up here with view counts.</p>
-            <Link href={apexHref("/register")} className={cn(s.btn, s.btnPrimary)} style={{ marginTop: 18 }}>
-              Create a game
-            </Link>
-          </div>
+        {projects === null ? (
+          <DashboardSkeleton label="Loading your listings" />
+        ) : projects.length === 0 ? (
+          <EmptyState
+            kind="first-use"
+            illustration="first-use"
+            title="No games yet"
+            body="Publish a listing and it will show up here with view counts."
+            action={
+              <Button variant="primary" asChild>
+                <Link href={apexHref("/register")}>Create a game</Link>
+              </Button>
+            }
+          />
         ) : (
-          <ManageStats projects={projects} days={days} handle={profile.handle} />
+          <>
+            <p className={s.legalIntro}>
+              {projects.length} {projects.length === 1 ? "game" : "games"} · {formatPlays(totalViews)} views · {formatPlays(totalPlays)} plays
+            </p>
+            <ManageStats projects={projects} days={days} handle={profile.handle} />
+          </>
         )}
       </>
     );
   }
 
   return (
-    <div className={s.create}>
+    <div className={`${s.create} ${s.pageSkin}`}>
       <div className={s.frame}>
         <div className={s.wrap}>
           <p className={s.eyebrow}>Creator</p>

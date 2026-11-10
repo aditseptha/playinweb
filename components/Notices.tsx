@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Illustration } from "@/components/ds/illustration";
+import { Skeleton } from "@/components/ds/skeleton";
 import s from "@/components/home/home.module.css";
 import { IconBell, IconCoin, IconComment, IconFlag, IconHeart, IconUsers, IconWallet, type AppIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,11 @@ export function Notices() {
             {fresh.size > 0 ? <small>{fresh.size} new</small> : null}
           </div>
           {items === null ? (
-            <p className={s.noticeEmpty}>Loading…</p>
+            <div className={s.noticeList} role="status" aria-label="Loading notifications">
+              {Array.from({ length: 4 }, (_, i) => (
+                <Skeleton key={i} className="mb-2 h-14 w-full" />
+              ))}
+            </div>
           ) : items.length === 0 ? (
             <div className={s.noticeEmpty}>
               <Illustration name="no-notifications" size="s" />

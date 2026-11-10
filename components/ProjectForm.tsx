@@ -1,8 +1,12 @@
 ﻿"use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { DeleteProjectButton } from "@/components/DeleteProjectButton";
+import { FormSkeleton } from "@/components/ds/skeleton";
+import { EmptyState } from "@/components/ds/empty-state";
+import { Button as DsButton } from "@/components/ds/button";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { BuildFields } from "@/components/project-form/BuildFields";
 import { CurationFields, type CurationDraft } from "@/components/project-form/CurationFields";
@@ -134,6 +138,7 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
   const [filledFromLink, setFilledFromLink] = useState(false);
   const [readingLink, setReadingLink] = useState(false);
   const [error, setError] = useState("");
+  const [published, setPublished] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -145,7 +150,7 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
     return choices;
   }, [project, curated]);
 
-  if (loading) return <p className="text-ui text-text-muted">Loading account…</p>;
+  if (loading) return <FormSkeleton label="Loading account" fields={6} />;
 
   if (!user || !profile) {
     return (
@@ -548,13 +553,41 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
       }
 
       clearCatalogueCache();
-      router.push(editing ? (curated?.doneHref ?? "/manage") : projectPublicUrl(handle, nextSlug));
+      if (editing) {
+        router.push(curated?.doneHref ?? "/manage");
+        router.refresh();
+        return;
+      }
+      setPending(false);
+      setStatus("");
+      setPublished(projectPublicUrl(handle, nextSlug));
       router.refresh();
     } catch (err) {
       setPending(false);
       setStatus("");
       setError(saveErrorMessage(err));
     }
+  }
+
+  if (published) {
+    return (
+      <EmptyState
+        kind="first-use"
+        illustration="success"
+        title="Your game is live"
+        body="The listing is published. Open it, or go back to your games."
+        action={
+          <>
+            <DsButton variant="primary" asChild>
+              <Link href={published}>View game</Link>
+            </DsButton>
+            <DsButton asChild>
+              <Link href="/manage">Manage games</Link>
+            </DsButton>
+          </>
+        }
+      />
+    );
   }
 
   return (

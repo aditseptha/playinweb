@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ds/button";
 import { StatusPage } from "@/components/ds/empty-state";
+import { AuthSkeleton } from "@/components/ds/skeleton";
 import { useAuth } from "@/lib/auth";
 import { canOpenFeature, useFeature } from "@/lib/features";
 
@@ -11,7 +12,7 @@ export function FeatureGate({ id, children }: { id: string; children: ReactNode 
   const { user, loading: authLoading } = useAuth();
   const { feature, loading } = useFeature(id);
 
-  if (authLoading || loading) return <p className="text-pw-body text-pw-muted">Loading…</p>;
+  if (authLoading || loading) return <AuthSkeleton label="Loading" />;
   if (canOpenFeature(feature ?? undefined, user?.email)) return children;
 
   if (feature?.soon) {

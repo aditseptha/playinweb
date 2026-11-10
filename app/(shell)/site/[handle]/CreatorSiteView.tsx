@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChannelHero } from "@/components/ChannelHero";
 import { TallCard } from "@/components/home/cards";
+import { EmptyState } from "@/components/ds/empty-state";
 import s from "@/components/home/home.module.css";
 import { HomeUiProvider } from "@/components/home/Peek";
 import { useAuth } from "@/lib/auth";
@@ -70,10 +71,12 @@ export function CreatorSiteView({
               <h2>Games</h2>
             </div>
             {games.length === 0 ? (
-              <div className={s.empty}>
-                <h3>No published games yet</h3>
-                <p>Games this creator publishes will show up here.</p>
-              </div>
+              <EmptyState
+                kind="first-use"
+                illustration="first-use"
+                title="No published games yet"
+                body="Games this creator publishes will show up here."
+              />
             ) : (
               <div className={s.grid}>
                 {games.map((game, index) => (

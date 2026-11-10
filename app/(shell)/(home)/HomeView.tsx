@@ -3,6 +3,8 @@
 import { IconBook, IconClose, IconFlame, IconHeart, IconHistory, IconRocket, IconSearch, IconSpark, IconUsers } from "@/components/icons";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
+import { Button } from "@/components/ds/button";
+import { EmptyState } from "@/components/ds/empty-state";
 import { CreatorCTA, GuestBanner } from "@/components/home/Banners";
 import { SlotCard, TallCard, WideCard } from "@/components/home/cards";
 import { FilterRail } from "@/components/home/FilterRail";
@@ -295,10 +297,25 @@ function Results({
 
   const empty =
     view === "saved"
-      ? { h: "No favorites yet", p: "Press Save on a game you like and it shows up here." }
+      ? {
+          kind: "user" as const,
+          illustration: "no-favorites" as const,
+          title: "No favorites yet",
+          body: "Press Save on a game you like and it shows up here.",
+        }
       : view === "recent"
-        ? { h: "Nothing played yet", p: "Games you open show up here." }
-        : { h: "No games match", p: "Try removing a few filters or searching for something else." };
+        ? {
+            kind: "user" as const,
+            illustration: "nothing-played" as const,
+            title: "Nothing played yet",
+            body: "Games you open show up here.",
+          }
+        : {
+            kind: "no-results" as const,
+            illustration: "no-results" as const,
+            title: "No games match",
+            body: "Try removing a few filters or searching for something else.",
+          };
 
   return (
     <section aria-live="polite">
@@ -325,13 +342,17 @@ function Results({
           ))}
         </div>
       ) : (
-        <div className={s.empty}>
-          <h3>{empty.h}</h3>
-          <p>{empty.p}</p>
-          <button type="button" className={cn(s.btn, s.btnPrimary)} onClick={onReset}>
-            Clear all filters
-          </button>
-        </div>
+        <EmptyState
+          kind={empty.kind}
+          illustration={empty.illustration}
+          title={empty.title}
+          body={empty.body}
+          action={
+            <Button variant="primary" type="button" onClick={onReset}>
+              Clear all filters
+            </Button>
+          }
+        />
       )}
     </section>
   );

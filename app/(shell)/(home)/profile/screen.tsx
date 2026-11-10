@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { DetailSkeleton, CatalogSkeleton } from "@/components/ds/skeleton";
+import { EmptyState } from "@/components/ds/empty-state";
+import { Button } from "@/components/ds/button";
 import { ChannelHero } from "@/components/ChannelHero";
 import { TallCard } from "@/components/home/cards";
 import s from "@/components/home/home.module.css";
@@ -14,7 +17,6 @@ import { publicMediaUrl } from "@/lib/media";
 import { fetchProjectsForOwner, projectToGame } from "@/lib/projects";
 import { gamesForChannel, historyGames, useGames } from "@/lib/store";
 import type { Game } from "@/lib/types";
-import { cn } from "@/lib/cn";
 
 function mergeGames(primary: Game[], extra: Game[]) {
   const seen = new Set(primary.map((g) => g.id));
@@ -69,7 +71,7 @@ export function ProfileScreen() {
       <div className={s.create}>
         <div className={s.frame}>
           <div className={s.wrap}>
-            <p className={s.legalIntro}>Loading account…</p>
+            <DetailSkeleton label="Loading account" />
           </div>
         </div>
       </div>
@@ -157,7 +159,7 @@ export function ProfileScreen() {
         action={channelHandle ? { href: siteOrigin(channelHandle), label: "See all games" } : undefined}
       >
         {gamesLoading ? (
-          <p className={s.legalIntro}>Loading your games…</p>
+          <CatalogSkeleton label="Loading your games" />
         ) : listed.length > 0 ? (
           <div className={s.grid}>
             {listed.map((game, index) => (
@@ -165,13 +167,17 @@ export function ProfileScreen() {
             ))}
           </div>
         ) : (
-          <div className={s.empty}>
-            <h3>Create a game</h3>
-            <p>Register a web game and it will appear on your channel and in this shelf.</p>
-            <Link href="/register" className={cn(s.btn, s.btnPrimary)}>
-              Register a game
-            </Link>
-          </div>
+          <EmptyState
+            kind="first-use"
+            illustration="first-use"
+            title="Create a game"
+            body="Register a web game and it will appear on your channel and in this shelf."
+            action={
+              <Button variant="primary" asChild>
+                <Link href="/register">Register a game</Link>
+              </Button>
+            }
+          />
         )}
       </GameSection>
       </>

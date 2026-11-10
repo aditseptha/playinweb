@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { TallCard } from "@/components/home/cards";
+import { Button } from "@/components/ds/button";
+import { EmptyState } from "@/components/ds/empty-state";
 import s from "@/components/home/home.module.css";
 import { HomeUiProvider } from "@/components/home/Peek";
-import { cn } from "@/lib/cn";
 import { apexHref } from "@/lib/host";
 import { gamesByIds, historyGames, useGames } from "@/lib/store";
 import type { Game } from "@/lib/types";
@@ -45,13 +46,17 @@ export function LibraryScreen() {
                 <div className={s.secHead}>
                   <h2 className={s.secTitle}>Saved games</h2>
                 </div>
-                <div className={s.manageEmpty}>
-                  <p>Nothing saved yet</p>
-                  <p className={s.legalIntro}>Open a game and save it. It will show up here.</p>
-                  <Link href={apexHref("/")} className={cn(s.btn, s.btnPrimary)} style={{ marginTop: 18 }}>
-                    Browse games
-                  </Link>
-                </div>
+                <EmptyState
+                  kind="user"
+                  illustration="no-favorites"
+                  title="Nothing saved yet"
+                  body="Open a game and save it. It will show up here."
+                  action={
+                    <Button variant="primary" asChild>
+                      <Link href={apexHref("/")}>Browse games</Link>
+                    </Button>
+                  }
+                />
               </section>
             )}
           </HomeUiProvider>

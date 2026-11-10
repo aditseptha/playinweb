@@ -5,6 +5,8 @@ import { Suspense, useEffect, useRef, useState, type FormEvent, type PointerEven
 import { useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { FeatureGate } from "@/components/FeatureGate";
+import { FormSkeleton } from "@/components/ds/skeleton";
+import { EmptyState } from "@/components/ds/empty-state";
 import s from "@/components/home/home.module.css";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { Button } from "@/components/ui/button";
@@ -21,7 +23,7 @@ export default function TipPage() {
       <div className={s.frame}>
         <div className={s.wrap}>
           <FeatureGate id="tip">
-            <Suspense fallback={<p className={s.legalIntro}>Loading…</p>}>
+            <Suspense fallback={<FormSkeleton label="Loading" fields={2} />}>
               <TipView />
             </Suspense>
           </FeatureGate>
@@ -206,7 +208,11 @@ function TipView() {
           {pending ? "Redirecting…" : "Send tip"}
         </Button>
         <p className="mt-3 text-meta text-text-subtle">Minimum $1.00. Paid with Polar.</p>
-        {notice ? <p className="mt-2 text-ui text-warning">{notice}</p> : null}
+        {notice?.startsWith("Thanks") ? (
+          <EmptyState kind="user" illustration="success" title="Payment received" body={notice} />
+        ) : notice ? (
+          <p className="mt-2 text-ui text-warning">{notice}</p>
+        ) : null}
       </form>
     </div>
   );

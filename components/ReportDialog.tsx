@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { IconCheck, IconClose } from "@/components/icons";
+import { Illustration } from "@/components/ds/illustration";
+import { IconClose } from "@/components/icons";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextArea, TextInput } from "@/components/ui/field";
@@ -88,9 +89,7 @@ export function ReportDialog({
         </div>
         {sent ? (
           <>
-            <div className="mt-4 grid size-11 place-items-center rounded-full bg-emerald-400/15 text-emerald-300">
-              <IconCheck className="h-5 w-5" />
-            </div>
+            <Illustration name="success" size="s" />
             <p className="mt-3 text-body text-text-muted">{copy?.sent ?? "Thanks. We got your report."}</p>
             <Button type="button" variant="primary" className="mt-6 w-full" onClick={onClose}>
               OK

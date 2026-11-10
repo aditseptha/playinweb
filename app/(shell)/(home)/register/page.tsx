@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   return (
-    <div className={s.create}>
+    <div className={`${s.create} ${s.pageSkin}`}>
       <div className={s.frame}>
         <div className={s.wrap}>
           <p className={s.eyebrow}>Publish</p>

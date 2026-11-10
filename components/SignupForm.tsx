@@ -11,6 +11,7 @@ import {
   GoogleAuthButton,
 } from "@/components/AuthModal";
 import { SignupAgreeNote } from "@/components/SignupAgreeNote";
+import { EmptyState } from "@/components/ds/empty-state";
 import { slugify } from "@/lib/format";
 import { getRootDomain, isHandle, siteOrigin } from "@/lib/host";
 import { createClient } from "@/lib/supabase/client";
@@ -75,6 +76,17 @@ export function SignupForm({ onSuccess }: { onSuccess?: () => void } = {}) {
     onSuccess?.();
     router.push("/register");
     router.refresh();
+  }
+
+  if (notice) {
+    return (
+      <EmptyState
+        kind="user"
+        illustration="success"
+        title="Check your email"
+        body={notice}
+      />
+    );
   }
 
   return (

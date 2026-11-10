@@ -2,22 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { GameCard } from "@/components/GameCard";
 import { GameThumb } from "@/components/GameThumb";
-import { GameRail, Shelf } from "@/components/Shelf";
 import { IconCalendar, IconCheck, IconClock, IconPlay, IconTrophy } from "@/components/icons";
 import { useLoginDialog } from "@/components/LoginDialog";
-import { Button, LinkButton } from "@/components/ui/button";
-import { Segmented } from "@/components/ui/segmented";
+import { Button } from "@/components/ds/button";
+import { EmptyState } from "@/components/ds/empty-state";
 import { FeatureGate } from "@/components/FeatureGate";
 import s from "@/components/home/home.module.css";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatMoney, formatPlays, gamePath } from "@/lib/format";
 import { apexHref, parseSubdomain } from "@/lib/host";
-import { maxPopularity } from "@/lib/popularity";
 import {
   aggregateShowcaseBids,
   minShowcaseClaimAmount,
@@ -103,7 +99,6 @@ export default function ShowcasePage() {
     Boolean(polarCheckout && !loading && user) &&
     !(confirmed?.checkout === polarCheckout && confirmed.user === user);
   const pending = submitting || confirming;
-  const max = maxPopularity(games);
 
   const loadBids = useCallback(async () => {
     const rows = await fetchBidRows();
@@ -233,108 +228,73 @@ export default function ShowcasePage() {
     window.location.assign(data.url);
   }
 
+  const paid = notice.startsWith("Thanks");
+  const [first, second, third, ...rest] = ranked;
+
   return (
     <div className={cn(s.create, s.pageSkin)}>
     <FeatureGate id="showcase">
-    <div className="flex min-w-0 flex-col gap-8 rounded-t-2xl bg-[linear-gradient(180deg,var(--surface-3)_0%,var(--bg)_36rem)]">
-      <div>
-        <section className="relative isolate mx-1 mt-1 overflow-hidden rounded-2xl">
-          <div className="pointer-events-none absolute inset-0" aria-hidden>
-            <Image
-              src="/home-hero.webp"
-              alt=""
-              fill
-              preload
-              unoptimized
-              sizes="100vw"
-              className="object-cover object-[68%_48%]"
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,oklch(0.16_0.03_250_/_0.78)_0%,oklch(0.18_0.03_250_/_0.42)_28%,oklch(0.2_0.03_250_/_0.12)_48%,transparent_62%)]" />
-          </div>
-          <div className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4">
-            <Segmented
-              aria-label="Time range"
-              size="lg"
-              className="border border-border shadow-panel"
-              value={range}
-              onChange={setRange}
-              options={[
-                {
-                  value: "all",
-                  label: (
-                    <>
-                      <IconTrophy className="h-3.5 w-3.5 shrink-0" />
-                      All-time
-                    </>
-                  ),
-                },
-                {
-                  value: "today",
-                  label: (
-                    <>
-                      <IconCalendar className="h-3.5 w-3.5 shrink-0" />
-                      Today
-                    </>
-                  ),
-                },
-                {
-                  value: "week",
-                  label: (
-                    <>
-                      <IconClock className="h-3.5 w-3.5 shrink-0" />
-                      Week
-                    </>
-                  ),
-                },
-              ]}
-            />
-          </div>
-          <div className="absolute left-3 top-3 z-20 sm:left-4 sm:top-4">
-            <CompactStats fallbackVisitors={games.reduce((n, g) => n + (g.viewCount ?? 0), 0)} />
-          </div>
-          <div className="relative z-10 flex min-h-[132px] items-center justify-center px-6 pb-10 pt-8 sm:min-h-[148px] lg:min-h-[160px]">
-            <h1 className="text-center text-[36px] font-semibold tracking-tight text-white [text-shadow:0_1px_2px_oklch(0_0_0_/_0.45),0_12px_28px_oklch(0_0_0_/_0.28)] sm:text-[48px]">
-              Game showcase
-            </h1>
-          </div>
-        </section>
-        <div className="relative z-10 -mt-[26px] flex justify-center px-4 sm:-mt-7">
-          <div className="max-w-full overflow-x-auto pb-1">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 p-1.5">
-              <CategoryChip label="All" active={!filter} onClick={() => setFilter("")} />
-              {categories.map((name) => (
-                <CategoryChip
-                  key={name}
-                  label={prettyCategory(name)}
-                  active={filter === name}
-                  onClick={() => setFilter(name)}
-                />
-              ))}
-            </div>
-          </div>
+    <div className={s.frame}>
+      <div className={s.wrap}>
+        <p className={s.eyebrow}>PlayInWeb</p>
+        <h1 className={s.createTitle}>Showcase</h1>
+        <p className={s.legalIntro}>Bid to hold the top spot. The order follows bids in the period you pick.</p>
+        <CompactStats fallbackVisitors={games.reduce((n, g) => n + (g.viewCount ?? 0), 0)} />
+        <div className={s.showRanges} role="group" aria-label="Ranking period">
+          {(
+            [
+              { value: "today", label: "Today", icon: IconCalendar },
+              { value: "week", label: "This week", icon: IconClock },
+              { value: "all", label: "All time", icon: IconTrophy },
+            ] as const
+          ).map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              className={s.showRange}
+              aria-pressed={range === value}
+              onClick={() => setRange(value)}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
         </div>
-      </div>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void placeBid();
-        }}
-      >
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <p className="text-[28px] font-semibold tracking-tight sm:text-[36px]">Claim #1 for</p>
-          <button
-            type="button"
-            className="grid size-11 place-items-center rounded-full bg-accent text-accent-fg hover:bg-accent-hover sm:size-12"
-            onClick={() => setAmount((n) => Math.max(minClaim, n - 1))}
-            aria-label="Decrease bid"
-          >
-            <span className="text-[28px] leading-none font-medium">−</span>
+        <div className={s.showCats} role="group" aria-label="Category">
+          <button type="button" className={s.showCat} aria-pressed={!filter} onClick={() => setFilter("")}>
+            All
           </button>
-          <label className="inline-flex min-w-[6.5rem] items-baseline justify-center text-[36px] font-semibold tracking-tight sm:text-[44px]">
-            <span className="sr-only">Bid amount in dollars</span>
-            <span className="inline-flex items-baseline">
-              <span aria-hidden>$</span>
+          {categories.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className={s.showCat}
+              aria-pressed={filter === name}
+              onClick={() => setFilter(name)}
+            >
+              {prettyCategory(name)}
+            </button>
+          ))}
+        </div>
+
+        <form
+          className={s.showClaim}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void placeBid();
+          }}
+        >
+          <h2 className={s.secTitle}>Claim #1</h2>
+          <p className={s.legalIntro}>The lowest bid that takes the lead in this view is ${minClaim}.</p>
+          <div className={s.showStepper}>
+            <button type="button" className={s.showStep} aria-label="Decrease bid" onClick={() => setAmount((n) => Math.max(minClaim, n - 1))}>
+              −
+            </button>
+            <label className={s.showAmountWrap}>
+              <span className="sr-only">Bid amount in dollars</span>
+              <span className={s.showDollar} aria-hidden>
+                $
+              </span>
               <input
                 inputMode="numeric"
                 value={amount}
@@ -343,29 +303,16 @@ export default function ShowcasePage() {
                   setAmount(digits === "" ? 0 : Number(digits));
                 }}
                 onBlur={() => setAmount((n) => Math.max(minClaim, n))}
-                className="m-0 bg-transparent p-0 leading-none tabular outline-none"
-                style={{ width: `${String(amount).length}ch` }}
+                className={s.showAmount}
+                style={{ width: `${Math.max(1, String(amount).length)}ch` }}
+                aria-label="Bid amount in dollars"
               />
-            </span>
-          </label>
-          <button
-            type="button"
-            className="grid size-11 place-items-center rounded-full bg-accent text-accent-fg hover:bg-accent-hover sm:size-12"
-            onClick={() => setAmount((n) => n + 1)}
-            aria-label="Increase bid"
-          >
-            <span className="text-[28px] leading-none font-medium">+</span>
-          </button>
-        </div>
-
-        <div className="mx-auto mt-6 w-full max-w-lg">
-          <div
-            className={cn(
-              "flex h-12 items-center gap-1 rounded-xl border border-border bg-surface p-1 shadow-sm transition-colors",
-              urlState === "invalid" && "ring-1 ring-warning",
-              urlState === "valid" && "ring-1 ring-success",
-            )}
-          >
+            </label>
+            <button type="button" className={s.showStep} aria-label="Increase bid" onClick={() => setAmount((n) => n + 1)}>
+              +
+            </button>
+          </div>
+          <div className={s.showUrl}>
             <input
               value={url}
               onChange={(e) => {
@@ -375,42 +322,59 @@ export default function ShowcasePage() {
               placeholder="Game URL or @handle/slug"
               aria-label="Game URL"
               aria-invalid={urlState === "invalid"}
-              className="h-full min-w-0 flex-1 rounded-lg bg-surface-2 px-3 text-body outline-none placeholder:text-text-muted focus:bg-surface-3"
             />
-            {urlState === "valid" ? <IconCheck className="h-4 w-4 shrink-0 text-success" /> : null}
+            {urlState === "valid" ? <IconCheck className="h-4 w-4 shrink-0" /> : null}
             {user || loading ? (
-              <Button
-                type="submit"
-                variant="primary"
-                className="h-10 shrink-0 px-4"
-                disabled={loading || pending || urlState !== "valid"}
-              >
+              <Button type="submit" variant="primary" disabled={loading || pending || urlState !== "valid"}>
                 {pending ? "Redirecting…" : "Claim rank"}
               </Button>
             ) : (
-              <Button type="button" variant="primary" className="h-10 shrink-0 px-4" onClick={() => openLogin()}>
+              <Button type="button" variant="primary" onClick={() => openLogin()}>
                 Sign in
               </Button>
             )}
           </div>
           {urlState === "valid" && matched ? (
-            <p className="mt-2 text-center text-caption text-success">
+            <p className={s.legalIntro}>
               {matched.title}
               {matched.channelHandle ? ` · @${matched.channelHandle}/${matched.projectSlug}` : ""}
             </p>
           ) : null}
           {urlState === "invalid" ? (
-            <p className="mt-2 text-center text-caption text-warning">No listing matches that URL or slug.</p>
+            <p className={s.legalIntro}>No listing matches that URL or slug.</p>
           ) : null}
-          <p className="mt-2 text-center text-meta text-text-subtle">
-            Signed-in bids can target any listing. Paid with Polar.
-          </p>
-          {notice ? <p className="mt-2 text-center text-ui text-warning">{notice}</p> : null}
-        </div>
-      </form>
+          {paid ? (
+            <EmptyState kind="user" illustration="success" title="Bid received" body={notice} />
+          ) : notice ? (
+            <p className={s.legalIntro}>{notice}</p>
+          ) : null}
+        </form>
 
-      <div className="mx-auto mt-12 w-full max-w-3xl">
-        <RankedBlock games={ranked} bids={bids} max={max} />
+        {ranked.length === 0 ? (
+          <EmptyState
+            kind="no-results"
+            illustration="no-results"
+            title="No games in this view"
+            body="Try another category, or another period."
+          />
+        ) : (
+          <>
+            <div className={s.showPodium}>
+              {first ? <PodiumCard game={first} rank={1} bid={bidOf(first, bids)} /> : null}
+              {second ? <PodiumCard game={second} rank={2} bid={bidOf(second, bids)} /> : null}
+              {third ? <PodiumCard game={third} rank={3} bid={bidOf(third, bids)} /> : null}
+            </div>
+            {rest.length > 0 ? (
+              <ol className={s.showList}>
+                {rest.slice(0, 47).map((game, i) => (
+                  <li key={game.id}>
+                    <RankRow game={game} rank={i + 4} bid={bidOf(game, bids)} />
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </>
+        )}
       </div>
     </div>
     </FeatureGate>
@@ -482,188 +446,52 @@ function CompactStats({ fallbackVisitors }: { fallbackVisitors: number }) {
   }, []);
 
   return (
-    <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-0.5 rounded-full border border-white/20 bg-black/35 px-2.5 py-1 text-[10px] font-semibold tracking-[0.06em] text-white/90 backdrop-blur-sm [text-shadow:0_1px_2px_oklch(0_0_0_/_0.35)]">
-      <span className="inline-flex items-center gap-1 tabular">
-        <span className="relative flex size-1">
-          <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
-          <span className="relative size-1 rounded-full bg-emerald-400" />
-        </span>
-        <span className="tabular">{formatPlays(online)}</span>
-        <span className="font-medium tracking-[0.1em] text-white/75">ONLINE</span>
-      </span>
-      <span className="text-white/35" aria-hidden>
-        ·
-      </span>
-      <span className="inline-flex items-center gap-1 tabular">
-        <span className="tabular">{formatPlays(visitors)}</span>
-        <span className="font-medium tracking-[0.1em] text-white/75">VISITORS</span>
-      </span>
-      <span className="text-white/35" aria-hidden>
-        ·
-      </span>
-      <Link
-        href={umamiShareUrl() || apexHref("/top")}
-        target={umamiShareUrl() ? "_blank" : undefined}
-        rel={umamiShareUrl() ? "noopener noreferrer" : undefined}
-        className="font-medium tracking-[0.1em] text-white/90 underline-offset-2 hover:text-white hover:underline"
-      >
-        VIEW STATS
+    <p className={s.legalIntro}>
+      {formatPlays(online)} online
+      <span aria-hidden> · </span>
+      {formatPlays(visitors)} visitors
+      <span aria-hidden> · </span>
+      <Link href={umamiShareUrl() || apexHref("/top")}>View stats</Link>
+    </p>
+  );
+}
+
+function PodiumCard({ game, rank, bid }: { game: Game; rank: 1 | 2 | 3; bid: number }) {
+  const href = gamePath(game);
+  return (
+    <article>
+      <Link href={href} className={s.showCover}>
+        <GameThumb game={game} sizes="280px" ratio="portrait" priority={rank === 1} />
+        <span className={s.showBadge}>#{rank}</span>
+        {bid > 0 ? <span className={s.showBidTag}>${bid.toFixed(0)}</span> : null}
       </Link>
-    </div>
+      <Link href={href} className={s.showName}>
+        {game.title}
+      </Link>
+      <p className={s.showBy}>{game.developer}</p>
+    </article>
   );
 }
 
-function CategoryChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "inline-flex h-10 shrink-0 items-center rounded-full px-4 text-body font-medium sm:h-11 sm:px-5",
-        active ? "bg-accent text-accent-fg" : "text-text-muted hover:text-text",
-      )}
-    >
-      {label}
-    </button>
-  );
-}
-
-function RankedBlock({
-  games,
-  bids,
-  max,
-}: {
-  games: Game[];
-  bids: Record<string, ShowcaseBid>;
-  max: number;
-}) {
-  const [first, second, third, ...rest] = games;
-  const head = rest.slice(0, 5);
-  const tail = rest.slice(5);
-  const newest = [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 10);
-
-  return (
-    <div>
-      {first ? (
-        <PodiumSlot
-          game={first}
-          rank={1}
-          bid={bidOf(first, bids)}
-          max={max}
-          featured
-        />
-      ) : null}
-      {second || third ? (
-        <div className="mt-3 flex flex-col gap-3">
-          {second ? (
-            <PodiumSlot game={second} rank={2} bid={bidOf(second, bids)} max={max} />
-          ) : null}
-          {third ? (
-            <PodiumSlot game={third} rank={3} bid={bidOf(third, bids)} max={max} />
-          ) : null}
-        </div>
-      ) : null}
-      {head.length > 0 ? (
-        <ol className="mt-6 flex flex-col gap-3">
-          {head.map((game, i) => (
-            <li key={game.id}>
-              <ShowcaseRow game={game} rank={i + 4} bid={bidOf(game, bids)} />
-            </li>
-          ))}
-        </ol>
-      ) : null}
-      {newest.length > 0 ? (
-        <div className="mt-8">
-          <Shelf title="Newest">
-            <GameRail games={newest} maxScore={max} variant="mini" />
-          </Shelf>
-        </div>
-      ) : null}
-      {tail.length > 0 ? (
-        <ol className="mt-8 flex flex-col gap-3">
-          {tail.map((game, i) => (
-            <li key={game.id}>
-              <ShowcaseRow game={game} rank={i + 9} bid={bidOf(game, bids)} />
-            </li>
-          ))}
-        </ol>
-      ) : null}
-    </div>
-  );
-}
-
-function PodiumSlot({
-  game,
-  rank,
-  bid,
-  max,
-  featured,
-}: {
-  game: Game;
-  rank: 1 | 2 | 3;
-  bid: number;
-  max: number;
-  featured?: boolean;
-}) {
-  const tone = rank === 1 ? "text-warning" : rank === 2 ? "text-text" : "text-text-muted";
-
-  return (
-    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-      <span className="sr-only">Rank {rank}</span>
-      <div className={cn("flex w-12 shrink-0 flex-col items-center gap-1 sm:w-16", tone)} aria-hidden>
-        <IconTrophy className={cn("h-5 w-5 sm:h-6 sm:w-6", featured && "sm:h-7 sm:w-7")} />
-        <span
-          className={cn(
-            "font-semibold tabular leading-none tracking-tight",
-            featured ? "text-[28px] sm:text-[36px]" : "text-[24px] sm:text-[30px]",
-          )}
-        >
-          #{rank}
-        </span>
-      </div>
-      <div className="relative min-w-0 flex-1">
-        {bid > 0 ? (
-          <span className="absolute right-[4.75rem] top-3 z-10 rounded-md bg-accent px-2 py-0.5 text-badge font-medium uppercase text-accent-fg">
-            ${bid.toFixed(0)} bid
-          </span>
-        ) : null}
-        <GameCard game={game} maxScore={max} variant="featured" priority={featured} />
-      </div>
-    </div>
-  );
-}
-
-function ShowcaseRow({ game, rank }: { game: Game; rank: number; bid: number }) {
+function RankRow({ game, rank, bid }: { game: Game; rank: number; bid: number }) {
   const href = gamePath(game);
   const play = game.embeddable && game.playUrl ? `${href}?play=1` : href;
-
   return (
-    <article className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-panel border border-border bg-surface/90 px-4 py-3.5 shadow-panel backdrop-blur-sm hover:bg-surface sm:grid-cols-[3rem_72px_minmax(0,1fr)_auto]">
-      <Link href={href} className="text-center text-body font-semibold tabular text-text-muted">
-        #{rank}
+    <article className={s.showRow}>
+      <span className={s.showPlace}>#{rank}</span>
+      <Link href={href} className={s.showCopy}>
+        <b>{game.title}</b>
+        <small>
+          {game.developer}
+          {bid > 0 ? ` · $${bid.toFixed(0)} bid` : ""}
+          {" · "}
+          {formatPlays(game.playCount)} plays
+        </small>
       </Link>
-      <Link href={href} className="relative hidden aspect-[3/4] overflow-hidden rounded-lg bg-surface-2 sm:block">
-        <GameThumb game={game} sizes="72px" ratio="portrait" />
-      </Link>
-      <div className="min-w-0">
-        <h3 className="truncate text-ui font-medium">
-          <Link href={href} className="text-text hover:text-text-muted">
-            {game.title}
-          </Link>
-        </h3>
-        <p className="truncate text-caption text-text-subtle">{game.developer}</p>
-        <p className="mt-1.5 text-caption text-text-subtle">
-          <span className="tabular">{formatPlays(game.viewCount ?? 0)} views</span>
-          <span aria-hidden> · </span>
-          <span className="tabular">{formatPlays(game.playCount)} plays</span>
-          <span aria-hidden> · </span>
-          <span className="tabular">{formatPlays(game.likeCount)} likes</span>
-        </p>
-      </div>
-      <LinkButton href={play} variant="primary" size="sm" className="gap-1.5">
+      <Link href={play} className={cn(s.btn, s.btnPrimary)}>
         <IconPlay className="h-3.5 w-3.5" />
         Play
-      </LinkButton>
+      </Link>
     </article>
   );
 }

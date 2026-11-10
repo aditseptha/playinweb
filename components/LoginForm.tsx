@@ -10,6 +10,8 @@ import {
   AuthPrimaryButton,
   GoogleAuthButton,
 } from "@/components/AuthModal";
+import { EmptyState } from "@/components/ds/empty-state";
+import { Button } from "@/components/ds/button";
 import { continueAfterAuth } from "@/lib/auth-redirect";
 import { passwordResetCallbackUrl } from "@/lib/oauth";
 import { createClient } from "@/lib/supabase/client";
@@ -84,6 +86,22 @@ export function LoginForm({
       return;
     }
     setNotice("Check your email for a reset link.");
+  }
+
+  if (mode === "forgot" && notice) {
+    return (
+      <EmptyState
+        kind="user"
+        illustration="success"
+        title="Check your email"
+        body={notice}
+        action={
+          <Button type="button" variant="primary" onClick={() => switchMode("sign-in")}>
+            Back to sign in
+          </Button>
+        }
+      />
+    );
   }
 
   if (mode === "forgot") {

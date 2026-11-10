@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { FeatureGate } from "@/components/FeatureGate";
 import s from "@/components/home/home.module.css";
+import { EmptyState } from "@/components/ds/empty-state";
+import { TableSkeletonRows } from "@/components/ds/skeleton";
 import { IconDownload } from "@/components/icons";
 import { cn } from "@/lib/cn";
 import { publicMediaUrl } from "@/lib/media";
@@ -27,11 +29,16 @@ export default function DownloadsPage() {
             <p className={s.legalIntro}>Files published with a game. Open a listing to play in the browser.</p>
 
             {projects == null ? (
-              <p className={s.legalIntro}>Loading…</p>
-            ) : listed.length === 0 ? (
-              <div className={s.manageEmpty}>
-                <p>No downloadable files yet</p>
+              <div className="mt-8">
+                <TableSkeletonRows rows={4} />
               </div>
+            ) : listed.length === 0 ? (
+              <EmptyState
+                kind="user"
+                illustration="empty-library"
+                title="No downloadable files yet"
+                body="Files published with a game will show up here."
+              />
             ) : (
               <ul className={s.fileList}>
                 {listed.flatMap((project) =>

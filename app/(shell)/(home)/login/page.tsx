@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LoginPagePrompt } from "@/components/LoginPagePrompt";
+import { AuthSkeleton } from "@/components/ds/skeleton";
 import s from "@/components/home/home.module.css";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -14,7 +15,7 @@ export default function LoginPage() {
           <h1 className={s.createTitle}>Sign in</h1>
           <p className={s.legalIntro}>Publish games on your page, like yourname/game.</p>
           <div className={s.createForm}>
-            <Suspense fallback={<p className={s.legalIntro}>Loading…</p>}>
+            <Suspense fallback={<AuthSkeleton label="Loading sign in" />}>
               <LoginPagePrompt />
             </Suspense>
           </div>

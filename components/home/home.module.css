@@ -794,3 +794,117 @@
   .fCols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
   .fBot { flex-direction: column; align-items: flex-start; }
 }
+
+.showRanges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.showRange {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--soft);
+  font-weight: 650;
+  font-size: 14px;
+}
+.showRange[aria-pressed="true"] {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(180deg, var(--primary-hi), var(--primary-lo));
+}
+.showCats { display: flex; gap: 8px; margin-top: 16px; overflow-x: auto; scrollbar-width: none; }
+.showCats::-webkit-scrollbar { display: none; }
+.showCat {
+  flex: none;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--soft);
+  font-weight: 650;
+  font-size: 13.5px;
+}
+.showCat[aria-pressed="true"] { color: var(--text); border-color: var(--bright); background: rgba(10, 132, 255, 0.12); }
+.showClaim { margin-top: 36px; }
+.showStepper { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 8px; }
+.showAmountWrap { display: inline-flex; align-items: baseline; }
+.showDollar { font-family: var(--pw-font-display); font-weight: 800; font-size: clamp(40px, 5vw, 56px); line-height: 1; color: var(--text); }
+.showStep {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(180deg, var(--primary-hi), var(--primary-lo));
+  font-size: 28px;
+  line-height: 1;
+}
+.showAmount {
+  width: 1.2ch;
+  min-width: 1.2ch;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--pw-font-display);
+  font-weight: 800;
+  font-size: clamp(40px, 5vw, 56px);
+  line-height: 1;
+  text-align: center;
+  field-sizing: content;
+}
+.showUrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 18px; }
+.showUrl input {
+  min-width: 0;
+  flex: 1 1 220px;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
+.showPodium { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 36px; }
+.showPodium > article { width: 100%; min-width: 0; }
+.showPodium > :first-child { grid-column: 1 / -1; max-width: 280px; margin-inline: auto; }
+.showCover { position: relative; display: block; width: 100%; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 18px; background: var(--surface-2); }
+.showBadge, .showBidTag {
+  position: absolute;
+  z-index: 1;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 750;
+}
+.showBadge { top: 10px; left: 10px; color: var(--pw-gold-ink, #3a2500); background: var(--gold); }
+.showBidTag { top: 10px; right: 10px; color: #fff; background: rgba(3, 22, 84, 0.72); }
+.showName { display: block; margin-top: 10px; color: var(--text); font-weight: 700; }
+.showName:hover { color: var(--link); }
+.showBy { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.showList { display: flex; flex-direction: column; gap: 8px; margin-top: 28px; }
+.showRow {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.showRow:hover { background: rgba(123, 195, 255, 0.12); }
+.showPlace { font-variant-numeric: tabular-nums; font-weight: 750; color: var(--muted); }
+.showCopy { min-width: 0; }
+.showCopy b, .showCopy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.showCopy b { color: var(--text); font-size: 14.5px; }
+.showCopy small { margin-top: 2px; color: var(--muted); font-size: 12.5px; }
+@media (min-width: 768px) {
+  .showPodium { grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 16px; }
+  .showPodium > :first-child { grid-column: auto; max-width: none; margin-inline: 0; width: auto; order: 2; }
+  .showPodium > :nth-child(2) { order: 1; }
+  .showPodium > :nth-child(3) { order: 3; }
+}

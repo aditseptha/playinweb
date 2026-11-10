@@ -3,18 +3,20 @@
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ds/button";
+import { StatusPage } from "@/components/ds/empty-state";
 import { Field, TextInput } from "@/components/ui/field";
 import { HomeShell } from "@/components/home/HomeShell";
+import { AuthSkeleton } from "@/components/ds/skeleton";
 import s from "@/components/home/home.module.css";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
   return (
     <HomeShell>
-      <div className={s.create}>
+      <div className={`${s.create} ${s.pageSkin}`}>
         <div className={s.frame}>
           <div className={s.wrap}>
-            <Suspense fallback={<p className={s.legalIntro}>Loading…</p>}>
+            <Suspense fallback={<AuthSkeleton label="Loading password reset" />}>
               <ResetPasswordForm />
             </Suspense>
           </div>
@@ -116,19 +118,22 @@ function ResetPasswordForm() {
 
   if (error && !ready) {
     return (
-      <div>
-        <p className={s.eyebrow}>Account</p>
-        <h1 className={s.createTitle}>Reset password</h1>
-        <p className={s.legalIntro}>{error}</p>
-        <Button type="button" variant="secondary" className="mt-6" onClick={() => router.push("/")}>
-          Back home
-        </Button>
-      </div>
+      <StatusPage
+        status="error"
+        title="This link has expired"
+        body={error}
+        fullHeight={false}
+        actions={
+          <Button type="button" variant="primary" onClick={() => router.push("/login")}>
+            Back to sign in
+          </Button>
+        }
+      />
     );
   }
 
   if (!ready) {
-    return <p className={s.legalIntro}>Preparing password reset…</p>;
+    return <AuthSkeleton label="Preparing password reset" />;
   }
 
   return (

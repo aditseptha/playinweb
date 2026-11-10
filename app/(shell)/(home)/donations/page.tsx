@@ -9,6 +9,9 @@ import { useSignupDialog } from "@/components/SignupDialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextInput } from "@/components/ui/field";
 import { Segmented } from "@/components/ui/segmented";
+import { Button as DsButton } from "@/components/ds/button";
+import { EmptyState } from "@/components/ds/empty-state";
+import { DashboardSkeleton, TableSkeletonRows } from "@/components/ds/skeleton";
 import { FeatureGate } from "@/components/FeatureGate";
 import s from "@/components/home/home.module.css";
 import { useAuth } from "@/lib/auth";
@@ -76,7 +79,7 @@ export default function DonationsPage() {
       <div className={s.frame}>
         <div className={s.wrap}>
           <FeatureGate id="donations">
-            <Suspense fallback={<p className={s.legalIntro}>Loading account…</p>}>
+            <Suspense fallback={<DashboardSkeleton label="Loading account" />}>
               <DonationsView />
             </Suspense>
           </FeatureGate>
@@ -163,7 +166,7 @@ function DonationsView() {
     };
   }, [loading, user]);
 
-  if (loading) return <p className={s.legalIntro}>Loading account…</p>;
+  if (loading) return <DashboardSkeleton label="Loading account" />;
 
   if (!user) {
     return (
@@ -299,16 +302,22 @@ function DonationSection({
       <p className="mt-1 text-body text-text-muted">
         {rows === null ? loading : rows.length === 0 ? empty : summary(rows, total)}
       </p>
-      {rows === null ? null : rows.length === 0 ? (
-        <div className="mt-4 rounded-panel bg-surface-2 px-5 py-8 text-center">
-          <p className="font-medium">{emptyTitle}</p>
-          <Link
-            href={emptyHref}
-            className="mt-4 inline-flex h-9 items-center rounded-lg bg-surface-2 px-3.5 text-body font-medium hover:bg-surface-3"
-          >
-            {emptyLabel}
-          </Link>
+      {rows === null ? (
+        <div className="mt-4">
+          <TableSkeletonRows rows={3} />
         </div>
+      ) : rows.length === 0 ? (
+        <EmptyState
+          kind="user"
+          illustration="wallet"
+          title={emptyTitle}
+          body={empty}
+          action={
+            <DsButton variant="primary" asChild>
+              <Link href={emptyHref}>{emptyLabel}</Link>
+            </DsButton>
+          }
+        />
       ) : showGifts ? (
         <ul className="mt-4 flex flex-col gap-4">
           {rows.map((row) => {
