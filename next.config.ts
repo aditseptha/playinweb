@@ -17,8 +17,9 @@ const nextConfig: NextConfig = {
       ...(supabaseHost
         ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }]
         : []),
-      // Covers of link-out curated games (#9 F2) stay on the creator's itch.io page.
+      // Covers of link-out curated games (#9 F2) stay on the creator's itch.io or Game Jolt page.
       { protocol: "https", hostname: "img.itch.zone", pathname: "/**" },
+      { protocol: "https", hostname: "m.gjcdn.net", pathname: "/game-thumbnail/**" },
     ],
   },
 };

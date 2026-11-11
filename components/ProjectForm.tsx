@@ -27,7 +27,7 @@ import { Field, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { cn } from "@/lib/cn";
-import { CURATION_LICENSES, LINK_OUT_LICENSE } from "@/lib/curation";
+import { CURATION_LICENSES, LINK_OUT_LICENSE, isOfficialEmbedUrl } from "@/lib/curation";
 import type { Database } from "@/lib/database.types";
 import { slugify } from "@/lib/format";
 import { taglineFrom, type LinkPreview } from "@/lib/link-preview";
@@ -400,7 +400,8 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
         // Comments open once the creator claims the game (#9).
         community: curated ? "disabled" : community,
         contains_ai: containsAi === "yes",
-        embeddable: kind === "html",
+        // An official embed link (for example itch.io's embed player) plays here instead of opening a tab.
+        embeddable: kind === "html" || (kind === "external" && isOfficialEmbedUrl(playLink)),
         // A new curated game stays hidden until its credit is saved, then goes public below.
         published: curated && !editing ? false : visibility === "public",
       };
@@ -540,7 +541,7 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
         const linkOut = kind === "external";
         const credit = {
           project_id: projectId,
-          play_mode: linkOut ? "link_out" : "hosted",
+          play_mode: linkOut ? (isOfficialEmbedUrl(playLink) ? "embed" : "link_out") : "hosted",
           creator_name: curation.creatorName.trim(),
           creator_url: curation.creatorUrl.trim() || null,
           source_url: curation.sourceUrl.trim() || null,
