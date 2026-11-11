@@ -14,6 +14,9 @@ export type CurationDraft = {
   modified: boolean;
   /** The admin checked the license; required when adding a game. */
   confirmed: boolean;
+  /** Native game size for embed players, as typed. Empty means "fill the stage". */
+  frameWidth: string;
+  frameHeight: string;
 };
 
 /**
@@ -25,11 +28,14 @@ export function CurationFields({
   onChange,
   requireConfirm,
   linkOut = false,
+  embed = false,
 }: {
   draft: CurationDraft;
   onChange: (next: CurationDraft) => void;
   requireConfirm: boolean;
   linkOut?: boolean;
+  /** The play link is an official embed player, so the game plays here at a fixed size. */
+  embed?: boolean;
 }) {
   const set = (patch: Partial<CurationDraft>) => onChange({ ...draft, ...patch });
 
@@ -71,6 +77,31 @@ export function CurationFields({
           placeholder="https://"
         />
       </Field>
+
+      {embed ? (
+        <Field
+          label="Game size"
+          hint="Width × height the game was made for, from the itch.io page (Embed options). The player scales it to fit, so it is never cropped."
+        >
+          <div className="flex items-center gap-2">
+            <TextInput
+              inputMode="numeric"
+              value={draft.frameWidth}
+              onChange={(e) => set({ frameWidth: e.target.value.replace(/\D/g, "") })}
+              placeholder="1280"
+              aria-label="Game width in pixels"
+            />
+            <span aria-hidden>×</span>
+            <TextInput
+              inputMode="numeric"
+              value={draft.frameHeight}
+              onChange={(e) => set({ frameHeight: e.target.value.replace(/\D/g, "") })}
+              placeholder="720"
+              aria-label="Game height in pixels"
+            />
+          </div>
+        </Field>
+      ) : null}
 
       {linkOut ? null : (
         <>

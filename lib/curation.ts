@@ -26,7 +26,25 @@ export type Curation = {
   modified: boolean;
   playMode: PlayMode;
   status: "listed" | "claim_pending";
+  /**
+   * The size the game was built for (an embed player's native viewport). The play frame renders it
+   * at exactly this size and scales it to fit, so fixed-size games are never cropped or left tiny.
+   */
+  frameSize?: FrameSize;
 };
+
+export type FrameSize = { width: number; height: number };
+
+/** Frame sizes outside this range are typos, not games. */
+export const FRAME_MIN = 200;
+export const FRAME_MAX = 4000;
+
+export function validFrameSize(width: unknown, height: unknown): FrameSize | undefined {
+  const w = Number(width);
+  const h = Number(height);
+  const ok = (n: number) => Number.isInteger(n) && n >= FRAME_MIN && n <= FRAME_MAX;
+  return ok(w) && ok(h) ? { width: w, height: h } : undefined;
+}
 
 /**
  * Licenses an admin may pick. Each one allows hosting the game here, also on a site with donations.
@@ -108,6 +126,7 @@ export function curationFromRow(
     modified: Boolean(row.modified),
     playMode: row.play_mode === "link_out" || row.play_mode === "embed" ? row.play_mode : "hosted",
     status: row.status,
+    frameSize: validFrameSize(row.frame_width, row.frame_height),
   };
 }
 
@@ -115,8 +134,6 @@ export function curationFromRow(
  * Embed players that game sites offer for use on other sites, so the game can play inside PlayInWeb
  * without us hosting the build. Only these load in our play frame; other external links open a new tab.
  */
-type FrameSize = { width: number; height: number };
-
 const OFFICIAL_EMBEDS: { host: string; path: RegExp; size?: FrameSize }[] = [
   // itch.io: the "embed-upload" player for an HTML5 upload, the one itch's own embed code uses.
   { host: "itch.io", path: /^\/embed-upload\/\d+$/ },
@@ -143,6 +160,14 @@ export function isOfficialEmbedUrl(value: string | null | undefined) {
 /** The fixed frame size an embed player needs (scale it to fit), or null when it fills any frame. */
 export function embedFrameSize(value: string | null | undefined): FrameSize | null {
   return officialEmbed(value)?.size ?? null;
+}
+
+/**
+ * The size to render a game's play frame at before scaling it to fit, or null to fill the stage.
+ * A per-game size (project_curation.frame_width/height) wins over the embed player's default.
+ */
+export function playFrameSize(curated: Pick<Curation, "frameSize"> | null | undefined, playUrl: string | null | undefined) {
+  return curated?.frameSize ?? embedFrameSize(playUrl);
 }
 
 /** "github.com/gabrielecirulli/2048" from a URL, for compact credit links. */

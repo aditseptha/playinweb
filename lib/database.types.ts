@@ -195,6 +195,8 @@ export type Database = {
           claimed_at: string | null
           creator_name: string
           creator_url: string | null
+          frame_height: number | null
+          frame_width: number | null
           license: string
           license_url: string | null
           listed_at: string
@@ -210,6 +212,8 @@ export type Database = {
           claimed_at?: string | null
           creator_name: string
           creator_url?: string | null
+          frame_height?: number | null
+          frame_width?: number | null
           license: string
           license_url?: string | null
           listed_at?: string
@@ -225,6 +229,8 @@ export type Database = {
           claimed_at?: string | null
           creator_name?: string
           creator_url?: string | null
+          frame_height?: number | null
+          frame_width?: number | null
           license?: string
           license_url?: string | null
           listed_at?: string

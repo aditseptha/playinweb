@@ -61,8 +61,11 @@ const CATALOGUE_MEDIA_SELECT = `
   project_tags ( tag )
 `;
 
-const CURATION_SELECT =
+const CURATION_SELECT_BASE =
   "project_id, status, play_mode, creator_name, creator_url, source_url, source_code_url, license, license_url, modified";
+// frame_width/height arrive with 20261111100000_curated_playable_games.sql. Until it runs, the read
+// falls back to the base columns so curated badges keep working.
+const CURATION_SELECT = `${CURATION_SELECT_BASE}, frame_width, frame_height`;
 
 /** Either Supabase client (browser or server); both are typed with Database. */
 type Client = Pick<SupabaseClient<Database>, "from">;
@@ -80,10 +83,12 @@ export async function withCuration<T extends { id: string }>(
   const ids = rows.map((r) => r.id).filter(isPersistedId);
   if (!ids.length) return rows;
   // Few rows: ask for those. Many (the catalogue): the table is small, so read the active ones.
-  const query = supabase.from("project_curation").select(CURATION_SELECT);
-  const { data, error } = await (ids.length <= 50
-    ? query.in("project_id", ids)
-    : query.in("status", ["listed", "claim_pending"]));
+  const scope = <Q extends { in: (column: string, values: string[]) => Q }>(query: Q) =>
+    ids.length <= 50 ? query.in("project_id", ids) : query.in("status", ["listed", "claim_pending"]);
+  const full = await scope(supabase.from("project_curation").select(CURATION_SELECT));
+  const { data, error }: { data: Partial<CurationRow>[] | null; error: unknown } = full.error
+    ? await scope(supabase.from("project_curation").select(CURATION_SELECT_BASE))
+    : full;
   if (error || !data) return rows;
   const byId = new Map(data.map((row) => [row.project_id, row]));
   return rows.map((r) => (byId.has(r.id) ? { ...r, project_curation: byId.get(r.id) } : r));
