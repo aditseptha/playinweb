@@ -51,6 +51,33 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_badges: {
+        Row: {
+          badge: string
+          earned_at: string
+          level: number
+          leveled_at: string
+          profile_id: string
+          revoked_at: string | null
+        }
+        Insert: {
+          badge: string
+          earned_at?: string
+          level: number
+          leveled_at?: string
+          profile_id: string
+          revoked_at?: string | null
+        }
+        Update: {
+          badge?: string
+          earned_at?: string
+          level?: number
+          leveled_at?: string
+          profile_id?: string
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
       profile_follows: {
         Row: {
           created_at: string
@@ -66,6 +93,27 @@ export type Database = {
           created_at?: string
           creator_id?: string
           follower_id?: string
+        }
+        Relationships: []
+      }
+      profile_plays: {
+        Row: {
+          first_played_at: string
+          last_played_at: string
+          profile_id: string
+          project_id: string
+        }
+        Insert: {
+          first_played_at?: string
+          last_played_at?: string
+          profile_id: string
+          project_id: string
+        }
+        Update: {
+          first_played_at?: string
+          last_played_at?: string
+          profile_id?: string
+          project_id?: string
         }
         Relationships: []
       }
@@ -625,6 +673,16 @@ export type Database = {
       can_manage_curated: { Args: { owner: string }; Returns: boolean }
       curated_owner_id: { Args: Record<string, never>; Returns: string }
       is_admin: { Args: Record<string, never>; Returns: boolean }
+      profile_badge_board: {
+        Args: { p_profile: string }
+        Returns: {
+          badge: string
+          earned_at: string | null
+          level: number
+          progress: number | null
+        }[]
+      }
+      record_play: { Args: { pid: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
