@@ -315,6 +315,27 @@ function utcDayDaysAgo(days: number) {
   return d.toISOString().slice(0, 10);
 }
 
+function sumPlaysByProject(rows: { project_id: string; plays: number | null }[] | null) {
+  const totals: Record<string, number> = {};
+  for (const row of rows ?? []) {
+    const id = row.project_id;
+    totals[id] = (totals[id] ?? 0) + (row.plays ?? 0);
+  }
+  return totals;
+}
+
+/** Plays per published project on the current UTC day (rankings: Today). */
+export async function fetchCatalogueDailyPlays(): Promise<Record<string, number>> {
+  const day = utcDayDaysAgo(0);
+  const supabase = createClient();
+  const { data, error } = await supabase.from("project_stat_days").select("project_id, plays").eq("day", day);
+  if (error) {
+    console.error("fetchCatalogueDailyPlays", error.message);
+    return {};
+  }
+  return sumPlaysByProject(data);
+}
+
 /** Sum of `plays` per published project over the last 7 UTC days (homepage trends). */
 export async function fetchCatalogueWeeklyPlays(): Promise<Record<string, number>> {
   const sinceDay = utcDayDaysAgo(7);
@@ -327,12 +348,7 @@ export async function fetchCatalogueWeeklyPlays(): Promise<Record<string, number
     console.error("fetchCatalogueWeeklyPlays", error.message);
     return {};
   }
-  const totals: Record<string, number> = {};
-  for (const row of data ?? []) {
-    const id = row.project_id;
-    totals[id] = (totals[id] ?? 0) + (row.plays ?? 0);
-  }
-  return totals;
+  return sumPlaysByProject(data);
 }
 
 export async function fetchOwnerStatDays(sinceDay: string): Promise<StatDay[]> {

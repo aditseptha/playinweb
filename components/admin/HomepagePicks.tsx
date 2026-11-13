@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { asGames, type AdminGame } from "@/components/admin/shared";
+import { CURATED_HANDLE } from "@/lib/curation";
 import { formatPlays } from "@/lib/format";
 import { FEATURED_GAMES_MAX } from "@/lib/featured-games";
 import { HERO_SPOTLIGHT_MAX } from "@/lib/hero-spotlights";
 import { createClient } from "@/lib/supabase/client";
-import type { AdminGame } from "@/components/admin/shared";
 
 type PickTarget = "hero" | "featured";
 
@@ -83,7 +84,7 @@ function OrderPanel({
 }
 
 /** One admin screen for hero carousel + featured row (shared game pool). */
-export function HomepagePicks({ games }: { games: AdminGame[] | null }) {
+export function HomepagePicks(_props: { games: AdminGame[] | null }) {
   const [heroOrder, setHeroOrder] = useState<string[]>([]);
   const [featuredOrder, setFeaturedOrder] = useState<string[]>([]);
   const [addTarget, setAddTarget] = useState<PickTarget>("hero");
@@ -91,16 +92,45 @@ export function HomepagePicks({ games }: { games: AdminGame[] | null }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [pool, setPool] = useState<AdminGame[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    void supabase
+      .from("projects")
+      .select(
+        "id, title, slug, published, created_at, view_count, play_count, profiles!projects_owner_id_fkey ( handle, display_name )",
+      )
+      .eq("published", true)
+      .order("play_count", { ascending: false })
+      .limit(500)
+      .then(({ data, error: loadErr }) => {
+        if (cancelled) return;
+        if (!loadErr && data) setPool(asGames(data));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const eligible = useMemo(
-    () =>
-      (games ?? [])
-        .filter((g) => g.published)
-        .sort((a, b) => b.play_count - a.play_count || a.title.localeCompare(b.title)),
-    [games],
+    () => [...pool].sort((a, b) => b.play_count - a.play_count || a.title.localeCompare(b.title)),
+    [pool],
   );
 
   const byId = useMemo(() => new Map(eligible.map((g) => [g.id, g])), [eligible]);
+  const eligibleIds = useMemo(() => new Set(eligible.map((g) => g.id)), [eligible]);
+
+  const pickList = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return eligible;
+    return eligible.filter((g) => {
+      const hay = [g.title, g.slug, g.handle ?? "", g.display_name ?? ""].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [eligible, search]);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,6 +164,22 @@ export function HomepagePicks({ games }: { games: AdminGame[] | null }) {
       cancelled = true;
     };
   }, []);
+
+  // Drop picks that are unpublished or no longer in the published catalogue.
+  const [prevPickPool, setPrevPickPool] = useState<string | null>(null);
+  const pickPoolKey = loading ? null : [...eligibleIds].sort().join(",");
+  if (!loading && pickPoolKey !== null && pickPoolKey !== prevPickPool) {
+    setPrevPickPool(pickPoolKey);
+    setHeroOrder((prev) => {
+      const next = prev.filter((id) => eligibleIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+    setFeaturedOrder((prev) => {
+      const next = prev.filter((id) => eligibleIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }
+  if (loading && prevPickPool !== null) setPrevPickPool(null);
 
   const move = useCallback((setter: Dispatch<SetStateAction<string[]>>, id: string, dir: -1 | 1) => {
     setter((prev) => {
@@ -183,8 +229,8 @@ export function HomepagePicks({ games }: { games: AdminGame[] | null }) {
       <h2 className="text-title font-semibold tracking-tight">Homepage picks</h2>
       <p className="mt-1 max-w-3xl text-ui text-text-muted">
         Choose games for the <strong>hero carousel</strong> (top banner) and the <strong>Featured games</strong> shelf
-        below it. The same game can appear in both. Curated listings are not eligible. Empty lists fall back to most
-        played creator games.
+        below it. The same game can appear in both. Creator and curated games are allowed. Empty lists fall back to
+        most played creator games.
       </p>
       {error ? <p className="mt-4 text-ui text-danger">{error}</p> : null}
       {message ? <p className="mt-4 text-ui text-text-muted">{message}</p> : null}
@@ -210,7 +256,7 @@ export function HomepagePicks({ games }: { games: AdminGame[] | null }) {
         />
         <div className="rounded-panel border border-border bg-surface-2 p-4">
           <h3 className="text-ui font-semibold">Add a game</h3>
-          <p className="mt-1 text-caption text-text-subtle">Published creator games only — one shared list.</p>
+          <p className="mt-1 text-caption text-text-subtle">All published games — one shared list.</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
@@ -227,11 +273,24 @@ export function HomepagePicks({ games }: { games: AdminGame[] | null }) {
               → Featured
             </button>
           </div>
+          <label className="mt-3 block">
+            <span className="sr-only">Search games</span>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by title, slug, or creator"
+              className="w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-ui text-text placeholder:text-text-subtle"
+              enterKeyHint="search"
+            />
+          </label>
           <ul className="mt-3 max-h-[22rem] space-y-1 overflow-y-auto">
             {eligible.length === 0 ? (
               <li className="text-ui text-text-muted">No published games.</li>
+            ) : pickList.length === 0 ? (
+              <li className="text-ui text-text-muted">No games match your search.</li>
             ) : (
-              eligible.map((g) => {
+              pickList.map((g) => {
                 const inHero = heroOrder.includes(g.id);
                 const inFeatured = featuredOrder.includes(g.id);
                 const targetFull =
@@ -239,6 +298,7 @@ export function HomepagePicks({ games }: { games: AdminGame[] | null }) {
                     ? heroOrder.length >= HERO_SPOTLIGHT_MAX && !inHero
                     : featuredOrder.length >= FEATURED_GAMES_MAX && !inFeatured;
                 const inTarget = addTarget === "hero" ? inHero : inFeatured;
+                const curated = g.handle === CURATED_HANDLE;
                 return (
                   <li key={g.id}>
                     <button
@@ -248,7 +308,12 @@ export function HomepagePicks({ games }: { games: AdminGame[] | null }) {
                       onClick={() => add(g.id)}
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{g.title}</span>
+                        <span className="block truncate font-medium">
+                          {g.title}
+                          {curated ? (
+                            <span className="ml-1.5 text-caption font-semibold text-text-subtle uppercase">Curated</span>
+                          ) : null}
+                        </span>
                         {(inHero || inFeatured) && (
                           <span className="mt-0.5 block text-caption text-text-subtle">
                             {inHero ? "Hero" : null}

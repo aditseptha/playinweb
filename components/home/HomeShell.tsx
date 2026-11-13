@@ -4,7 +4,7 @@ import { IconLogout, IconMenu, IconMoon, IconPlus, IconSun, IconUser } from "@/c
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { dsFontVars } from "@/app/fonts";
 import { Avatar } from "@/components/Avatar";
 import { MosaicGrid } from "@/components/ui/mosaic-grid";
@@ -23,6 +23,7 @@ import { navItemVisible, useFeatures } from "@/lib/features";
 import { apexHref } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
 import { usePrefersReducedMotion } from "@/lib/reduced-motion";
+import { SitePresenceTracker } from "@/components/SitePresenceTracker";
 import { switchTheme } from "@/lib/theme";
 
 /** Top-level links: only pages that exist; feature-flagged ones follow the admin flags. */
@@ -124,6 +125,7 @@ export function HomeShell({ children }: { children: ReactNode }) {
   return (
     <LegalProvider>
       <SignupProvider>
+        <SitePresenceTracker />
         <div ref={rootRef} data-scroll-root className={cn(s.root, dsFontVars, compact && s.navCompactRoot)}>
           <a
             href="#content"
@@ -178,7 +180,17 @@ function Logo({ animated = false }: { animated?: boolean }) {
   );
 }
 
+function useClientMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 function ThemeButton() {
+  const mounted = useClientMounted();
+
   return (
     <button
       type="button"
@@ -186,8 +198,14 @@ function ThemeButton() {
       aria-label="Toggle light and dark mode"
       onClick={(e) => switchTheme(e.currentTarget)}
     >
-      <IconMoon className={cn(s.ic, "theme-icon dark:hidden")} />
-      <IconSun className={cn(s.ic, "theme-icon hidden dark:block")} />
+      {mounted ? (
+        <>
+          <IconMoon className={cn(s.ic, "theme-icon dark:hidden")} />
+          <IconSun className={cn(s.ic, "theme-icon hidden dark:block")} />
+        </>
+      ) : (
+        <span className={s.ic} aria-hidden />
+      )}
     </button>
   );
 }
@@ -247,6 +265,7 @@ function Nav({ compact, onReport }: { compact: boolean; onReport: () => void }) 
           <Suspense fallback={null}>
             <HeaderSearch />
           </Suspense>
+          <div className={s.navActions}>
           <div className={s.navTools}>
             <ThemeButton />
             {user ? (
@@ -342,45 +361,71 @@ function Nav({ compact, onReport }: { compact: boolean; onReport: () => void }) 
                 </button>
               </>
             )}
-            <button type="button" className={cn(s.iconBtn, s.menuBtn)} aria-label="Open menu" onClick={() => setSheet(true)}>
+            <button
+              type="button"
+              className={cn(s.iconBtn, s.menuBtn)}
+              aria-label="Open menu"
+              onClick={() => setSheet(true)}
+            >
               <IconMenu className={s.ic} />
             </button>
+          </div>
           </div>
         </div>
       </header>
       {sheet ? (
-        <MenuSheet
-          signedIn={Boolean(user)}
-          onClose={() => setSheet(false)}
-          onSignIn={() => openLogin()}
-          onSignOut={() => void signOut()}
-        />
+        <Suspense fallback={null}>
+          <MenuSheet
+            onClose={() => setSheet(false)}
+            onSignIn={() => openLogin()}
+            onSignUp={() => openSignup()}
+            onSignOut={() => void signOut()}
+            onReport={() => {
+              setSheet(false);
+              onReport();
+            }}
+          />
+        </Suspense>
       ) : null}
     </>
   );
 }
 
 function MenuSheet({
-  signedIn,
   onClose,
   onSignIn,
+  onSignUp,
   onSignOut,
+  onReport,
 }: {
-  signedIn: boolean;
   onClose: () => void;
   onSignIn: () => void;
+  onSignUp: () => void;
   onSignOut: () => void;
+  onReport: () => void;
 }) {
+  const { user, profile } = useAuth();
+  const pathname = usePathname();
+  const view = useSearchParams().get("view");
   const visible = useVisible();
+  const signedIn = Boolean(user);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const links = [...NAV, ...(signedIn ? [{ href: "/register", label: "Add game" }, ...ACCOUNT_LINKS] : [])].filter(
-    (link, index, all) => all.findIndex((item) => item.href === link.href) === index,
-  );
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  const itemClass = (href: string) =>
+    cn(s.menuSheetItem, navCurrent(href, pathname, view) && s.menuSheetItemOn);
 
   return (
     <>
@@ -388,26 +433,105 @@ function MenuSheet({
       <div className={s.sheet} role="dialog" aria-modal="true" aria-label="Menu">
         <div className={s.grab} />
         <div className={cn(s.sheetBody, s.menuSheet)}>
-          {links
-            .filter((l) => visible(l.href))
-            .map((l) => (
-              <Link key={l.href} href={hrefFor(l.href)} onClick={onClose}>
-                {l.label}
-              </Link>
-            ))}
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              if (signedIn) onSignOut();
-              else onSignIn();
-            }}
-          >
-            {signedIn ? <IconLogout className={s.ic} /> : <IconUser className={s.ic} />}
-            {signedIn ? "Sign out" : "Sign in"}
-          </button>
+          {signedIn && profile ? (
+            <div className={s.menuSheetHead}>
+              <b>{profile.display_name || profile.handle}</b>
+              {profile.handle ? <small>@{profile.handle}</small> : null}
+            </div>
+          ) : null}
+
+          <p className={s.menuSheetLabel}>Browse</p>
+          {NAV.filter((l) => visible(l.href)).map((l) => (
+            <Link
+              key={l.href}
+              href={hrefFor(l.href)}
+              className={itemClass(l.href)}
+              aria-current={navCurrent(l.href, pathname, view) ? "page" : undefined}
+              onClick={onClose}
+            >
+              {l.label}
+            </Link>
+          ))}
+
+          {signedIn ? (
+            <>
+              <div className={s.menuSheetSep} />
+              <p className={s.menuSheetLabel}>You</p>
+              {visible("/register") ? (
+                <Link href={hrefFor("/register")} className={itemClass("/register")} onClick={onClose}>
+                  Add game
+                </Link>
+              ) : null}
+              {ACCOUNT_LINKS.filter((l) => visible(l.href)).map((l) => (
+                <Link
+                  key={l.href}
+                  href={hrefFor(l.href)}
+                  className={itemClass(l.href)}
+                  aria-current={navCurrent(l.href, pathname, view) ? "page" : undefined}
+                  onClick={onClose}
+                >
+                  {l.label}
+                </Link>
+              ))}
+              {isAdminEmail(user?.email) ? (
+                <Link href={hrefFor("/admin")} className={itemClass("/admin")} onClick={onClose}>
+                  Admin
+                </Link>
+              ) : null}
+              <div className={s.menuSheetSep} />
+              {SITE_LINKS.filter((l) => visible(l.href)).map((l) =>
+                l.href === "/report" ? (
+                  <button key={l.href} type="button" className={s.menuSheetItem} onClick={onReport}>
+                    {l.label}
+                  </button>
+                ) : (
+                  <Link key={l.href} href={hrefFor(l.href)} className={itemClass(l.href)} onClick={onClose}>
+                    {l.label}
+                  </Link>
+                ),
+              )}
+              <div className={s.menuSheetSep} />
+              <button
+                type="button"
+                className={s.menuSheetItem}
+                onClick={() => {
+                  onClose();
+                  onSignOut();
+                }}
+              >
+                <IconLogout className={s.ic} />
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <div className={s.menuSheetSep} />
+              <button
+                type="button"
+                className={s.menuSheetItem}
+                onClick={() => {
+                  onClose();
+                  onSignIn();
+                }}
+              >
+                <IconUser className={s.ic} />
+                Sign in
+              </button>
+              <button
+                type="button"
+                className={cn(s.menuSheetItem, s.menuSheetPrimary)}
+                onClick={() => {
+                  onClose();
+                  onSignUp();
+                }}
+              >
+                Sign up free
+              </button>
+            </>
+          )}
         </div>
         <div className={s.sheetFoot}>
+          <ThemeButton />
           <button type="button" className={cn(s.btn, s.btnGhost)} onClick={onClose}>
             Close
           </button>
