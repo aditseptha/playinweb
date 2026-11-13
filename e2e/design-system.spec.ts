@@ -90,8 +90,34 @@ test.describe("keyboard", () => {
   });
 
   test("a dialog leaves fullscreen so it can be seen (#38)", async ({ page }) => {
+    // Headless Chromium on Linux (CI) refuses real fullscreen, so the Fullscreen API is replaced
+    // with one that behaves the same on every machine. It records what the page asks for.
+    await page.addInitScript(() => {
+      let current: Element | null = null;
+      const changed = () => document.dispatchEvent(new Event("fullscreenchange"));
+      Object.defineProperty(Document.prototype, "fullscreenElement", { configurable: true, get: () => current });
+      Object.defineProperty(Document.prototype, "fullscreenEnabled", { configurable: true, get: () => true });
+      Element.prototype.requestFullscreen = function (this: Element) {
+        current = this; // eslint-disable-line @typescript-eslint/no-this-alias -- the fake records which element asked
+        changed();
+        return Promise.resolve();
+      };
+      Document.prototype.exitFullscreen = function () {
+        current = null;
+        changed();
+        return Promise.resolve();
+      };
+      // The iPhone fallback listens for this signal to drop its CSS fullscreen.
+      const w = window as unknown as { leaveSignals: number };
+      w.leaveSignals = 0;
+      window.addEventListener("playinweb:leave-fullscreen", () => w.leaveSignals++);
+    });
     await open(page);
-    // Stand in for the game stage: a separate element goes fullscreen from a real click.
+    // Wait for React to finish hydrating: nodes added to <body> before that count as a hydration
+    // mismatch, and React's re-render throws them away (this made the test flaky on CI).
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByTestId("open-dialog")).toBeEnabled();
+    // Stand in for the game stage: a separate element goes fullscreen from a click.
     await page.evaluate(() => {
       const stage = document.createElement("div");
       stage.id = "fake-stage";
@@ -106,8 +132,9 @@ test.describe("keyboard", () => {
     await expect.poll(() => page.evaluate(() => document.fullscreenElement?.id ?? null)).toBe("fake-stage");
     // Something opens a dialog while the game is fullscreen (the guest sign-in prompt does this).
     await page.getByTestId("open-dialog").evaluate((el: HTMLElement) => el.click());
-    await expect.poll(() => page.evaluate(() => document.fullscreenElement)).toBeNull();
     await expect(page.getByRole("dialog", { name: "Add to collection" })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement)).toBeNull();
+    expect(await page.evaluate(() => (window as unknown as { leaveSignals: number }).leaveSignals)).toBeGreaterThan(0);
   });
 
   test("delete confirmation unlocks only after typing the title", async ({ page }) => {

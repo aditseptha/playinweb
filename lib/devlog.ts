@@ -23,6 +23,17 @@ export type DevlogRelease = {
 
 export const DEVLOG: DevlogRelease[] = [
   {
+    version: "0.7",
+    date: "2026-11-13",
+    title: "Tidier profiles and safer fullscreen",
+    items: [
+      { kind: "improved", text: "Game cards on profiles are back to their normal size." },
+      { kind: "improved", text: "Your channel shows your badges in a sidebar, and first on phones." },
+      { kind: "improved", text: "Fullscreen on iPhone fits the visible screen, so the controls stay within reach." },
+      { kind: "fixed", text: "Sign-in and other windows now appear when a game is fullscreen, instead of hiding behind it." },
+    ],
+  },
+  {
     version: "0.6",
     date: "2026-11-13",
     title: "The devlog",
