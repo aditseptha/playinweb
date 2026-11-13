@@ -4,6 +4,7 @@ import { IconClose } from "@/components/icons";
 import { Dialog as RDialog } from "radix-ui";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { useLeaveFullscreen } from "@/lib/fullscreen";
 import { Button } from "./button";
 import { TextInput } from "./field";
 import { usePortalContainer } from "./portal";
@@ -50,6 +51,7 @@ export function DialogContent({
         )}
         {...props}
       >
+        <LeaveFullscreen />
         <div className="flex items-start gap-4 p-6 pb-0">
           <div className="min-w-0 flex-1">
             <RDialog.Title className="text-pw-title font-bold text-pw-text">{title}</RDialog.Title>
@@ -72,6 +74,12 @@ export function DialogContent({
       </RDialog.Content>
     </RDialog.Portal>
   );
+}
+
+/** Mounted inside the open dialog only: a fullscreen game would hide the dialog (#38). */
+function LeaveFullscreen() {
+  useLeaveFullscreen(true);
+  return null;
 }
 
 /**

@@ -89,6 +89,27 @@ test.describe("keyboard", () => {
     await expect(trigger).toBeFocused();
   });
 
+  test("a dialog leaves fullscreen so it can be seen (#38)", async ({ page }) => {
+    await open(page);
+    // Stand in for the game stage: a separate element goes fullscreen from a real click.
+    await page.evaluate(() => {
+      const stage = document.createElement("div");
+      stage.id = "fake-stage";
+      stage.textContent = "game";
+      const go = document.createElement("button");
+      go.id = "go-fullscreen";
+      go.textContent = "Go fullscreen";
+      go.onclick = () => void stage.requestFullscreen();
+      document.body.prepend(go, stage);
+    });
+    await page.click("#go-fullscreen");
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement?.id ?? null)).toBe("fake-stage");
+    // Something opens a dialog while the game is fullscreen (the guest sign-in prompt does this).
+    await page.getByTestId("open-dialog").evaluate((el: HTMLElement) => el.click());
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement)).toBeNull();
+    await expect(page.getByRole("dialog", { name: "Add to collection" })).toBeVisible();
+  });
+
   test("delete confirmation unlocks only after typing the title", async ({ page }) => {
     await open(page);
     await page.getByTestId("open-confirm").click();
