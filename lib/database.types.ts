@@ -59,6 +59,7 @@ export type Database = {
           leveled_at: string
           profile_id: string
           revoked_at: string | null
+          seen_level: number
         }
         Insert: {
           badge: string
@@ -67,6 +68,7 @@ export type Database = {
           leveled_at?: string
           profile_id: string
           revoked_at?: string | null
+          seen_level?: number
         }
         Update: {
           badge?: string
@@ -75,6 +77,7 @@ export type Database = {
           leveled_at?: string
           profile_id?: string
           revoked_at?: string | null
+          seen_level?: number
         }
         Relationships: []
       }
@@ -673,6 +676,16 @@ export type Database = {
       can_manage_curated: { Args: { owner: string }; Returns: boolean }
       curated_owner_id: { Args: Record<string, never>; Returns: string }
       is_admin: { Args: Record<string, never>; Returns: boolean }
+      mark_badges_seen: { Args: { p_badges: string[] }; Returns: undefined }
+      my_badges: {
+        Args: Record<string, never>
+        Returns: {
+          badge: string
+          level: number
+          leveled_at: string
+          seen_level: number
+        }[]
+      }
       profile_badge_board: {
         Args: { p_profile: string }
         Returns: {
