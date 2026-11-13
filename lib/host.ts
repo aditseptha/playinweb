@@ -39,6 +39,9 @@ export const RESERVED_HANDLES = new Set([
   "tip",
   "donations",
   "home-v2",
+  // The devlog (#40). Also reserved in the database: 20261114120000_reserve_devlog_handle.sql.
+  "devlog",
+  "devlogs",
 ]);
 
 const HANDLE_RE = /^[a-z0-9]([a-z0-9-]{1,30}[a-z0-9])$/;

@@ -7,6 +7,7 @@ import { PortalScope } from "@/components/ds/portal";
 import { TallCard } from "@/components/home/cards";
 import s from "@/components/home/home.module.css";
 import { HomeUiProvider } from "@/components/home/Peek";
+import { ProfileColumns } from "@/components/profile/ProfileColumns";
 import { ProfileHeader, ProfileStats } from "@/components/profile/ProfileHeader";
 import { RecentlyPlayed } from "@/components/profile/RecentlyPlayed";
 import { useFollow } from "@/components/profile/useFollow";
@@ -20,7 +21,9 @@ import type { Game } from "@/lib/types";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
-const GAME_GRID = "grid grid-cols-2 gap-4 sm:grid-cols-3";
+// The same card grid as the homepage (#39): columns of at least 168px, so cards stay about
+// 168–220px wide instead of stretching to a third of the content column.
+const GAME_GRID = s.grid;
 
 /**
  * A profile (#30, "Explore B"): header card, stats, the profile's games (or what it played
@@ -90,24 +93,26 @@ export function CreatorSiteView({
                 { label: likes === 1 ? "Like" : "Likes", value: likes },
               ]}
             />
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-              <section aria-labelledby="profile-games" className="min-w-0">
-                <h2 id="profile-games" className="mb-4 flex items-baseline gap-3 font-pw-display text-pw-display-m font-extrabold uppercase italic leading-none text-pw-text">
-                  {games.length > 0 ? "Games" : "Recently played"}
-                  {games.length > 0 ? <span className="text-pw-muted">{games.length}</span> : null}
-                </h2>
-                {games.length > 0 ? (
-                  <div className={GAME_GRID}>
-                    {games.map((game, index) => (
-                      <TallCard key={game.id} game={game} i={index} />
-                    ))}
-                  </div>
-                ) : (
-                  <RecentlyPlayed profileId={profile.id} gridClassName={GAME_GRID} />
-                )}
-              </section>
-              <BadgeShelf profileId={profile.id} viewerId={user?.id ?? null} className="lg:sticky lg:top-24" />
-            </div>
+            <ProfileColumns
+              main={
+                <section aria-labelledby="profile-games" className="min-w-0">
+                  <h2 id="profile-games" className="mb-4 flex items-baseline gap-3 font-pw-display text-pw-display-m font-extrabold uppercase italic leading-none text-pw-text">
+                    {games.length > 0 ? "Games" : "Recently played"}
+                    {games.length > 0 ? <span className="text-pw-muted">{games.length}</span> : null}
+                  </h2>
+                  {games.length > 0 ? (
+                    <div className={GAME_GRID}>
+                      {games.map((game, index) => (
+                        <TallCard key={game.id} game={game} i={index} />
+                      ))}
+                    </div>
+                  ) : (
+                    <RecentlyPlayed profileId={profile.id} gridClassName={GAME_GRID} />
+                  )}
+                </section>
+              }
+              side={<BadgeShelf profileId={profile.id} viewerId={user?.id ?? null} />}
+            />
             {games.length === 0 && isOwner ? (
               <EmptyState
                 kind="inline"

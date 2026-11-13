@@ -11,6 +11,13 @@ function supabaseHostname() {
 const supabaseHost = supabaseHostname();
 
 const nextConfig: NextConfig = {
+  // The deployed commit, shown beside the version in the footer and on /devlog (#40).
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
+  },
+  async redirects() {
+    return [{ source: "/devlogs", destination: "/devlog", permanent: true }];
+  },
   images: {
     qualities: [75, 90],
     remotePatterns: [
