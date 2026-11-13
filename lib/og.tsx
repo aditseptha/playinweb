@@ -18,13 +18,16 @@ function alpha(hex: string, a: number) {
 
 async function assets() {
   // Literal paths keep file tracing scoped to assets/ (a variable path would bundle the whole repo).
-  const [display, body, bodyBold, pixel, mark, word] = await Promise.all([
+  const [display, body, bodyBold, pixel, mark, word, posterA, posterB, posterC] = await Promise.all([
     readFile(join(process.cwd(), "assets/fonts/BarlowCondensed-ExtraBoldItalic.ttf")),
     readFile(join(process.cwd(), "assets/fonts/PlusJakartaSans-Medium.ttf")),
     readFile(join(process.cwd(), "assets/fonts/PlusJakartaSans-Bold.ttf")),
     readFile(join(process.cwd(), "assets/fonts/Silkscreen-Regular.ttf")),
     readFile(join(process.cwd(), "assets/brand/mark.png")),
     readFile(join(process.cwd(), "assets/brand/lettermark-white.png")),
+    readFile(join(process.cwd(), "assets/og/poster-a.jpg")),
+    readFile(join(process.cwd(), "assets/og/poster-b.jpg")),
+    readFile(join(process.cwd(), "assets/og/poster-c.jpg")),
   ]);
   return {
     fonts: [
@@ -35,6 +38,11 @@ async function assets() {
     ],
     mark: dataUri(mark, "image/png"),
     word: dataUri(word, "image/png"),
+    posters: [dataUri(posterA, "image/jpeg"), dataUri(posterB, "image/jpeg"), dataUri(posterC, "image/jpeg")] as [
+      string,
+      string,
+      string,
+    ],
   };
 }
 
@@ -65,7 +73,96 @@ function Brand({ mark, word }: { mark: string; word: string }) {
   );
 }
 
-const NIGHT = `radial-gradient(70% 90% at 15% 80%, ${alpha(p.deep, 0.66)}, transparent 70%), linear-gradient(160deg, ${p.navy} 0%, ${p["night-900"]} 70%)`;
+const NIGHT = `radial-gradient(78% 62% at 88% 18%, ${alpha(p.bright, 0.42)}, transparent 58%), radial-gradient(64% 70% at 12% 92%, ${alpha(p.deep, 0.7)}, transparent 72%), linear-gradient(152deg, ${p.navy} 0%, ${p["night-900"]} 48%, ${p["night-950"]} 100%)`;
+
+/** Even inset. Social crops eat the outer ~40px, so content stays inside this frame. */
+const OG_PAD = 48;
+
+function Hashtag({ children, tone }: { children: string; tone: "gold" | "sky" }) {
+  const hash = tone === "gold" ? p.gold : p.sky;
+  const text = tone === "gold" ? p["mist-50"] : p["mist-100"];
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        fontSize: 22,
+        fontWeight: 700,
+        color: text,
+        letterSpacing: 0.2,
+      }}
+    >
+      <span style={{ color: hash, marginRight: 3, fontSize: 24 }}>#</span>
+      {children}
+    </div>
+  );
+}
+
+function PosterCard({ src, w, h, rotate }: { src: string; w: number; h: number; rotate: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        width: w,
+        height: h,
+        borderRadius: 18,
+        overflow: "hidden",
+        border: `2px solid ${alpha(p["mist-50"], 0.22)}`,
+        boxShadow: `0 14px 36px ${alpha(p.navy, 0.75)}`,
+        transform: `rotate(${rotate}deg)`,
+        background: p["night-800"],
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} width={w} height={h} style={{ objectFit: "cover", width: w, height: h }} alt="" />
+    </div>
+  );
+}
+
+/** Sample 3:4 game covers (tall-card posters). Sources: scripts/sync-og-posters.mjs */
+function PosterShowcase({ mark, posters }: { mark: string; posters: [string, string, string] }) {
+  const side = { w: 232, h: 310 };
+  const front = { w: 268, h: 358 };
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: 460,
+        height: 430,
+        display: "flex",
+      }}
+    >
+      <div style={{ position: "absolute", left: 0, top: 72, display: "flex" }}>
+        <PosterCard src={posters[0]} w={side.w} h={side.h} rotate={-10} />
+      </div>
+      <div style={{ position: "absolute", right: 0, top: 64, display: "flex" }}>
+        <PosterCard src={posters[2]} w={side.w} h={side.h} rotate={10} />
+      </div>
+      <div style={{ position: "absolute", left: 96, top: 18, display: "flex" }}>
+        <PosterCard src={posters[1]} w={front.w} h={front.h} rotate={0} />
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: 190,
+          top: 332,
+          display: "flex",
+          width: 84,
+          height: 84,
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 22,
+          border: `3px solid ${alpha(p.gold, 0.7)}`,
+          background: p["night-950"],
+          boxShadow: `0 12px 28px ${alpha(p.navy, 0.85)}`,
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={mark} width={56} height={56} style={{ borderRadius: 12 }} alt="" />
+      </div>
+    </div>
+  );
+}
 
 /** Site-wide preview: brand, the promise, and the warm-night palette. */
 export async function siteOgImage() {
@@ -73,40 +170,68 @@ export async function siteOgImage() {
   return new ImageResponse(
     <div
       style={{
-        width: "100%",
-        height: "100%",
+        width: OG_SIZE.width,
+        height: OG_SIZE.height,
         display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        padding: 72,
+        flexDirection: "row",
+        position: "relative",
         background: NIGHT,
         color: p["mist-50"],
         fontFamily: "Body",
       }}
     >
-      <Brand mark={a.mark} word={a.word} />
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <div style={{ fontFamily: "Pixel", fontSize: 22, color: p.gold, letterSpacing: 2 }}>INDIE WEB GAMES</div>
-        <div
-          style={{
-            fontFamily: "Display",
-            fontStyle: "italic",
-            fontWeight: 800,
-            fontSize: 112,
-            lineHeight: 0.92,
-            textTransform: "uppercase",
-            color: p.gold,
-            marginTop: 18,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <span>Play right</span>
-          <span style={{ color: p["mist-50"] }}>in your browser</span>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: OG_PAD,
+          width: 680,
+          height: OG_SIZE.height,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Brand mark={a.mark} word={a.word} />
+          <div style={{ fontFamily: "Pixel", fontSize: 18, color: p.gold, letterSpacing: 2 }}>INDIE WEB GAMES</div>
         </div>
-        <div style={{ fontSize: 30, color: p["mist-100"], marginTop: 24 }}>
-          Story and adventure games from indie creators. Nothing to install.
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div
+            style={{
+              fontFamily: "Display",
+              fontStyle: "italic",
+              fontWeight: 800,
+              fontSize: 88,
+              lineHeight: 0.9,
+              textTransform: "uppercase",
+              color: p.gold,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <span>Play right</span>
+            <span style={{ color: p["mist-50"] }}>in your browser</span>
+          </div>
+          <div style={{ fontSize: 26, lineHeight: 1.35, color: p["mist-100"], maxWidth: 560 }}>
+            Story and adventure games from indie creators. Nothing to install.
+          </div>
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
+          <Hashtag tone="gold">FreeToPlay</Hashtag>
+          <Hashtag tone="sky">NoDownload</Hashtag>
+          <span style={{ fontSize: 22, color: p["mist-300"] }}>playinweb.com</span>
+        </div>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          position: "relative",
+          width: 520,
+          height: OG_SIZE.height,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <PosterShowcase mark={a.mark} posters={a.posters} />
       </div>
     </div>,
     { ...OG_SIZE, fonts: a.fonts },
