@@ -3,6 +3,7 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { IconClose, IconEye, IconEyeOff } from "@/components/icons";
 import { cn } from "@/lib/cn";
+import { useLeaveFullscreen } from "@/lib/fullscreen";
 import { signInWithGoogle } from "@/lib/oauth";
 
 export function AuthModalShell({
@@ -22,6 +23,7 @@ export function AuthModalShell({
 }) {
   const titleId = useId();
 
+  useLeaveFullscreen(open);
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {

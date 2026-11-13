@@ -24,6 +24,7 @@ import { playFrameSandbox } from "@/lib/html-game";
 import { canOptimizeImage } from "@/lib/optimize-image";
 import type { Game } from "@/lib/types";
 import { vimeoThumbUrl, parseTrailer, type Trailer } from "@/lib/trailer";
+import { onLeaveFullscreen } from "@/lib/fullscreen";
 
 // The game stage and its media strip. ProjectHeroRoot owns the play state; the stage, the strip,
 // the Play card and the sticky Play bar read it through useProjectHero().
@@ -310,6 +311,9 @@ export function ProjectHeroStage() {
     if (!running) setPseudo(false);
   }
 
+  // A dialog is opening (sign in, report, ...): drop the fallback fullscreen so it can be seen.
+  useEffect(() => onLeaveFullscreen(() => setPseudo(false)), []);
+
   useEffect(() => {
     if (!pseudo) return;
     const root = document.querySelector<HTMLElement>("[data-scroll-root]");
@@ -365,7 +369,7 @@ export function ProjectHeroStage() {
       className={cn(
         "project-stage dark relative flex flex-col overflow-hidden border border-[color-mix(in_srgb,var(--pw-sky)_18%,transparent)] bg-pw-night-950 shadow-pw-3",
         pseudo
-          ? "fixed inset-0 z-[100] rounded-none border-0 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
+          ? "fixed inset-x-0 top-0 z-[100] h-dvh overscroll-contain rounded-none border-0 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
           : "rounded-[22px]",
       )}
     >

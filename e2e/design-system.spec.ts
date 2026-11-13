@@ -89,6 +89,41 @@ test.describe("keyboard", () => {
     await expect(trigger).toBeFocused();
   });
 
+  test("a dialog leaves fullscreen so it can be seen (#38)", async ({ page }) => {
+    // Headless Chromium on Linux (CI) refuses real fullscreen, so the Fullscreen API is replaced
+    // with one that behaves the same on every machine. It records what the page asks for.
+    await page.addInitScript(() => {
+      let current: Element | null = null;
+      const changed = () => document.dispatchEvent(new Event("fullscreenchange"));
+      Object.defineProperty(Document.prototype, "fullscreenElement", { configurable: true, get: () => current });
+      Object.defineProperty(Document.prototype, "fullscreenEnabled", { configurable: true, get: () => true });
+      Element.prototype.requestFullscreen = function (this: Element) {
+        current = this; // eslint-disable-line @typescript-eslint/no-this-alias -- the fake records which element asked
+        changed();
+        return Promise.resolve();
+      };
+      Document.prototype.exitFullscreen = function () {
+        current = null;
+        changed();
+        return Promise.resolve();
+      };
+      // The iPhone fallback listens for this signal to drop its CSS fullscreen.
+      const w = window as unknown as { leaveSignals: number };
+      w.leaveSignals = 0;
+      window.addEventListener("playinweb:leave-fullscreen", () => w.leaveSignals++);
+    });
+    await open(page);
+    // Stand in for the game stage: an element the page already has goes fullscreen. Nothing is
+    // added to the page, so React re-rendering it (hydration) cannot get in the way.
+    await page.evaluate(() => document.querySelector("h1")?.requestFullscreen());
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement !== null)).toBe(true);
+    // Something opens a dialog while the game is fullscreen (the guest sign-in prompt does this).
+    await page.getByTestId("open-dialog").evaluate((el: HTMLElement) => el.click());
+    await expect(page.getByRole("dialog", { name: "Add to collection" })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement)).toBeNull();
+    expect(await page.evaluate(() => (window as unknown as { leaveSignals: number }).leaveSignals)).toBeGreaterThan(0);
+  });
+
   test("delete confirmation unlocks only after typing the title", async ({ page }) => {
     await open(page);
     await page.getByTestId("open-confirm").click();
