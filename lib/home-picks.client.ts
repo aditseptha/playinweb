@@ -7,11 +7,14 @@ import { createClient } from "@/lib/supabase/client";
 export function useHomePickIds(serverHero: string[], serverFeatured: string[]) {
   const [heroIds, setHeroIds] = useState(serverHero);
   const [featuredIds, setFeaturedIds] = useState(serverFeatured);
+  const serverKey = `${serverHero.join("\0")}|${serverFeatured.join("\0")}`;
+  const [syncedServerKey, setSyncedServerKey] = useState(serverKey);
 
-  useEffect(() => {
+  if (serverKey !== syncedServerKey) {
+    setSyncedServerKey(serverKey);
     setHeroIds(serverHero);
     setFeaturedIds(serverFeatured);
-  }, [serverHero, serverFeatured]);
+  }
 
   useEffect(() => {
     let cancelled = false;
