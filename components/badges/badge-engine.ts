@@ -26,6 +26,8 @@ export type BadgeView = {
 
 export type BadgeRenderer = {
   add(el: HTMLElement, look: BadgeLook): BadgeView;
+  /** Keep drawing for `ms`, for example while CSS animates the element a badge sits in. */
+  keepAlive(ms: number): void;
   dispose(): void;
 };
 
@@ -261,6 +263,7 @@ export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion =
 
   const views = new Set<Internal>();
   let raf = 0;
+  let aliveUntil = 0;
   let visible = true;
   let disposed = false;
 
@@ -303,8 +306,11 @@ export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion =
     const size = renderer.getSize(new THREE.Vector2());
     if (size.x !== w || size.y !== h) renderer.setSize(w, h, false);
     const box = canvas.getBoundingClientRect();
+    // A CSS transform on an ancestor scales the boxes but not clientWidth; map back to canvas pixels.
+    const sx = box.width ? w / box.width : 1;
+    const sy = box.height ? h / box.height : 1;
     const t = now / 1000;
-    let busy = false;
+    let busy = now < aliveUntil;
 
     renderer.setScissorTest(false);
     renderer.clear();
@@ -331,9 +337,11 @@ export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion =
       }
 
       const r = v.el.getBoundingClientRect();
-      const x = r.left - box.left;
-      const y = box.bottom - r.bottom;
       if (r.width === 0 || r.right < box.left || r.left > box.right || r.bottom < box.top || r.top > box.bottom) continue;
+      const x = (r.left - box.left) * sx;
+      const y = (box.bottom - r.bottom) * sy;
+      const vw = r.width * sx;
+      const vh = r.height * sy;
 
       v.root.rotation.set(v.tilt.x, v.tilt.y + spin, 0);
       v.root.scale.setScalar(1 + v.hoverT * 0.06);
@@ -357,13 +365,13 @@ export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion =
         v.aura.scale.setScalar(1 + v.hoverT * 0.08);
         const su = v.sparks.material.uniforms;
         su.time.value = reducedMotion ? 2 : t * (1 + v.hoverT * 0.8) + v.phase;
-        su.scale.value = renderer.getPixelRatio() * (r.height / 230);
+        su.scale.value = renderer.getPixelRatio() * (vh / 230);
         su.strength.value = reducedMotion ? 0.6 : 0.8 + v.hoverT * 0.4;
       }
 
-      renderer.setViewport(x, y, r.width, r.height);
-      renderer.setScissor(x, y, r.width, r.height);
-      const aspect = r.width / r.height;
+      renderer.setViewport(x, y, vw, vh);
+      renderer.setScissor(x, y, vw, vh);
+      const aspect = vw / vh;
       v.camera.aspect = aspect;
       v.camera.position.set(0, 0, aspect < 1 ? 6.2 / aspect : 6.2);
       v.camera.updateProjectionMatrix();
@@ -478,6 +486,10 @@ export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion =
           request();
         },
       };
+    },
+    keepAlive(ms) {
+      aliveUntil = Math.max(aliveUntil, performance.now() + ms);
+      request();
     },
     dispose() {
       disposed = true;

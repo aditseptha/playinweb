@@ -211,7 +211,7 @@ export function ChannelHero({
                     </Link>
                     {showSiteLink ? (
                       <Link href={siteOrigin(handle)} className={cn(s.btn, s.btnPrimary)}>
-                        View site
+                        View public profile
                       </Link>
                     ) : null}
                   </div>

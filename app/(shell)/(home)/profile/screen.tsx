@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { DetailSkeleton, CatalogSkeleton } from "@/components/ds/skeleton";
 import { EmptyState } from "@/components/ds/empty-state";
 import { Button } from "@/components/ds/button";
+import { BadgeShelf } from "@/components/badges/BadgeShelf";
 import { ChannelHero } from "@/components/ChannelHero";
 import { TallCard } from "@/components/home/cards";
 import s from "@/components/home/home.module.css";
@@ -138,6 +139,25 @@ export function ProfileScreen() {
         showSiteLink
         editable
       />
+
+      {user ? (
+        <section className="pb-10">
+          <div className={s.frame}>
+            <div className={s.wrap}>
+              <BadgeShelf id="badges" profileId={user.id} viewerId={user.id} showCount />
+              {channelHandle ? (
+                <p className="mt-3 text-pw-caption text-pw-muted">
+                  Everyone sees these on{" "}
+                  <Link href={siteOrigin(channelHandle)} className="font-semibold text-pw-sky hover:underline">
+                    your public profile
+                  </Link>
+                  .
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {recent.length > 0 ? (
         <GameSection title="Play history">

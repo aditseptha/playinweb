@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { fileExt, MEDIA_BUCKET } from "@/lib/media";
 import { createClient } from "@/lib/supabase/client";
+import { requestBadgeCheck } from "@/lib/badge-events";
 
 const AVATAR_MAX = 2 * 1024 * 1024;
 const BANNER_MAX = 5 * 1024 * 1024;
@@ -56,6 +57,7 @@ export function useChannelImageUpload() {
       setError(rowError.message);
       return false;
     }
+    requestBadgeCheck();
     if (previous) {
       await supabase.storage.from(MEDIA_BUCKET).remove([previous]);
     }

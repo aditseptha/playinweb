@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { dsFontVars } from "@/app/fonts";
 import { Avatar } from "@/components/Avatar";
+import { BadgeCelebrations } from "@/components/badges/BadgeCelebrations";
 import { MosaicGrid } from "@/components/ui/mosaic-grid";
 import { ReportDialog } from "@/components/ReportDialog";
 import { LegalProvider } from "@/components/LegalModal";
@@ -137,6 +138,7 @@ export function HomeShell({ children }: { children: ReactNode }) {
           <main id="content">{children}</main>
           <Footer onReport={() => setReportOpen(true)} />
           {reportOpen ? <ReportDialog onClose={() => setReportOpen(false)} /> : null}
+          <BadgeCelebrations />
         </div>
       </SignupProvider>
     </LegalProvider>
