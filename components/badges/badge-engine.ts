@@ -21,6 +21,8 @@ export type BadgeView = {
   /** Tilt toward a pointer at x, y in -1..1 across the badge. */
   tilt(x: number, y: number): void;
   spin(): void;
+  /** A slower, grander entrance for Foil unlocks: two turns with a long glint. */
+  celebrate(): void;
   remove(): void;
 };
 
@@ -195,7 +197,8 @@ function extrude(outer: Polygon, holes: readonly Polygon[], depth: number, bevel
 }
 
 const easeOut = (p: number) => 1 - Math.pow(1 - p, 3);
-const SPIN_MS = 1100;
+const SPIN = { ms: 1100, turns: 1 };
+const CELEBRATE = { ms: 1900, turns: 2 };
 
 export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion = false } = {}): BadgeRenderer {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -258,6 +261,7 @@ export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion =
     hover: number;
     hoverT: number;
     spinStart: number;
+    spinKind: { ms: number; turns: number };
     phase: number;
   };
 
@@ -326,12 +330,12 @@ export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion =
       let sweep = -9;
       let sweepAmt = 0;
       if (v.spinStart >= 0) {
-        const p = (now - v.spinStart) / SPIN_MS;
+        const p = (now - v.spinStart) / v.spinKind.ms;
         if (p >= 1) v.spinStart = -1;
         else {
-          spin = easeOut(p) * Math.PI * 2;
-          sweep = -2.2 + 4.4 * p;
-          sweepAmt = 1.1;
+          spin = easeOut(p) * Math.PI * 2 * v.spinKind.turns;
+          sweep = -2.2 + 4.4 * ((p * v.spinKind.turns) % 1);
+          sweepAmt = v.spinKind.turns > 1 ? 1.6 : 1.1;
           busy = true;
         }
       }
@@ -446,6 +450,7 @@ export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion =
         hover: 0,
         hoverT: 0,
         spinStart: -1,
+        spinKind: SPIN,
         phase: views.size * 1.7,
       };
       build(v);
@@ -473,6 +478,14 @@ export function createBadgeRenderer(canvas: HTMLCanvasElement, { reducedMotion =
         },
         spin() {
           if (reducedMotion || v.spinStart >= 0) return;
+          v.spinKind = SPIN;
+          v.spinStart = performance.now();
+          request();
+        },
+        celebrate() {
+          if (reducedMotion) return;
+          v.spinKind = CELEBRATE;
+          v.hover = 1;
           v.spinStart = performance.now();
           request();
         },
