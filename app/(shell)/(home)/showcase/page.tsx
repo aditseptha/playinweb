@@ -21,6 +21,7 @@ import {
   type ShowcaseRange,
 } from "@/lib/showcase-bids";
 import { useGames } from "@/lib/store";
+import { useSiteOnlineCount } from "@/lib/site-presence";
 import { createClient } from "@/lib/supabase/client";
 import { umamiShareUrl } from "@/lib/umami";
 import type { Game } from "@/lib/types";
@@ -387,7 +388,6 @@ function prettyCategory(name: string) {
 }
 
 function CompactStats({ fallbackVisitors }: { fallbackVisitors: number }) {
-  const [online, setOnline] = useState(1);
   const [visitors, setVisitors] = useState(fallbackVisitors);
   const [prevFallback, setPrevFallback] = useState(fallbackVisitors);
   if (prevFallback !== fallbackVisitors) {
@@ -419,31 +419,8 @@ function CompactStats({ fallbackVisitors }: { fallbackVisitors: number }) {
     };
   }, []);
 
-  useEffect(() => {
-    const supabase = createClient();
-    const key = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now());
-    const channel = supabase.channel("showcase-presence", {
-      config: { presence: { key } },
-    });
-
-    const sync = () => {
-      const state = channel.presenceState();
-      const count = Object.keys(state).length;
-      setOnline(Math.max(1, count));
-    };
-
-    channel.on("presence", { event: "sync" }, sync);
-    channel.subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await channel.track({ page: "showcase", at: Date.now() });
-        sync();
-      }
-    });
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, []);
+  const liveOnline = useSiteOnlineCount();
+  const online = liveOnline !== null && liveOnline > 0 ? liveOnline : 1;
 
   return (
     <p className={s.legalIntro}>

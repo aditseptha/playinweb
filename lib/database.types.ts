@@ -668,6 +668,18 @@ export type Database = {
           views: number
         }
       }
+      admin_trends_7d: {
+        Args: Record<string, never>
+        Returns: {
+          day: string
+          new_users: number
+          new_games: number
+          total_users: number
+          total_games: number
+          plays: number
+          views: number
+        }[]
+      }
       bump_play_count: { Args: { pid: string }; Returns: undefined }
       bump_view_count: { Args: { pid: string }; Returns: undefined }
       can_manage_curated: { Args: { owner: string }; Returns: boolean }

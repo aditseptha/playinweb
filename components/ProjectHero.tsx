@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ds/button";
 import { Illustration } from "@/components/ds/illustration";
 import { focusRing, onArt } from "@/components/ds/styles";
@@ -287,6 +287,15 @@ export function ProjectHeroStage() {
     document.addEventListener("fullscreenchange", sync);
     return () => document.removeEventListener("fullscreenchange", sync);
   }, []);
+
+  const [prevLoadEpoch, setPrevLoadEpoch] = useState({ running, frameKey });
+  if (running !== prevLoadEpoch.running || frameKey !== prevLoadEpoch.frameKey) {
+    setPrevLoadEpoch({ running, frameKey });
+    if (running) {
+      setLoadedKey(null);
+      setTimedOutKey(null);
+    }
+  }
 
   useEffect(() => {
     if (!running || loaded) return;
@@ -698,6 +707,15 @@ function ClipStage({
  * The game iframe. Most games fill the stage. An embed player with a fixed size (PICO-8) renders at
  * that size and is scaled to fit, centred, because it lays out badly at any other size.
  */
+function embedFrameLooksReady(iframe: HTMLIFrameElement) {
+  try {
+    const doc = iframe.contentDocument;
+    return Boolean(doc && doc.readyState === "complete");
+  } catch {
+    return false;
+  }
+}
+
 function PlayFrame({
   src,
   title,
@@ -710,7 +728,45 @@ function PlayFrame({
   onLoad: () => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const reported = useRef(false);
   const [scale, setScale] = useState(1);
+
+  const notifyLoaded = useCallback(() => {
+    if (reported.current) return;
+    reported.current = true;
+    onLoad();
+  }, [onLoad]);
+
+  useEffect(() => {
+    reported.current = false;
+  }, [src]);
+
+  useEffect(() => {
+    const el = iframeRef.current;
+    if (!el) return;
+
+    const handleLoad = () => notifyLoaded();
+    const catchUp = () => {
+      if (embedFrameLooksReady(el)) notifyLoaded();
+    };
+
+    el.addEventListener("load", handleLoad);
+    catchUp();
+    // Fast embeds (itch.io) can finish before React attaches `onLoad`, especially after hydration.
+    const soon = window.setTimeout(catchUp, 0);
+    const remoteEmbed = /^https?:\/\//i.test(src);
+    const backup = remoteEmbed ? window.setTimeout(catchUp, 250) : undefined;
+    // Cross-origin embeds may not expose `contentDocument`; don't block play behind the spinner forever.
+    const reveal = remoteEmbed ? window.setTimeout(() => notifyLoaded(), 4_000) : undefined;
+
+    return () => {
+      el.removeEventListener("load", handleLoad);
+      window.clearTimeout(soon);
+      if (backup !== undefined) window.clearTimeout(backup);
+      if (reveal !== undefined) window.clearTimeout(reveal);
+    };
+  }, [src, notifyLoaded]);
 
   useEffect(() => {
     const box = boxRef.current;
@@ -724,6 +780,7 @@ function PlayFrame({
 
   const frame = (
     <iframe
+      ref={iframeRef}
       src={src}
       title={title}
       className={cn("border-0 bg-pw-night-950", size ? "absolute top-1/2 left-1/2" : "absolute inset-0 h-full w-full")}
@@ -735,7 +792,7 @@ function PlayFrame({
       allow="fullscreen; gamepad; accelerometer; autoplay; pointer-lock; clipboard-write"
       allowFullScreen
       sandbox={playFrameSandbox()}
-      onLoad={onLoad}
+      onLoad={notifyLoaded}
     />
   );
   return size ? (

@@ -2,12 +2,9 @@
 
 import { IconCheck, IconChevronUp, IconSliders } from "@/components/icons";
 import { useId, useState, type ReactNode } from "react";
-import { CREATOR_COLORS, capitalize, toggle, type Creator, type HomeFilters } from "@/components/home/filters";
+import { capitalize, toggle, type Creator, type HomeFilters } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
-import { initials } from "@/lib/format";
-
-const STACK = 6;
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   const [open, setOpen] = useState(true);
@@ -39,14 +36,11 @@ function CheckRow({ label, checked, onChange }: { label: string; checked: boolea
   );
 }
 
-/**
- * Category and creator filters. Duration, rating, language and type join once
- * those fields exist on games (PR 2).
- */
+/** Sidebar filters: library shortcut and categories. Creator picking is hidden for now. */
 export function FilterRail({
   filters,
   tags,
-  creators,
+  creators: _creators,
   onChange,
   onReset,
 }: {
@@ -56,7 +50,6 @@ export function FilterRail({
   onChange: (next: Partial<HomeFilters>) => void;
   onReset: () => void;
 }) {
-  const [pick, setPick] = useState(false);
   const dirty = filters.tags.length > 0 || filters.creators.length > 0 || Boolean(filters.q.trim()) || Boolean(filters.view);
   const allCategories = filters.tags.length === 0;
 
@@ -93,50 +86,6 @@ export function FilterRail({
               onChange={() => onChange({ tags: toggle(filters.tags, tag) })}
             />
           ))}
-        </Group>
-      ) : null}
-
-      {creators.length > 0 ? (
-        <Group title="Creator">
-          <div className={s.stack}>
-            {creators.slice(0, STACK).map((c, i) => (
-              <span
-                key={c.handle}
-                title={c.name}
-                className={cn(s.av, filters.creators.includes(c.handle) && s.avOn)}
-                style={{ background: CREATOR_COLORS[i % CREATOR_COLORS.length] }}
-              >
-                {c.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.avatarUrl} alt="" />
-                ) : (
-                  initials(c.name)
-                )}
-              </span>
-            ))}
-            <span className={s.more}>
-              {filters.creators.length
-                ? `${filters.creators.length} selected`
-                : creators.length > STACK
-                  ? `+${creators.length - STACK} creators`
-                  : `${creators.length} ${creators.length === 1 ? "creator" : "creators"}`}
-            </span>
-          </div>
-          <button type="button" className={s.btnSoft} aria-expanded={pick} onClick={() => setPick((p) => !p)}>
-            {pick ? "Done" : "Pick creators"}
-          </button>
-          {pick ? (
-            <div className={s.kpop}>
-              {creators.map((c) => (
-                <CheckRow
-                  key={c.handle}
-                  label={c.name}
-                  checked={filters.creators.includes(c.handle)}
-                  onChange={() => onChange({ creators: toggle(filters.creators, c.handle) })}
-                />
-              ))}
-            </div>
-          ) : null}
         </Group>
       ) : null}
     </aside>

@@ -47,6 +47,7 @@ import { apexHref } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
 import { usePrefersReducedMotion } from "@/lib/reduced-motion";
 import { useGames } from "@/lib/store";
+import { SitePresenceTracker } from "@/components/SitePresenceTracker";
 import { switchTheme } from "@/lib/theme";
 
 const PRIMARY_NAV = [
@@ -116,6 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <LegalProvider>
     <SignupProvider>
+    <SitePresenceTracker />
     <div className="flex h-dvh max-w-full flex-col gap-2 overflow-hidden bg-transparent p-3 text-text md:flex-row">
       <a
         href="#content"
