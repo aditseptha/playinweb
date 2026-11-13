@@ -16,16 +16,29 @@ const geistSans = Geist({
   display: "swap",
 });
 
+const siteTitle = "Play right in your browser";
+const siteDescription = "Story and adventure games from indie creators. Nothing to install.";
+
 export const metadata: Metadata = {
   // Makes Open Graph image URLs absolute (link previews need a full URL).
   metadataBase: new URL(apexOrigin()),
   applicationName: "PlayInWeb",
   title: {
-    default: "PlayInWeb — indie web games",
+    default: "PlayInWeb — play right in your browser",
     template: "%s · PlayInWeb",
   },
-  description:
-    "A YouTube-style catalogue of indie web games. Browse by plays, check popularity, and register your own.",
+  description: siteDescription,
+  openGraph: {
+    type: "website",
+    siteName: "PlayInWeb",
+    title: siteTitle,
+    description: siteDescription,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+  },
 };
 
 function supabaseOrigin() {
