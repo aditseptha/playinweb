@@ -20,6 +20,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { BRAND_MARKS, BRAND_MARK_INTERVAL_MS } from "@/lib/brand";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
+import { buildId, currentRelease } from "@/lib/devlog";
 import { navItemVisible, useFeatures } from "@/lib/features";
 import { apexHref } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
@@ -81,6 +82,7 @@ const FOOTER = [
       { href: "/library", label: "Library" },
       { href: "/downloads", label: "Downloads" },
       { href: "/tip", label: "Tip the developer" },
+      { href: "/devlog", label: "Devlog" },
       { href: "mailto:support@playinweb.com", label: "Contact" },
     ],
   },
@@ -543,6 +545,22 @@ function MenuSheet({
   );
 }
 
+/** The live version and build, linking to the devlog (#40). Read from lib/devlog.ts, so it always matches the devlog. */
+function FooterVersion() {
+  const release = currentRelease();
+  const build = buildId();
+  return (
+    <Link
+      href={hrefFor("/devlog")}
+      className={cn(s.made, s.fBotCopy, "rounded-pw-sm underline-offset-4 hover:underline focus-visible:underline")}
+      aria-label={`Version ${release.version}${build ? `, build ${build}` : ""}. See what's new`}
+    >
+      v{release.version}
+      {build ? <span className="font-mono font-normal opacity-70"> · {build}</span> : null} · What&apos;s new
+    </Link>
+  );
+}
+
 function Footer({ onReport }: { onReport: () => void }) {
   const visible = useVisible();
   return (
@@ -581,7 +599,10 @@ function Footer({ onReport }: { onReport: () => void }) {
           </div>
         </div>
         <div className={s.fBot}>
-          <span className={cn(s.made, s.fBotCopy)}>© 2026 PlayInWeb</span>
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className={cn(s.made, s.fBotCopy)}>© 2026 PlayInWeb</span>
+            <FooterVersion />
+          </span>
           <span className={s.made}>MADE FOR INDIE STORYTELLERS</span>
         </div>
       </div>
