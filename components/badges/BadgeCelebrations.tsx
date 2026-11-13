@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
@@ -101,7 +100,7 @@ export function BadgeCelebrations() {
 // The 3D badges inside a popup ----------------------------------------------------------------
 
 /** Draws `items` in 3D on one canvas, popping in one after another. Flat badges until three.js loads. */
-function BadgeStage({ items, size, className }: { items: Unlock[]; size: number; className?: string }) {
+function BadgeStage({ items, size, epic = false, className }: { items: Unlock[]; size: number; epic?: boolean; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cells = useRef<(HTMLSpanElement | null)[]>([]);
   const reducedMotion = usePrefersReducedMotion();
@@ -122,10 +121,16 @@ function BadgeStage({ items, size, className }: { items: Unlock[]; size: number;
           const el = cells.current[i];
           if (!el) return;
           const view = r.add(el, { badge: u.def.id, tier: tierFor(u.def, u.level), stripes: stripeCount(u.def, u.level) });
-          timers.push(window.setTimeout(() => view.hover(true), 180 + i * 120));
-          timers.push(window.setTimeout(() => view.hover(false), 1500 + i * 120));
+          if (epic) {
+            // Lands with the flash, then spins twice.
+            timers.push(window.setTimeout(() => view.celebrate(), 720));
+            timers.push(window.setTimeout(() => view.hover(false), 3200));
+          } else {
+            timers.push(window.setTimeout(() => view.hover(true), 180 + i * 120));
+            timers.push(window.setTimeout(() => view.hover(false), 1500 + i * 120));
+          }
         });
-        r.keepAlive(1800 + items.length * 120);
+        r.keepAlive(epic ? 3400 : 1800 + items.length * 120);
         setReady(true);
       })
       .catch(() => {});
@@ -143,7 +148,7 @@ function BadgeStage({ items, size, className }: { items: Unlock[]; size: number;
       <canvas ref={canvasRef} aria-hidden className="pointer-events-none absolute inset-0 z-10 size-full" />
       <ul className="flex flex-wrap justify-center gap-3">
         {items.map((u, i) => (
-          <li key={unlockKey(u)} className={cn("grid justify-items-center gap-2", c.pop)} style={{ "--i": i } as CSSProperties}>
+          <li key={unlockKey(u)} className={cn("grid justify-items-center gap-2", epic ? c.epicPop : c.pop)} style={{ "--i": i } as CSSProperties}>
             <span
               ref={(el) => {
                 cells.current[i] = el;
@@ -228,6 +233,29 @@ function Confetti({ count = 28 }: { count?: number }) {
   );
 }
 
+/** Rainbow confetti that explodes out of a Foil badge, then falls. */
+function ConfettiBurst({ count = 40 }: { count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }, (_, i) => {
+        const a = (i / count) * Math.PI * 2 + ((i * 17) % 7) * 0.05;
+        const dist = 150 + ((i * 53) % 9) * 22;
+        const style = {
+          "--x": `${(Math.cos(a) * dist).toFixed(1)}px`,
+          "--y": `${(Math.sin(a) * dist * 0.75).toFixed(1)}px`,
+          "--r": `${(i % 2 ? 1 : -1) * (240 + i * 31)}deg`,
+          "--c": RAINBOW[i % RAINBOW.length],
+          "--d": `${(0.72 + (i % 5) * 0.02).toFixed(2)}s`,
+          "--t": `${(1.4 + ((i * 7) % 10) / 12).toFixed(2)}s`,
+        } as CSSProperties;
+        return <span key={i} className={c.boom} style={style} aria-hidden />;
+      })}
+    </>
+  );
+}
+
+const RAINBOW = ["var(--pw-pastel-6)", "var(--pw-pastel-3)", "var(--pw-pastel-5)", "var(--pw-pastel-2)", "var(--pw-pastel-4)", "var(--pw-white)"];
+
 function LevelDots({ unlock }: { unlock: Unlock }) {
   if (unlock.def.kind !== "tiered") return null;
   return (
@@ -286,7 +314,6 @@ function BadgeCard({ unlock, onDone }: { unlock: Unlock; onDone: () => void }) {
         leaving ? c.cardOut : c.cardIn,
       )}
     >
-      <Image src="/illustrations/success.webp" alt="" width={64} height={64} className={cn("absolute -top-11 right-12 size-16", c.peek)} />
       <div className="relative flex items-center gap-3 rounded-pw-xl border border-pw-line-strong bg-pw-surface-raised p-3 pr-11 shadow-pw-3">
         <div className="relative">
           <SparkleBurst count={10} reach={60} />
@@ -318,10 +345,19 @@ function BadgeCard({ unlock, onDone }: { unlock: Unlock; onDone: () => void }) {
 function BadgeSpotlight({ moment, onDone }: { moment: Moment; onDone: () => void }) {
   const summary = moment.kind === "summary";
   const first = moment.items[0];
-  const title = summary ? `You've earned ${moment.items.length} badges!` : unlockHeadline(first);
+  const epic = !summary && first.def.kind === "foil";
+  const title = summary ? (
+    `You've earned ${moment.items.length} badges!`
+  ) : epic ? (
+    <span className={c.rainbowText}>Foil badge unlocked!</span>
+  ) : (
+    unlockHeadline(first)
+  );
   const description = summary
     ? "They're on your profile now. Keep playing to level them up."
-    : `${first.def.name} · ${unlockDetail(first)}`;
+    : epic
+      ? `${first.def.name} · one of the rarest badges on PlayInWeb`
+      : `${first.def.name} · ${unlockDetail(first)}`;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onDone()}>
@@ -342,25 +378,34 @@ function BadgeSpotlight({ moment, onDone }: { moment: Moment; onDone: () => void
           </>
         }
       >
-        <div className={cn("relative grid min-h-64 place-items-center overflow-hidden rounded-pw-xl bg-pw-bg-deep pb-6", summary ? "pt-24" : "pt-6")}>
-          <Confetti count={summary ? 36 : 28} />
-          <div className="relative">
-            {summary ? null : <SparkleBurst count={14} reach={130} />}
-            <BadgeStage items={moment.items} size={summary ? 96 : 200} />
+        <div
+          className={cn(
+            "relative grid min-h-64 place-items-center overflow-hidden rounded-pw-xl bg-pw-bg-deep pb-6",
+            epic && cn(c.epicStage, "min-h-80"),
+          )}
+        >
+          {epic ? (
+            <>
+              <div className={c.rays} aria-hidden />
+              <div className={c.charge} aria-hidden />
+              <div className={c.shock} aria-hidden />
+              <div className={c.shock} style={{ "--d": "0.86s" } as CSSProperties} aria-hidden />
+              <ConfettiBurst />
+            </>
+          ) : (
+            <Confetti count={summary ? 36 : 28} />
+          )}
+          <div className={cn("relative", epic && c.shake)}>
+            {summary ? null : <SparkleBurst count={epic ? 20 : 14} reach={epic ? 170 : 130} />}
+            <BadgeStage items={moment.items} size={summary ? 96 : epic ? 220 : 200} epic={epic} />
           </div>
-          <Image
-            src="/illustrations/success.webp"
-            alt=""
-            width={112}
-            height={112}
-            className={cn("absolute top-3 right-3 size-20 sm:size-24", c.mascot)}
-          />
           {summary ? null : (
             <div className="relative mt-2 flex flex-col items-center gap-2">
               <LevelDots unlock={first} />
               <p className="text-center text-pw-body-sm text-pw-muted">{nextGoal(first)}</p>
             </div>
           )}
+          {epic ? <div className={c.flash} aria-hidden /> : null}
         </div>
       </DialogContent>
     </Dialog>
