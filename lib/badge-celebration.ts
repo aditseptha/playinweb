@@ -70,6 +70,26 @@ export function badgeNoticeText(badge: string, level: number): { title: string; 
   return { title: `${u.from > 0 ? "Level up" : "Badge unlocked"}: ${def.name}`, detail: unlockDetail(u) };
 }
 
+/** Anything with a Supabase-style rpc(). Kept structural so tests can pass a fake. */
+type RpcClient = {
+  rpc(fn: "mark_badges_seen", args: { p_badges: string[] }): PromiseLike<{ error: unknown }>;
+};
+
+/**
+ * Marks badges seen so their popup never shows again. Supabase query builders are lazy: the
+ * request is only sent when the result is awaited, so this must be awaited, never fired and
+ * forgotten. Returns false when the request failed.
+ */
+export async function markBadgesSeen(client: RpcClient, badges: string[]): Promise<boolean> {
+  if (badges.length === 0) return true;
+  try {
+    const { error } = await client.rpc("mark_badges_seen", { p_badges: badges });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 /** A key per badge level, to never show the same level twice in one visit. */
 export function unlockKey(u: Unlock): string {
   return `${u.def.id}:${u.level}`;

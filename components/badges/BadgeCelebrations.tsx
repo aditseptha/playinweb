@@ -11,7 +11,7 @@ import { Dialog, DialogContent } from "@/components/ds/dialog";
 import { focusRing } from "@/components/ds/styles";
 import { IconClose } from "@/components/icons";
 import { useAuth } from "@/lib/auth";
-import { nextGoal, planCelebration, unlockDetail, unlockHeadline, unlockKey, type Moment, type Unlock } from "@/lib/badge-celebration";
+import { markBadgesSeen, nextGoal, planCelebration, unlockDetail, unlockHeadline, unlockKey, type Moment, type Unlock } from "@/lib/badge-celebration";
 import { isPlaying, onBadgeCheck, subscribePlaying } from "@/lib/badge-events";
 import { maxLevel, stripeCount, tierFor } from "@/lib/badges";
 import { cn } from "@/lib/cn";
@@ -28,6 +28,12 @@ import { createClient } from "@/lib/supabase/client";
 // devices. While a game is running, popups wait.
 
 const CHECK_GAP_MS = 4000;
+
+// Badge levels already shown in this tab. Lives outside the component because every page mounts
+// its own HomeShell, so a popup must not come back just because the user moved to another page.
+// A level is added when its popup appears, not when it is queued, so a queued popup that never got
+// its turn before a page change still shows on the next page.
+const shownThisTab = new Set<string>();
 const CARD_MS = 6500;
 const PROFILE_BADGES = apexHref("/profile#badges");
 
@@ -37,24 +43,36 @@ export function BadgeCelebrations() {
   const pathname = usePathname();
   const playing = useSyncExternalStore(subscribePlaying, isPlaying, () => false);
   const [state, setState] = useState<{ owner: string | null; queue: Moment[] }>({ owner: null, queue: [] });
-  const shown = useRef(new Set<string>());
   const marked = useRef(new Set<Moment>());
   const lastCheck = useRef(0);
 
-  const check = useCallback(
-    async (force = false) => {
-      if (!userId) return;
+  /** Fetches the account's badges and returns the popups not shown yet, or null. */
+  const load = useCallback(
+    async (force = false): Promise<Moment[] | null> => {
+      if (!userId) return null;
       const now = Date.now();
-      if (!force && now - lastCheck.current < CHECK_GAP_MS) return;
+      if (!force && now - lastCheck.current < CHECK_GAP_MS) return null;
       lastCheck.current = now;
       const { data, error } = await createClient().rpc("my_badges");
-      if (error || !data) return;
-      const moments = planCelebration(data).filter((m) => m.items.some((u) => !shown.current.has(unlockKey(u))));
-      if (moments.length === 0) return;
-      for (const m of moments) for (const u of m.items) shown.current.add(unlockKey(u));
-      setState((s) => ({ owner: userId, queue: s.owner === userId ? [...s.queue, ...moments] : moments }));
+      if (error || !data) return null;
+      const moments = planCelebration(data).filter((m) => m.items.some((u) => !shownThisTab.has(unlockKey(u))));
+      return moments.length ? moments : null;
     },
     [userId],
+  );
+
+  const check = useCallback(
+    (force = false) =>
+      load(force).then((moments) => {
+        if (!moments) return;
+        setState((s) => {
+          const queue = s.owner === userId ? s.queue : [];
+          const queued = new Set(queue.flatMap((m) => m.items.map(unlockKey)));
+          const fresh = moments.filter((m) => m.items.some((u) => !queued.has(unlockKey(u))));
+          return fresh.length ? { owner: userId, queue: [...queue, ...fresh] } : s;
+        });
+      }),
+    [load, userId],
   );
 
   useEffect(() => {
@@ -80,11 +98,16 @@ export function BadgeCelebrations() {
   const queue = state.owner === userId ? state.queue : [];
   const current = !playing ? queue[0] : undefined;
 
-  // Mark a popup's badges seen as soon as it appears.
+  // Mark a popup's badges seen as soon as it appears, so it never shows again on any page or
+  // device. If that fails, the tab still remembers it; another visit may show it once more.
   useEffect(() => {
     if (!current || marked.current.has(current)) return;
     marked.current.add(current);
-    void createClient().rpc("mark_badges_seen", { p_badges: current.items.map((u) => u.def.id) });
+    for (const u of current.items) shownThisTab.add(unlockKey(u));
+    void markBadgesSeen(
+      createClient(),
+      current.items.map((u) => u.def.id),
+    );
   }, [current]);
 
   const done = useCallback(() => setState((s) => ({ ...s, queue: s.queue.slice(1) })), []);
