@@ -8,11 +8,13 @@ import { EmptyState } from "@/components/ds/empty-state";
 import { Button } from "@/components/ds/button";
 import { BadgeShelf } from "@/components/badges/BadgeShelf";
 import { ChannelHero } from "@/components/ChannelHero";
+import { ProfileColumns } from "@/components/profile/ProfileColumns";
 import { TallCard } from "@/components/home/cards";
 import s from "@/components/home/home.module.css";
 import { HomeUiProvider } from "@/components/home/Peek";
 import { ProfileForm } from "@/components/ProfileForm";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { siteOrigin } from "@/lib/host";
 import { publicMediaUrl } from "@/lib/media";
 import { fetchProjectsForOwner, projectToGame } from "@/lib/projects";
@@ -140,66 +142,73 @@ export function ProfileScreen() {
         editable
       />
 
-      {user ? (
-        <section className="pb-10">
-          <div className={s.frame}>
-            <div className={s.wrap}>
-              <BadgeShelf id="badges" profileId={user.id} viewerId={user.id} showCount />
-              {channelHandle ? (
-                <p className="mt-3 text-pw-caption text-pw-muted">
-                  Everyone sees these on{" "}
-                  <Link href={siteOrigin(channelHandle)} className="font-semibold text-pw-sky hover:underline">
-                    your public profile
-                  </Link>
-                  .
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {recent.length > 0 ? (
-        <GameSection title="Play history">
-          <div className={s.grid}>
-            {recent.map((game, index) => (
-              <div key={game.id}>
-                <TallCard game={game} i={index} />
-                <button type="button" className={s.channelRemove} onClick={() => removeFromHistory(game.id)}>
-                  Remove from history
-                </button>
+      <div className={s.frame}>
+        <div className={cn(s.wrap, "pb-16")}>
+          <ProfileColumns
+            sideFirstOnPhone
+            main={
+              <div className="grid gap-12">
+                {recent.length > 0 ? (
+                  <GameSection title="Play history">
+                    <div className={s.grid}>
+                      {recent.map((game, index) => (
+                        <div key={game.id}>
+                          <TallCard game={game} i={index} />
+                          <button type="button" className={s.channelRemove} onClick={() => removeFromHistory(game.id)}>
+                            Remove from history
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </GameSection>
+                ) : null}
+                <GameSection
+                  title="Your games"
+                  action={channelHandle ? { href: siteOrigin(channelHandle), label: "See all games" } : undefined}
+                >
+                  {gamesLoading ? (
+                    <CatalogSkeleton label="Loading your games" />
+                  ) : listed.length > 0 ? (
+                    <div className={s.grid}>
+                      {listed.map((game, index) => (
+                        <TallCard key={game.id} game={game} i={index} />
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState
+                      kind="first-use"
+                      illustration="first-use"
+                      title="Create a game"
+                      body="Register a web game and it will appear on your channel and in this shelf."
+                      action={
+                        <Button variant="primary" asChild>
+                          <Link href="/register">Register a game</Link>
+                        </Button>
+                      }
+                    />
+                  )}
+                </GameSection>
               </div>
-            ))}
-          </div>
-        </GameSection>
-      ) : null}
-
-      <GameSection
-        title="Your games"
-        action={channelHandle ? { href: siteOrigin(channelHandle), label: "See all games" } : undefined}
-      >
-        {gamesLoading ? (
-          <CatalogSkeleton label="Loading your games" />
-        ) : listed.length > 0 ? (
-          <div className={s.grid}>
-            {listed.map((game, index) => (
-              <TallCard key={game.id} game={game} i={index} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            kind="first-use"
-            illustration="first-use"
-            title="Create a game"
-            body="Register a web game and it will appear on your channel and in this shelf."
-            action={
-              <Button variant="primary" asChild>
-                <Link href="/register">Register a game</Link>
-              </Button>
+            }
+            side={
+              user ? (
+                <>
+                  <BadgeShelf id="badges" profileId={user.id} viewerId={user.id} showCount />
+                  {channelHandle ? (
+                    <p className="mt-3 text-pw-caption text-pw-muted">
+                      Everyone sees these on{" "}
+                      <Link href={siteOrigin(channelHandle)} className="font-semibold text-pw-sky hover:underline">
+                        your public profile
+                      </Link>
+                      .
+                    </p>
+                  ) : null}
+                </>
+              ) : null
             }
           />
-        )}
-      </GameSection>
+        </div>
+      </div>
       </>
     </HomeUiProvider>
   );
@@ -215,20 +224,16 @@ function GameSection({
   children: ReactNode;
 }) {
   return (
-    <section className={s.channelGames}>
-      <div className={s.frame}>
-        <div className={s.wrap}>
-          <div className={s.channelHead}>
-            <h2>{title}</h2>
-            {action ? (
-              <Link href={action.href} className={s.linkGold}>
-                {action.label}
-              </Link>
-            ) : null}
-          </div>
-          {children}
-        </div>
+    <section className="min-w-0">
+      <div className={s.channelHead}>
+        <h2>{title}</h2>
+        {action ? (
+          <Link href={action.href} className={s.linkGold}>
+            {action.label}
+          </Link>
+        ) : null}
       </div>
+      {children}
     </section>
   );
 }
