@@ -2,7 +2,7 @@
 
 import { IconBook, IconClose, IconFlame, IconHeart, IconHistory, IconSearch, IconSliders, IconSpark, IconUsers } from "@/components/icons";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ds/button";
 import { EmptyState } from "@/components/ds/empty-state";
 import { CreatorCTA, GuestBanner } from "@/components/home/Banners";
@@ -37,6 +37,8 @@ import { pickFeaturedGames } from "@/lib/featured-games";
 import { useHomePickIds } from "@/lib/home-picks.client";
 import { pickHeroGames } from "@/lib/hero-spotlights";
 import type { Game } from "@/lib/types";
+import { DeviceChips } from "@/components/home/DeviceChips";
+import { DEVICE_LABEL, autoPhoneDismissed, dismissAutoPhone, matchesDevice, readTouchDevice, type Device } from "@/lib/device";
 
 /** Below this many games the page uses the compact sparse layout. */
 const SPARSE_LIMIT = 8;
@@ -68,7 +70,17 @@ export function HomeView({
     };
   }, [filterSheet]);
 
-  const games = useMemo(() => withInitialGames(store.games, initialGames), [store.games, initialGames]);
+  const allGames = useMemo(() => withInitialGames(store.games, initialGames), [store.games, initialGames]);
+  // The Phone or Desktop chip (#38) filters every row, the hero included: a phone should never open
+  // on a big featured game it cannot play.
+  // Until some game has its controls set (before the controls migration runs), there is nothing to
+  // filter on: the chips stay hidden and the catalogue shows in full.
+  const hasControls = useMemo(() => allGames.some((g) => (g.controls?.length ?? 0) > 0), [allGames]);
+  const device = hasControls ? filters.device : null;
+  const games = useMemo(
+    () => (device ? allGames.filter((g) => matchesDevice(g.controls, device)) : allGames),
+    [allGames, device],
+  );
   // Curated games (#9) get their own "Curated picks" row (after featured, before hottest this week).
   const own = useMemo(() => games.filter((g) => !g.curated), [games]);
   const curated = useMemo(() => byPopularity(games.filter((g) => g.curated)), [games]);
@@ -86,18 +98,43 @@ export function HomeView({
     (next: Partial<HomeFilters>) => router.replace(filtersHref({ ...filters, ...next }), { scroll: false }),
     [filters, router],
   );
-  const reset = useCallback(() => router.replace("/", { scroll: false }), [router]);
+  const reset = useCallback(() => {
+    if (filters.device) dismissAutoPhone();
+    router.replace("/", { scroll: false });
+  }, [filters.device, router]);
+
+  // A person who turns the chip off, or picks Desktop, keeps that choice: the Phone chip never
+  // turns itself back on for them.
+  const pickDevice = useCallback(
+    (device: Device | null) => {
+      if (device !== "phone") dismissAutoPhone();
+      go({ device });
+    },
+    [go],
+  );
+
+  // Phones open with the Phone chip on, once per visit, unless the link already picks a device or
+  // the person turned it off before.
+  const autoTried = useRef(false);
+  const currentDevice = filters.device;
+  useEffect(() => {
+    if (autoTried.current || !hasControls) return;
+    autoTried.current = true;
+    if (currentDevice || !readTouchDevice() || autoPhoneDismissed()) return;
+    go({ device: "phone" });
+  }, [currentDevice, go, hasControls]);
 
   const ctx = { library: store.library, history: store.history, weeklyPlays };
+  const panelFilters = hasControls ? filters : { ...filters, device: null };
   const results = browsing
     ? (filters.view === "featured" ? featuredGames : viewGames(filters.view, games, ctx)).filter((g) =>
-        matchesFilters(g, filters),
+        matchesFilters(g, panelFilters),
       )
     : [];
   const showRecentRow = filters.view === "recent" && !browsing;
   const recentRowGames = useMemo(() => {
     if (!showRecentRow) return [];
-    const panel = { ...filters, view: null };
+    const panel = { ...panelFilters, view: null };
     return viewGames("recent", games, ctx).filter((g) => matchesFilters(g, panel));
   }, [showRecentRow, games, ctx, filters]);
 
@@ -116,6 +153,7 @@ export function HomeView({
         <div className={cn(s.wrap, s.layout, !hasRail && s.layoutNoRail)}>
           {hasRail ? <FilterRail filters={filters} tags={tags} creators={creators} onChange={go} onReset={reset} /> : null}
           <div className={s.main}>
+            {hasControls ? <DeviceChips value={device} onChange={pickDevice} /> : null}
             {hasRail ? (
               <button
                 type="button"
@@ -128,7 +166,19 @@ export function HomeView({
                 {filterCount > 0 ? <b className={s.tnum}>{filterCount}</b> : null}
               </button>
             ) : null}
-            {browsing ? (
+            {device && games.length === 0 ? (
+              <EmptyState
+                kind="no-results"
+                illustration="no-results"
+                title={`No ${DEVICE_LABEL[device].toLowerCase()} games yet`}
+                body="We're still checking which games play on which device."
+                action={
+                  <button type="button" className={cn(s.btn, s.btnPrimary)} onClick={() => pickDevice(null)}>
+                    Show all games
+                  </button>
+                }
+              />
+            ) : browsing ? (
               <Results games={results} filters={filters} creators={creators} onChange={go} onReset={reset} />
             ) : (
               <>
@@ -177,7 +227,7 @@ export function HomeView({
                 Reset
               </button>
               <button type="button" className={cn(s.btn, s.btnPrimary)} onClick={() => setFilterSheet(false)}>
-                Show {viewGames(filters.view, games, ctx).filter((g) => matchesFilters(g, filters)).length} games
+                Show {viewGames(filters.view, games, ctx).filter((g) => matchesFilters(g, panelFilters)).length} games
               </button>
             </div>
           </div>
@@ -250,11 +300,13 @@ function Full({
       {curated.length > 0 ? <CuratedPicks games={curated} /> : null}
       {showGuestBanner ? <GuestBanner recent={recent} popular={popular} /> : null}
       <NewestGamesSection games={catalogue} />
-      <Row icon={IconFlame} title="Most played" href="/?view=popular" kind="tall">
-        {popular.slice(0, 12).map((g, i) => (
-          <TallCard key={g.id} game={g} i={i} badge={i < 2 ? "top" : null} />
-        ))}
-      </Row>
+      {popular.length > 0 ? (
+        <Row icon={IconFlame} title="Most played" href="/?view=popular" kind="tall">
+          {popular.slice(0, 12).map((g, i) => (
+            <TallCard key={g.id} game={g} i={i} badge={i < 2 ? "top" : null} />
+          ))}
+        </Row>
+      ) : null}
       {tag && tagged.length > 0 ? (
         <Row icon={IconBook} title={`${capitalize(tag)} games`} href={filtersHref({ tags: [tag] })} kind="wide">
           {tagged.map((g, i) => (

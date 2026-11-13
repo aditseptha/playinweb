@@ -1,3 +1,4 @@
+import { matchesDevice, parseDevice, type Device } from "@/lib/device";
 import type { Game, HistoryItem } from "@/lib/types";
 
 /** Results views: personal lists, or the "See all" of a homepage row. */
@@ -10,6 +11,8 @@ export type HomeFilters = {
   view: HomeView | null;
   /** Full grid for `view=recent` (See all). The rail checkbox uses `view=recent` without browse. */
   browse: boolean;
+  /** Phone or Desktop chip (#38). Filters every row; it does not switch to the results grid. */
+  device: Device | null;
 };
 
 type Params = { get(name: string): string | null; getAll(name: string): string[] };
@@ -37,6 +40,7 @@ export function parseFilters(params: Params): HomeFilters {
     creators: unique(params.getAll("creator").map((c) => c.toLowerCase())),
     view: VIEWS.includes(view as HomeView) ? (view as HomeView) : null,
     browse: params.get("browse") === "1",
+    device: parseDevice(params.get("device")),
   };
 }
 
@@ -55,6 +59,7 @@ export function filtersHref(f: Partial<HomeFilters>) {
   for (const creator of f.creators ?? []) sp.append("creator", creator);
   if (f.view) sp.set("view", f.view);
   if (f.browse) sp.set("browse", "1");
+  if (f.device) sp.set("device", f.device);
   const s = sp.toString();
   return s ? `/?${s}` : "/";
 }
@@ -141,6 +146,7 @@ export function viewGames(
 }
 
 export function matchesFilters(game: Game, f: HomeFilters) {
+  if (!matchesDevice(game.controls, f.device)) return false;
   if (f.tags.length && !game.tags.some((t) => f.tags.includes(t))) return false;
   if (f.creators.length && !f.creators.includes(game.channelHandle?.toLowerCase() ?? "")) return false;
   const q = f.q.trim().toLowerCase();

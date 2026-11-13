@@ -23,6 +23,17 @@ export type DevlogRelease = {
 
 export const DEVLOG: DevlogRelease[] = [
   {
+    version: "0.8",
+    date: "2026-11-14",
+    title: "Phone and Desktop",
+    summary: "Find games that work on the device in your hand.",
+    items: [
+      { kind: "new", text: "Phone and Desktop chips above the games. On a phone, Phone turns on by itself; tap it to see every game." },
+      { kind: "new", text: "Every game now says how it's played: touchscreen, keyboard, mouse or gamepad." },
+      { kind: "improved", text: "On a phone, the featured game at the top is one you can actually play there." },
+    ],
+  },
+  {
     version: "0.7",
     date: "2026-11-13",
     title: "Tidier profiles and safer fullscreen",
