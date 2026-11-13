@@ -113,23 +113,10 @@ test.describe("keyboard", () => {
       window.addEventListener("playinweb:leave-fullscreen", () => w.leaveSignals++);
     });
     await open(page);
-    // Wait for React to finish hydrating: nodes added to <body> before that count as a hydration
-    // mismatch, and React's re-render throws them away (this made the test flaky on CI).
-    await page.waitForLoadState("networkidle");
-    await expect(page.getByTestId("open-dialog")).toBeEnabled();
-    // Stand in for the game stage: a separate element goes fullscreen from a click.
-    await page.evaluate(() => {
-      const stage = document.createElement("div");
-      stage.id = "fake-stage";
-      stage.textContent = "game";
-      const go = document.createElement("button");
-      go.id = "go-fullscreen";
-      go.textContent = "Go fullscreen";
-      go.onclick = () => void stage.requestFullscreen();
-      document.body.prepend(go, stage);
-    });
-    await page.click("#go-fullscreen");
-    await expect.poll(() => page.evaluate(() => document.fullscreenElement?.id ?? null)).toBe("fake-stage");
+    // Stand in for the game stage: an element the page already has goes fullscreen. Nothing is
+    // added to the page, so React re-rendering it (hydration) cannot get in the way.
+    await page.evaluate(() => document.querySelector("h1")?.requestFullscreen());
+    await expect.poll(() => page.evaluate(() => document.fullscreenElement !== null)).toBe(true);
     // Something opens a dialog while the game is fullscreen (the guest sign-in prompt does this).
     await page.getByTestId("open-dialog").evaluate((el: HTMLElement) => el.click());
     await expect(page.getByRole("dialog", { name: "Add to collection" })).toBeVisible();
