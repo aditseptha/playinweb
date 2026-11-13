@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { BadgeSvg } from "@/components/badges/BadgeSvg";
 import type { BadgeRenderer, BadgeView } from "@/components/badges/badge-engine";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ds/popover";
+import { PortalScope } from "@/components/ds/portal";
 import { Skeleton } from "@/components/ds/skeleton";
 import { Tooltip, TooltipProvider } from "@/components/ds/tooltip";
 import { focusRing } from "@/components/ds/styles";
@@ -49,14 +50,36 @@ function useBadgeBoard(profileId: string, viewerId: string | null): Load {
  * once the panel is on screen. Hidden when the board cannot load (for example before the
  * migration is applied), so a profile never shows a broken panel.
  */
-export function BadgeShelf({ profileId, viewerId, className }: { profileId: string; viewerId: string | null; className?: string }) {
+export function BadgeShelf({
+  profileId,
+  viewerId,
+  showCount = false,
+  id,
+  className,
+}: {
+  profileId: string;
+  viewerId: string | null;
+  /** "7 of 11 unlocked" beside the heading. On for the owner's own channel page. */
+  showCount?: boolean;
+  /** Anchor for links such as /profile#badges. */
+  id?: string;
+  className?: string;
+}) {
   const load = useBadgeBoard(profileId, viewerId);
   if (load.status === "error") return null;
+  const unlocked = load.status === "ready" ? load.board.filter((b) => b.level > 0).length : 0;
   return (
-    <section aria-labelledby="badges-heading" className={cn("rounded-pw-lg border border-pw-line bg-pw-surface-1 p-5", className)}>
-      <h2 id="badges-heading" className="font-pw-pixel text-pw-label uppercase tracking-[0.18em] text-pw-highlight">
-        Badges
-      </h2>
+    <section id={id} aria-labelledby="badges-heading" className={cn("scroll-mt-28 rounded-pw-lg border border-pw-line bg-pw-surface-1 p-5", className)}>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="badges-heading" className="font-pw-pixel text-pw-label uppercase tracking-[0.18em] text-pw-highlight">
+          Badges
+        </h2>
+        {showCount && load.status === "ready" ? (
+          <p className="text-pw-caption text-pw-muted">
+            <span className="font-pw-display text-pw-title font-extrabold italic tabular-nums text-pw-highlight">{unlocked}</span> of {load.board.length} unlocked
+          </p>
+        ) : null}
+      </div>
       {load.status === "loading" ? (
         <ul className="mt-4 grid grid-cols-3 gap-x-2 gap-y-4" aria-busy="true" aria-label="Loading badges">
           {Array.from({ length: 9 }, (_, i) => (
@@ -67,9 +90,12 @@ export function BadgeShelf({ profileId, viewerId, className }: { profileId: stri
           ))}
         </ul>
       ) : (
-        <TooltipProvider>
-          <BadgeGrid board={load.board} />
-        </TooltipProvider>
+        // Popovers open inside the panel's scope, so they keep the design system fonts on any page.
+        <PortalScope>
+          <TooltipProvider>
+            <BadgeGrid board={load.board} />
+          </TooltipProvider>
+        </PortalScope>
       )}
     </section>
   );

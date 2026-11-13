@@ -44,6 +44,7 @@ import { RELEASE_STATUSES, STORES } from "@/lib/project-fields";
 import { isPersistedId, projectToGame, type ProjectRecord } from "@/lib/projects";
 import { moreFromCreator, similarGames } from "@/lib/related-games";
 import { claimSessionStat, releaseSessionStat } from "@/lib/session-stat";
+import { requestBadgeCheck, setPlaying } from "@/lib/badge-events";
 import { useGames } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 
@@ -216,10 +217,17 @@ export function GameDetail({
         .rpc("record_play", { pid: projectId })
         .then(({ error }) => {
           if (error) releaseSessionStat("recorded", projectId);
+          else requestBadgeCheck();
         });
     }, RECORD_PLAY_AFTER_MS);
     return () => window.clearTimeout(id);
   }, [isPlaying, userId, persisted, embeddable, projectId]);
+
+  // Badge popups wait while a game runs (#30).
+  useEffect(() => {
+    setPlaying(isPlaying);
+    return () => setPlaying(false);
+  }, [isPlaying]);
 
   // Guest play clock. Restart reloads the game without touching this, so it can't reset the limit.
   useEffect(() => {
@@ -303,9 +311,10 @@ export function GameDetail({
       setLiked(false);
       setLikes((n) => Math.max(0, n - 1));
     } else {
-      await supabase.from("project_likes").insert({ project_id: projectId, user_id: user.id });
+      const { error } = await supabase.from("project_likes").insert({ project_id: projectId, user_id: user.id });
       setLiked(true);
       setLikes((n) => n + 1);
+      if (!error) requestBadgeCheck();
     }
   }
 

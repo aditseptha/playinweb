@@ -1,3 +1,4 @@
+import { badgeNoticeText } from "@/lib/badge-celebration";
 import { isDummyDonation, isDummyPayout } from "@/lib/dummy-seed";
 import { formatMoney } from "@/lib/format";
 import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
@@ -49,7 +50,7 @@ export async function loadNotices(userId: string, admin: boolean): Promise<Notic
     }),
   );
 
-  const [donations, comments, follows, payouts, tips, reports] = await Promise.all([
+  const [donations, comments, follows, payouts, tips, reports, badges] = await Promise.all([
     gameIds.length
       ? supabase
           .from("donations")
@@ -88,6 +89,12 @@ export async function loadNotices(userId: string, admin: boolean): Promise<Notic
     admin
       ? supabase.from("issue_reports").select("id, subject, created_at").order("created_at", { ascending: false }).limit(10)
       : Promise.resolve({ data: [] as never[] }),
+    supabase
+      .from("profile_badges")
+      .select("badge, level, leveled_at")
+      .eq("profile_id", userId)
+      .order("leveled_at", { ascending: false })
+      .limit(10),
   ]);
 
   const followerIds = [...new Set((follows.data ?? []).map((row) => row.follower_id as string))];
@@ -98,6 +105,13 @@ export async function loadNotices(userId: string, admin: boolean): Promise<Notic
   const personById = new Map((people ?? []).map((row) => [row.id, row]));
 
   const out: Notice[] = [];
+
+  // Badges (#30): the latest level of each badge, linked to the owner's badge panel.
+  for (const row of badges.data ?? []) {
+    const text = badgeNoticeText(row.badge, row.level);
+    if (!text) continue;
+    out.push({ id: `badge:${row.badge}:${row.level}`, at: row.leveled_at, href: apexHref("/profile#badges"), ...text });
+  }
 
   for (const row of donations.data ?? []) {
     if (isDummyDonation(row)) continue;

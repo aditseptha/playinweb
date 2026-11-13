@@ -18,6 +18,7 @@ import { formatCommentTime, formatPlays } from "@/lib/format";
 import { siteOrigin } from "@/lib/host";
 import { cachedAvatarUrl } from "@/lib/media";
 import { createClient } from "@/lib/supabase/client";
+import { requestBadgeCheck } from "@/lib/badge-events";
 
 type Comment = {
   id: string;
@@ -158,6 +159,7 @@ export function ProjectComments({
       setError(insertError?.message || "Could not post.");
       return false;
     }
+    requestBadgeCheck();
     setComments((rows) => [
       ...(rows ?? []),
       {

@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Field, TextArea, TextInput } from "@/components/ui/field";
+import { requestBadgeCheck } from "@/lib/badge-events";
 
 type HandleStatus = "idle" | "checking" | "ok" | "taken" | "invalid";
 
@@ -92,6 +93,7 @@ export function ProfileForm({
         return;
       }
       await refresh();
+      requestBadgeCheck();
     }
     setPending(false);
     onSaved?.(profile);
