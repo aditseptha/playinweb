@@ -50,6 +50,8 @@ import { createClient } from "@/lib/supabase/client";
 const LOCAL_FOLLOWS_KEY = "showcase.follows.v1";
 /** A gentle heads-up this long before a guest's play time runs out. */
 const GUEST_WARNING_MS = 30_000;
+/** A signed-in play counts toward the Explorer and Crowd Pleaser badges (#30) after a minute in the player. */
+const RECORD_PLAY_AFTER_MS = 60_000;
 
 function readLocalFollows(): string[] {
   if (typeof window === "undefined") return [];
@@ -201,6 +203,23 @@ export function GameDetail({
       if (error) releaseSessionStat("viewed", projectId);
     })();
   }, [persisted, projectId]);
+
+  // Badges (#30): record this play for the signed-in player after a minute inside PlayInWeb's player.
+  // Link-out games open on another site, so they never count.
+  const userId = user?.id;
+  const embeddable = game.embeddable;
+  useEffect(() => {
+    if (!isPlaying || !userId || !persisted || !embeddable) return;
+    const id = window.setTimeout(() => {
+      if (!claimSessionStat("recorded", projectId)) return;
+      void createClient()
+        .rpc("record_play", { pid: projectId })
+        .then(({ error }) => {
+          if (error) releaseSessionStat("recorded", projectId);
+        });
+    }, RECORD_PLAY_AFTER_MS);
+    return () => window.clearTimeout(id);
+  }, [isPlaying, userId, persisted, embeddable, projectId]);
 
   // Guest play clock. Restart reloads the game without touching this, so it can't reset the limit.
   useEffect(() => {
