@@ -20,21 +20,19 @@ export function HeaderSearch() {
   const [sent, setSent] = useState("");
   const [urlQ, setUrlQ] = useState("");
 
-  if (onHome && filters.q !== urlQ) {
+  if (!onHome) {
+    if (q !== "" || sent !== "" || urlQ !== "") {
+      setQ("");
+      setSent("");
+      setUrlQ("");
+    }
+  } else if (filters.q !== urlQ) {
     setUrlQ(filters.q);
     if (filters.q !== sent) {
       setQ(filters.q);
       setSent(filters.q);
     }
   }
-
-  useEffect(() => {
-    if (!onHome) {
-      setQ("");
-      setSent("");
-      setUrlQ("");
-    }
-  }, [onHome]);
 
   useEffect(() => {
     if (q === sent) return;

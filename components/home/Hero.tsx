@@ -4,7 +4,7 @@ import { IconBookmark, IconPlay, IconPlus } from "@/components/icons";
 import { GameThumb } from "@/components/GameThumb";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { playHref } from "@/components/GameCard";
 import s from "@/components/home/home.module.css";
 import { useHomeUi } from "@/components/home/Peek";
@@ -67,10 +67,18 @@ export function Hero({ games }: { games: Game[] }) {
   const titleMeasureRef = useRef<HTMLDivElement>(null);
   const slideKey = slides.map((g) => g.id).join("|");
   const titleCandidates = slides.length > 0 ? slides.map((g) => g.title) : ["Play indie games"];
+  const titleMeasureKey = useMemo(
+    () => (slides.length > 0 ? slides.map((g) => g.title) : ["Play indie games"]).join("\0"),
+    [slideKey],
+  );
 
-  useEffect(() => {
+  const [indexForSlides, setIndexForSlides] = useState(slideKey);
+  if (slideKey !== indexForSlides) {
+    setIndexForSlides(slideKey);
     setIndex(0);
-  }, [slideKey]);
+  } else if (count > 0 && index >= count) {
+    setIndex(0);
+  }
 
   useLayoutEffect(() => {
     const root = titleMeasureRef.current;
@@ -87,7 +95,7 @@ export function Hero({ games }: { games: Game[] }) {
     ro.observe(root);
     void document.fonts?.ready.then(measure);
     return () => ro.disconnect();
-  }, [slideKey, titleCandidates.join("\0")]);
+  }, [slideKey, titleMeasureKey]);
 
   useLayoutEffect(() => {
     const root = titleMeasureRef.current;
