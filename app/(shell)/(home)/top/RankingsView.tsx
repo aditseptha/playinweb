@@ -25,7 +25,7 @@ import { cn } from "@/lib/cn";
 import { canOpenFeature, useFeature } from "@/lib/features";
 import { formatCompact, formatNumber, gamePath } from "@/lib/format";
 import { canOptimizeImage } from "@/lib/optimize-image";
-import { periodScore, type PlayRange } from "@/lib/popularity";
+import { playsForRange, rankScoreForRange, type PlayRange } from "@/lib/popularity";
 import { useGames, withInitialGames } from "@/lib/store";
 import type { Game } from "@/lib/types";
 import s from "./rankings.module.css";
@@ -35,10 +35,12 @@ const MAX_RANK = 50;
 const PAGE = 20;
 
 const RANGES: Array<{ value: PlayRange; label: string; icon: typeof IconTrophy; note: string }> = [
-  { value: "day", label: "Today", icon: IconCalendar, note: "Trending today" },
-  { value: "week", label: "This week", icon: IconClock, note: "Trending this week" },
+  { value: "day", label: "Today", icon: IconCalendar, note: "Ranked by plays today" },
+  { value: "week", label: "This week", icon: IconClock, note: "Ranked by plays this week" },
   { value: "all", label: "All time", icon: IconTrophy, note: "Ranked by plays · All time" },
 ];
+
+type PeriodPlays = { daily: Record<string, number>; weekly: Record<string, number> };
 
 const MEDAL = {
   1: { badge: "bg-linear-to-b from-pw-gold-soft to-pw-gold text-pw-gold-ink", line: "border-pw-gold", ink: "text-pw-gold" },
@@ -57,9 +59,18 @@ function playHref(game: Game) {
 
 // ---------- page ----------
 
-export function RankingsView({ initialGames }: { initialGames: Game[] }) {
+export function RankingsView({
+  initialGames,
+  dailyPlays = {},
+  weeklyPlays = {},
+}: {
+  initialGames: Game[];
+  dailyPlays?: Record<string, number>;
+  weeklyPlays?: Record<string, number>;
+}) {
   const { user, loading: authLoading } = useAuth();
   const { feature, loading: featureLoading } = useFeature("top");
+  const periods = useMemo(() => ({ daily: dailyPlays, weekly: weeklyPlays }), [dailyPlays, weeklyPlays]);
 
   if (authLoading || featureLoading) return <RankingsSkeleton />;
   if (!canOpenFeature(feature ?? undefined, user?.email)) {
@@ -77,19 +88,20 @@ export function RankingsView({ initialGames }: { initialGames: Game[] }) {
       </div>
     );
   }
-  return <Rankings initialGames={initialGames} />;
+  return <Rankings initialGames={initialGames} periods={periods} />;
 }
 
-function Rankings({ initialGames }: { initialGames: Game[] }) {
+function Rankings({ initialGames, periods }: { initialGames: Game[]; periods: PeriodPlays }) {
   const store = useGames();
   const [range, setRange] = useState<PlayRange>("week");
   const [shown, setShown] = useState(PAGE);
 
   const ranked = useMemo(() => {
-    // Curated games (#9) stay out of the rankings until their creators claim them.
-    const games = withInitialGames(store.games, initialGames).filter((g) => g.playCount > 0 && !g.curated);
-    return games.sort((a, b) => periodScore(b, range) - periodScore(a, range)).slice(0, MAX_RANK);
-  }, [store.games, initialGames, range]);
+    const games = withInitialGames(store.games, initialGames).filter((g) => rankScoreForRange(g, range, periods) > 0);
+    return games
+      .sort((a, b) => rankScoreForRange(b, range, periods) - rankScoreForRange(a, range, periods))
+      .slice(0, MAX_RANK);
+  }, [store.games, initialGames, range, periods]);
 
   const podium = ranked.slice(0, 3);
   const rest = ranked.slice(3);
@@ -108,7 +120,7 @@ function Rankings({ initialGames }: { initialGames: Game[] }) {
       >
         <Hero range={range} onRange={(r) => (setRange(r), setShown(PAGE))} />
         {podium.length ? (
-          <Podium key={range} games={podium} />
+          <Podium key={range} games={podium} range={range} periods={periods} />
         ) : (
           <Empty range={range} onAllTime={() => setRange("all")} />
         )}
@@ -136,7 +148,7 @@ function Rankings({ initialGames }: { initialGames: Game[] }) {
           <ol key={range} className="flex flex-col gap-3">
             {visible.map((game, i) => (
               <li key={game.id} className={s.rise} style={delay(Math.min(i % PAGE, 12) * 35)}>
-                <RankedRow game={game} rank={i + 4} />
+                <RankedRow game={game} rank={i + 4} range={range} periods={periods} />
               </li>
             ))}
           </ol>
@@ -209,16 +221,22 @@ function PeriodSwitch({ value, onChange }: { value: PlayRange; onChange: (r: Pla
 
 // ---------- podium ----------
 
-function Podium({ games }: { games: Game[] }) {
+function Podium({ games, range, periods }: { games: Game[]; range: PlayRange; periods: PeriodPlays }) {
   const [first, second, third] = games;
   return (
     <section aria-label="Top three" className="relative px-4 pt-6">
       <ol className="mx-auto grid max-w-[896px] grid-cols-2 items-end gap-x-3 gap-y-8 md:flex md:justify-center md:gap-7">
         {first ? (
-          <Place game={first} rank={1} className="col-span-2 mx-auto w-full max-w-[340px] md:order-2 md:w-[320px] md:max-w-none" />
+          <Place
+            game={first}
+            rank={1}
+            range={range}
+            periods={periods}
+            className="col-span-2 mx-auto w-full max-w-[340px] md:order-2 md:w-[320px] md:max-w-none"
+          />
         ) : null}
-        {second ? <Place game={second} rank={2} className="md:order-1 md:w-[260px]" /> : null}
-        {third ? <Place game={third} rank={3} className="md:order-3 md:w-[260px]" /> : null}
+        {second ? <Place game={second} rank={2} range={range} periods={periods} className="md:order-1 md:w-[260px]" /> : null}
+        {third ? <Place game={third} rank={3} range={range} periods={periods} className="md:order-3 md:w-[260px]" /> : null}
       </ol>
     </section>
   );
@@ -227,10 +245,22 @@ function Podium({ games }: { games: Game[] }) {
 const PLINTH = { 1: "h-[88px] md:h-[120px]", 2: "h-[68px] md:h-[100px]", 3: "h-[56px] md:h-[84px]" } as const;
 const ENTER = { 1: 80, 2: 180, 3: 260 } as const;
 
-function Place({ game, rank, className }: { game: Game; rank: Rank; className?: string }) {
+function Place({
+  game,
+  rank,
+  range,
+  periods,
+  className,
+}: {
+  game: Game;
+  rank: Rank;
+  range: PlayRange;
+  periods: PeriodPlays;
+  className?: string;
+}) {
   return (
     <li className={cn("flex min-w-0 flex-col gap-4", s.place, className)} style={delay(ENTER[rank])}>
-      <PodiumCard game={game} rank={rank} />
+      <PodiumCard game={game} rank={rank} range={range} periods={periods} />
       <div
         className={cn(
           "flex items-center justify-center rounded-t-[14px] border-t-2 bg-linear-to-b from-pw-surface-3 via-pw-surface-1 via-55% to-transparent",
@@ -260,7 +290,13 @@ function coverArt(game: Game) {
   };
 }
 
-function PodiumCard({ game, rank }: { game: Game; rank: Rank }) {
+function playsLabel(range: PlayRange) {
+  if (range === "day") return "plays today";
+  if (range === "week") return "plays this week";
+  return "plays";
+}
+
+function PodiumCard({ game, rank, range, periods }: { game: Game; rank: Rank; range: PlayRange; periods: PeriodPlays }) {
   const big = rank === 1;
   const { src: cover, position } = coverArt(game);
 
@@ -326,9 +362,19 @@ function PodiumCard({ game, rank }: { game: Game; rank: Rank }) {
         <p className="flex min-w-0 items-center gap-2 text-[13.5px] font-semibold text-pw-on-art-soft">
           <Avatar name={game.developer} src={game.creatorAvatarUrl} size="xs" ring />
           <span className="truncate">{game.developer}</span>
+          {game.curated ? (
+            <span className="shrink-0 rounded-pw-pill bg-[color-mix(in_srgb,var(--pw-night-950)_55%,transparent)] px-1.5 py-px text-[10px] font-bold tracking-wide text-pw-on-art-soft uppercase">
+              Curated
+            </span>
+          ) : null}
         </p>
         <div className="flex items-center justify-between gap-2 pt-1">
-          <Stats game={game} className={cn("text-[13.5px] font-bold text-pw-on-art", big ? "inline-flex" : "hidden md:inline-flex")} />
+          <Stats
+            game={game}
+            range={range}
+            periods={periods}
+            className={cn("text-[13.5px] font-bold text-pw-on-art", big ? "inline-flex" : "hidden md:inline-flex")}
+          />
           <Link
             href={playHref(game)}
             aria-label={`Play ${game.title}`}
@@ -390,14 +436,26 @@ function Laurel({ rank }: { rank: Rank }) {
 
 // ---------- list ----------
 
-/** Plays and likes. Callers set the display (inline-flex / hidden): cn doesn't merge conflicting classes. */
-function Stats({ game, className }: { game: Game; className: string }) {
+/** Plays (for the active period) and likes. Callers set the display (inline-flex / hidden): cn doesn't merge conflicting classes. */
+function Stats({
+  game,
+  range,
+  periods,
+  className,
+}: {
+  game: Game;
+  range: PlayRange;
+  periods: PeriodPlays;
+  className: string;
+}) {
+  const plays = playsForRange(game, range, periods);
+  const playTitle = `${formatNumber(plays)} ${playsLabel(range)}`;
   return (
     <span className={cn("items-center gap-3.5 tabular-nums", className)}>
-      <span className="inline-flex items-center gap-1.5" title={`${formatNumber(game.playCount)} plays`}>
+      <span className="inline-flex items-center gap-1.5" title={playTitle}>
         <IconUsers aria-hidden className="size-4 opacity-80" />
-        <span className="sr-only">Plays:</span>
-        {formatCompact(game.playCount)}
+        <span className="sr-only">{playsLabel(range)}:</span>
+        {formatCompact(plays)}
       </span>
       <span className="inline-flex items-center gap-1.5" title={`${formatNumber(game.likeCount)} likes`}>
         <IconHeart aria-hidden className="size-4 text-pw-gold" />
@@ -408,7 +466,7 @@ function Stats({ game, className }: { game: Game; className: string }) {
   );
 }
 
-function RankedRow({ game, rank }: { game: Game; rank: number }) {
+function RankedRow({ game, rank, range, periods }: { game: Game; rank: number; range: PlayRange; periods: PeriodPlays }) {
   const cover = coverArt(game);
   return (
     <article
@@ -439,10 +497,15 @@ function RankedRow({ game, rank }: { game: Game; rank: number }) {
         <p className="mt-1 flex min-w-0 items-center gap-2 text-[13.5px] text-pw-text-soft">
           <Avatar name={game.developer} src={game.creatorAvatarUrl} size="xs" />
           <span className="truncate">{game.developer}</span>
+          {game.curated ? (
+            <span className="shrink-0 rounded-pw-pill bg-pw-surface-3 px-1.5 py-px text-[10px] font-bold tracking-wide text-pw-muted uppercase">
+              Curated
+            </span>
+          ) : null}
         </p>
-        <Stats game={game} className="mt-1.5 inline-flex text-[12.5px] font-bold text-pw-text sm:hidden" />
+        <Stats game={game} range={range} periods={periods} className="mt-1.5 inline-flex text-[12.5px] font-bold text-pw-text sm:hidden" />
       </div>
-      <Stats game={game} className="hidden text-[13.5px] font-bold text-pw-text sm:inline-flex" />
+      <Stats game={game} range={range} periods={periods} className="hidden text-[13.5px] font-bold text-pw-text sm:inline-flex" />
       <Button variant="primary" size="sm" asChild className="relative z-[2] max-sm:size-11 max-sm:px-0">
         <Link href={playHref(game)} aria-label={`Play ${game.title}`}>
           <IconPlay aria-hidden />

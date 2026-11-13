@@ -10,6 +10,16 @@ export type Overview = {
   plays: number;
 };
 
+export type AdminTrendDay = {
+  day: string;
+  new_users: number;
+  new_games: number;
+  total_users: number;
+  total_games: number;
+  plays: number;
+  views: number;
+};
+
 export type AdminUser = {
   id: string;
   email: string | null;
@@ -133,6 +143,27 @@ export function asOverview(raw: unknown): Overview {
     views: num(row.views),
     plays: num(row.plays),
   };
+}
+
+export function asTrends7d(raw: unknown): AdminTrendDay[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Record<string, unknown>;
+    const day = String(row.day ?? "").slice(0, 10);
+    if (!day) return [];
+    return [
+      {
+        day,
+        new_users: num(row.new_users),
+        new_games: num(row.new_games),
+        total_users: num(row.total_users),
+        total_games: num(row.total_games),
+        plays: num(row.plays),
+        views: num(row.views),
+      },
+    ];
+  });
 }
 
 function num(value: unknown) {

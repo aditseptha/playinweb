@@ -11,6 +11,7 @@ import { ReportsTable } from "@/components/admin/ReportsTable";
 import {
   asGames,
   asOverview,
+  asTrends7d,
   asUsers,
   type AdminDonation,
   type AdminDonationWithOwner,
@@ -20,6 +21,7 @@ import {
   type AdminTip,
   type AdminUser,
   type AdminWallet,
+  type AdminTrendDay,
   type Overview,
 } from "@/components/admin/shared";
 import { WalletPanel } from "@/components/admin/WalletPanel";
@@ -49,6 +51,7 @@ export function AdminPanel() {
       : "overview";
   const { features, setFlags } = useFeatures();
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [trends7d, setTrends7d] = useState<AdminTrendDay[] | null>(null);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [games, setGames] = useState<AdminGame[] | null>(null);
   const [donations, setDonations] = useState<AdminDonation[] | null>(null);
@@ -75,6 +78,7 @@ export function AdminPanel() {
     let cancelled = false;
     Promise.all([
       supabase.rpc("admin_overview"),
+      supabase.rpc("admin_trends_7d"),
       supabase.rpc("admin_list_users"),
       supabase
         .from("projects")
@@ -97,11 +101,12 @@ export function AdminPanel() {
         .select("id, amount, created_at, donor_email, donor_handle")
         .order("created_at", { ascending: false })
         .limit(200),
-    ]).then(([overviewRes, usersRes, gamesRes, donationsRes, commissionRes, payoutsRes, tipsRes]) => {
+    ]).then(([overviewRes, trendsRes, usersRes, gamesRes, donationsRes, commissionRes, payoutsRes, tipsRes]) => {
       if (cancelled) return;
       if (overviewRes.error || usersRes.error || gamesRes.error) {
         setError("Could not load admin data.");
         setOverview(null);
+        setTrends7d([]);
         setUsers([]);
         setGames([]);
         setDonations([]);
@@ -110,6 +115,7 @@ export function AdminPanel() {
         return;
       }
       setOverview(asOverview(overviewRes.data));
+      setTrends7d(trendsRes.error ? [] : asTrends7d(trendsRes.data));
       setUsers(asUsers(usersRes.data));
       setGames(asGames(gamesRes.data));
       setDonations(((donationsRes.data ?? []) as AdminDonation[]).filter((row) => !isDummyDonation(row)));
@@ -293,7 +299,8 @@ export function AdminPanel() {
 
   return (
     <div className="min-w-0 pt-4">
-      <div className="flex min-w-0 justify-end">
+      <div className="-mx-2 min-w-0 overflow-x-auto px-2 pb-0.5 sm:mx-0 sm:overflow-visible sm:px-0">
+        <div className="flex w-max min-w-full justify-start sm:ml-auto sm:w-auto sm:justify-end">
         <Segmented
           aria-label="Admin menu"
           value={tab}
@@ -307,6 +314,7 @@ export function AdminPanel() {
             { value: "design", label: "Design system", href: "/admin/design" },
           ]}
         />
+        </div>
       </div>
 
       {error ? <p className="mt-6 text-ui text-danger">{error}</p> : null}
@@ -337,7 +345,7 @@ export function AdminPanel() {
       ) : null}
       {tab === "overview" ? (
         <>
-          <OverviewSummary overview={overview} users={users} games={games} />
+          <OverviewSummary overview={overview} users={users} games={games} trends={trends7d} />
           <DonationRecords
             rows={donations}
             commission={commission}
