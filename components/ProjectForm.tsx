@@ -27,7 +27,7 @@ import { Field, TextArea, TextInput } from "@/components/ui/field";
 import { useAuth } from "@/lib/auth";
 import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { cn } from "@/lib/cn";
-import { CURATION_LICENSES, LINK_OUT_LICENSE, isOfficialEmbedUrl } from "@/lib/curation";
+import { CURATION_LICENSES, FRAME_MAX, FRAME_MIN, LINK_OUT_LICENSE, isOfficialEmbedUrl, validFrameSize } from "@/lib/curation";
 import type { Database } from "@/lib/database.types";
 import { slugify } from "@/lib/format";
 import { taglineFrom, type LinkPreview } from "@/lib/link-preview";
@@ -96,6 +96,8 @@ function curationDraft(row: Partial<CurationRow> | null | undefined): CurationDr
     licenseUrl: row?.license_url ?? "",
     modified: row?.modified ?? false,
     confirmed: false,
+    frameWidth: row?.frame_width ? String(row.frame_width) : "",
+    frameHeight: row?.frame_height ? String(row.frame_height) : "",
   };
 }
 
@@ -274,6 +276,11 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
       }
       if (links.some((link) => link.trim() && !isHttpUrl(link.trim()))) {
         setError("Links must start with http:// or https://.");
+        return;
+      }
+      const sizeTyped = curation.frameWidth || curation.frameHeight;
+      if (kind === "external" && isOfficialEmbedUrl(playLink) && sizeTyped && !validFrameSize(curation.frameWidth, curation.frameHeight)) {
+        setError(`Game size needs both width and height, each between ${FRAME_MIN} and ${FRAME_MAX} pixels.`);
         return;
       }
     }
@@ -539,6 +546,8 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
       if (curated) {
         setStatus("Saving credit…");
         const linkOut = kind === "external";
+        const embed = linkOut && isOfficialEmbedUrl(playLink);
+        const frame = validFrameSize(curation.frameWidth, curation.frameHeight);
         const credit = {
           project_id: projectId,
           play_mode: linkOut ? (isOfficialEmbedUrl(playLink) ? "embed" : "link_out") : "hosted",
@@ -549,6 +558,8 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
           license: linkOut ? LINK_OUT_LICENSE : curation.license,
           license_url: linkOut ? null : curation.licenseUrl.trim() || null,
           modified: linkOut ? false : curation.modified,
+          // Only embed games have a native size; sending it for others would fail before the column exists.
+          ...(embed ? { frame_width: frame?.width ?? null, frame_height: frame?.height ?? null } : {}),
           ...(curated.row ? {} : { listed_by: user.id }),
         };
         const { error: creditError } = await supabase.from("project_curation").upsert(credit, { onConflict: "project_id" });
@@ -754,6 +765,7 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
           onChange={setCuration}
           requireConfirm={!editing}
           linkOut={kind === "external"}
+          embed={kind === "external" && isOfficialEmbedUrl(playLink)}
         />
       ) : null}
 

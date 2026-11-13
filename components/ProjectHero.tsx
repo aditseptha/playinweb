@@ -17,7 +17,7 @@ import {
   IconShrink,
 } from "@/components/icons";
 import { cn } from "@/lib/cn";
-import { embedFrameSize } from "@/lib/curation";
+import { playFrameSize } from "@/lib/curation";
 import { projectPublicUrl } from "@/lib/host";
 import { GUEST_PLAY_LIMIT_MS } from "@/lib/guest-play";
 import { playFrameSandbox } from "@/lib/html-game";
@@ -346,7 +346,7 @@ export function ProjectHeroStage() {
   }
 
   const isFull = fullscreen || pseudo;
-  const frameSize = embedFrameSize(game.playUrl);
+  const frameSize = playFrameSize(game.curated, game.playUrl);
   const poster = !current || current.kind === "cover" || current.kind === "shot";
 
   return (
