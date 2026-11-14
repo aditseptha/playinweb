@@ -2,7 +2,7 @@
 
 import { IconBook, IconClose, IconFlame, IconHeart, IconHistory, IconSearch, IconSliders, IconSpark, IconUsers } from "@/components/icons";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ds/button";
 import { EmptyState } from "@/components/ds/empty-state";
 import { CreatorCTA, GuestBanner } from "@/components/home/Banners";
@@ -38,7 +38,7 @@ import { useHomePickIds } from "@/lib/home-picks.client";
 import { pickHeroGames } from "@/lib/hero-spotlights";
 import type { Game } from "@/lib/types";
 import { replaceHomeUrl } from "@/components/home/HomeLink";
-import { DEVICE_LABEL, autoPhoneDismissed, dismissAutoPhone, matchesDevice, readTouchDevice, type Device } from "@/lib/device";
+import { DEVICE_LABEL, matchesDevice, type Device } from "@/lib/device";
 
 /** Below this many games the page uses the compact sparse layout. */
 const SPARSE_LIMIT = 8;
@@ -96,31 +96,10 @@ export function HomeView({
   // Filters change the address through the history API, not the router: the games are already here,
   // so there is nothing to ask the server for (#45). See components/home/HomeLink.tsx.
   const go = useCallback((next: Partial<HomeFilters>) => replaceHomeUrl(filtersHref({ ...filters, ...next })), [filters]);
-  const reset = useCallback(() => {
-    if (filters.device) dismissAutoPhone();
-    replaceHomeUrl("/");
-  }, [filters.device]);
+  const reset = useCallback(() => replaceHomeUrl("/"), []);
 
-  // A person who turns the chip off, or picks Desktop, keeps that choice: the Phone chip never
-  // turns itself back on for them.
-  const pickDevice = useCallback(
-    (device: Device | null) => {
-      if (device !== "phone") dismissAutoPhone();
-      go({ device });
-    },
-    [go],
-  );
-
-  // Phones open with the Phone chip on, once per visit, unless the link already picks a device or
-  // the person turned it off before.
-  const autoTried = useRef(false);
-  const currentDevice = filters.device;
-  useEffect(() => {
-    if (autoTried.current || !hasControls) return;
-    autoTried.current = true;
-    if (currentDevice || !readTouchDevice() || autoPhoneDismissed()) return;
-    go({ device: "phone" });
-  }, [currentDevice, go, hasControls]);
+  // Phone and Desktop are only ever picked by the person (#47): nothing turns on by itself.
+  const pickDevice = useCallback((device: Device | null) => go({ device }), [go]);
 
   const ctx = { library: store.library, history: store.history, weeklyPlays };
   const panelFilters = hasControls ? filters : { ...filters, device: null };
@@ -241,10 +220,7 @@ export function HomeView({
               <button
                 type="button"
                 className={cn(s.btn, s.btnGhost)}
-                onClick={() => {
-                  if (device) dismissAutoPhone();
-                  go({ tags: [], creators: [], device: null });
-                }}
+                onClick={() => go({ tags: [], creators: [], device: null })}
               >
                 Reset
               </button>

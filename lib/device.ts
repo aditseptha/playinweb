@@ -75,26 +75,6 @@ export function readTouchDevice(): boolean {
   });
 }
 
-// The Phone chip turns itself on for phones once. If the person turns it off (or picks Desktop),
-// that choice is remembered and the chip stays off.
-const AUTO_KEY = "playinweb.device-chip";
-
-export function autoPhoneDismissed(): boolean {
-  try {
-    return localStorage.getItem(AUTO_KEY) === "off";
-  } catch {
-    return false;
-  }
-}
-
-export function dismissAutoPhone() {
-  try {
-    localStorage.setItem(AUTO_KEY, "off");
-  } catch {
-    /* ignore */
-  }
-}
-
 /**
  * A homepage link that keeps the Phone or Desktop choice. "See all" and "Back to home" links are
  * written without it; following one should not quietly show games that don't play on this device.

@@ -23,6 +23,14 @@ export type DevlogRelease = {
 
 export const DEVLOG: DevlogRelease[] = [
   {
+    version: "0.10",
+    date: "2026-11-14",
+    title: "Every game, on every device",
+    items: [
+      { kind: "fixed", text: "Opening PlayInWeb on a phone shows every game again. Phone no longer turns on by itself; pick it in Filters when you want it." },
+    ],
+  },
+  {
     version: "0.9",
     date: "2026-11-14",
     title: "No more silent taps",
