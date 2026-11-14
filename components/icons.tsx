@@ -17,6 +17,7 @@ import {
   CaretUp,
   ChartLine,
   ChatCircle,
+  DeviceMobile,
   Check,
   CheckCircle,
   Clock,
@@ -78,6 +79,7 @@ import {
   Warning,
   WarningCircle,
   X,
+  Keyboard,
 } from "@phosphor-icons/react";
 import type { SVGProps } from "react";
 
@@ -173,6 +175,8 @@ export const IconTrash = wrap(Trash);
 export const IconUpload = wrap(UploadSimple);
 export const IconLock = wrap(Lock);
 export const IconGamepad = wrap(GameController);
+export const IconKeyboard = wrap(Keyboard);
+export const IconPhone = wrap(DeviceMobile);
 export const IconImage = wrap(ImageIcon);
 export const IconFileZip = wrap(FileZip);
 export const IconInbox = wrap(Tray);
@@ -251,6 +255,8 @@ export const ICON_GALLERY: { name: string; Icon: AppIcon }[] = [
   { name: "Upload", Icon: IconUpload },
   { name: "Lock", Icon: IconLock },
   { name: "Gamepad", Icon: IconGamepad },
+  { name: "Keyboard", Icon: IconKeyboard },
+  { name: "Phone", Icon: IconPhone },
   { name: "Image", Icon: IconImage },
   { name: "Zip file", Icon: IconFileZip },
   { name: "Inbox", Icon: IconInbox },

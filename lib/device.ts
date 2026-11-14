@@ -42,6 +42,14 @@ export function playsOnDesktop(controls: readonly string[] | null | undefined): 
   return c.length === 0 || c.some((x) => x !== "touch");
 }
 
+/**
+ * Worth a "Best on desktop" label on a phone (#47): somebody checked it, and it does not play on a
+ * phone. Unchecked games get no label, because we do not know.
+ */
+export function needsDesktop(controls: readonly string[] | null | undefined): boolean {
+  return normalizeControls(controls).length > 0 && !playsOnPhone(controls);
+}
+
 export function matchesDevice(controls: readonly string[] | null | undefined, device: Device | null): boolean {
   if (device === "phone") return playsOnPhone(controls);
   if (device === "desktop") return playsOnDesktop(controls);
@@ -73,26 +81,6 @@ export function readTouchDevice(): boolean {
     hover: window.matchMedia("(hover: hover)").matches,
     maxTouchPoints: navigator.maxTouchPoints ?? 0,
   });
-}
-
-// The Phone chip turns itself on for phones once. If the person turns it off (or picks Desktop),
-// that choice is remembered and the chip stays off.
-const AUTO_KEY = "playinweb.device-chip";
-
-export function autoPhoneDismissed(): boolean {
-  try {
-    return localStorage.getItem(AUTO_KEY) === "off";
-  } catch {
-    return false;
-  }
-}
-
-export function dismissAutoPhone() {
-  try {
-    localStorage.setItem(AUTO_KEY, "off");
-  } catch {
-    /* ignore */
-  }
 }
 
 /**

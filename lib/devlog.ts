@@ -23,6 +23,17 @@ export type DevlogRelease = {
 
 export const DEVLOG: DevlogRelease[] = [
   {
+    version: "0.10",
+    date: "2026-11-14",
+    title: "Every game, on every device",
+    items: [
+      { kind: "new", text: "On a phone, a \"Plays on your phone\" row near the top shows games that work there." },
+      { kind: "new", text: "On a phone, games that need a keyboard say \"Best on desktop\", so you know before you tap." },
+      { kind: "improved", text: "Phone and Desktop work like the other filters: they show a list of matching games, and the rest of the homepage keeps every game." },
+      { kind: "fixed", text: "Opening PlayInWeb on a phone shows every game again, the featured games at the top included. Phone no longer turns on by itself." },
+    ],
+  },
+  {
     version: "0.9",
     date: "2026-11-14",
     title: "No more silent taps",
