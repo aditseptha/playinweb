@@ -53,6 +53,7 @@ import {
 } from "@/lib/project-fields";
 import { clearCatalogueCache, type ProjectRecord } from "@/lib/projects";
 import { createClient } from "@/lib/supabase/client";
+import { CONTROLS, CONTROL_LABEL, isMissingColumnError, normalizeControls, playsOnPhone, type Control } from "@/lib/device";
 
 const KIND_CHOICES: { id: ProjectKind; title: string; hint: string }[] = [
   { id: "html", title: "Playable on PlayInWeb", hint: "Upload a game people play here" },
@@ -124,6 +125,8 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
     project ? (project.contains_ai ? "yes" : "no") : "",
   );
   const [tags, setTags] = useState<string[]>((project?.project_tags ?? []).map((t) => t.tag));
+  // How the game is played (#38): decides whether it shows under the Phone or Desktop chip.
+  const [controls, setControls] = useState<Control[]>(normalizeControls(project?.controls));
   const [tagDraft, setTagDraft] = useState("");
   const [storeUrls, setStoreUrls] = useState<Record<string, string>>(
     Object.fromEntries((project?.project_store_links ?? []).map((l) => [l.store, l.url])),
@@ -431,6 +434,14 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
         if (insertError || !created) throw insertError ?? new Error("Could not create the game.");
         projectId = created.id;
       }
+
+      // Saved on its own so the rest of the form still saves before the controls migration runs.
+      const { error: controlsError } = await supabase
+        .from("projects")
+        .update({ controls })
+        .eq("id", projectId)
+        .eq("owner_id", uid);
+      if (controlsError && !isMissingColumnError(controlsError)) throw controlsError;
 
       if (kind === "html" && htmlBuild) {
         const packed = await filesFromHtmlUpload(htmlBuild.name, await htmlBuild.arrayBuffer());
@@ -818,6 +829,37 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
             </span>
           </label>
         ) : null}
+
+        <fieldset>
+          <legend className="text-caption font-medium text-text-muted">Controls</legend>
+          <p className="mt-1 text-caption text-text-subtle">
+            Tick every way the game can be played. Games with Touchscreen, or with Mouse and no Keyboard, show under
+            Phone; the rest show under Desktop.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
+            {CONTROLS.map((control) => (
+              <label key={control} className="flex items-center gap-2 text-ui">
+                <input
+                  type="checkbox"
+                  name="controls"
+                  value={control}
+                  checked={controls.includes(control)}
+                  onChange={() =>
+                    setControls((list) => normalizeControls(list.includes(control) ? list.filter((c) => c !== control) : [...list, control]))
+                  }
+                />
+                {CONTROL_LABEL[control]}
+              </label>
+            ))}
+          </div>
+          <p className="mt-2 text-caption text-text-muted">
+            {controls.length === 0
+              ? "Not set yet: the game shows under Desktop only."
+              : playsOnPhone(controls)
+                ? "Shows under Phone and Desktop."
+                : "Shows under Desktop only."}
+          </p>
+        </fieldset>
 
         <fieldset>
           <legend className="text-caption font-medium text-text-muted">Generative AI</legend>

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import type { Game } from "@/lib/types";
+import { normalizeControls } from "@/lib/device";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -60,6 +61,10 @@ const CATALOGUE_MEDIA_SELECT = `
   profiles!projects_owner_id_fkey ( handle, display_name, avatar_path ),
   project_tags ( tag )
 `;
+
+// controls arrive with 20261114130000_project_controls.sql (#38). Until it runs, the catalogue read
+// falls back to the select without it, so the homepage keeps working.
+const CATALOGUE_DEVICE_SELECT = CATALOGUE_MEDIA_SELECT.replace("created_at, embeddable", "created_at, controls, embeddable");
 
 const CURATION_SELECT_BASE =
   "project_id, status, play_mode, creator_name, creator_url, source_url, source_code_url, license, license_url, modified";
@@ -127,6 +132,12 @@ function writeCatalogueCache(games: Game[]) {
 }
 
 async function selectCatalogue(supabase: ReturnType<typeof createClient>) {
+  const device = await supabase
+    .from("projects")
+    .select(CATALOGUE_DEVICE_SELECT)
+    .eq("published", true)
+    .order("created_at", { ascending: false });
+  if (!device.error) return device;
   const media = await supabase
     .from("projects")
     .select(CATALOGUE_MEDIA_SELECT)
@@ -438,6 +449,8 @@ export function projectToGame(project: ProjectRecord): Game {
     screenshots: shots,
     embeddable: project.embeddable && (project.kind === "html" || Boolean(project.play_url)),
     tags: (project.project_tags ?? []).map((t) => t.tag),
+    // Undefined when the catalogue was read before the controls migration ran.
+    controls: normalizeControls(project.controls),
     createdAt: project.created_at,
     playCount: project.play_count,
     viewCount: project.view_count,
@@ -475,6 +488,7 @@ export function gameToProjectRecord(game: Game): ProjectRecord {
     like_count: game.likeCount,
     owner_id: "",
     classification: "games",
+    controls: game.controls ?? [],
     community: "disabled",
     contains_ai: false,
     custom_noun: "game",

@@ -345,6 +345,7 @@ export type Database = {
         Row: {
           classification: string
           community: string
+          controls: string[]
           contains_ai: boolean | null
           cover_focal_x: number
           cover_focal_y: number
@@ -379,6 +380,7 @@ export type Database = {
         Insert: {
           classification?: string
           community?: string
+          controls?: string[]
           contains_ai?: boolean | null
           cover_focal_x?: number
           cover_focal_y?: number

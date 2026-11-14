@@ -24,6 +24,8 @@ export type Game = {
   /** Creator's profile photo, when they set one. */
   creatorAvatarUrl?: string
   projectSlug?: string
+  /** How the game is controlled (#38): touch, keyboard, mouse, gamepad. Empty when nobody has checked. */
+  controls?: string[]
   /** Set for a curated game by another creator (#9); developer then holds that creator's name. */
   curated?: Curation
 };
