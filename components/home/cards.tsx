@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { playHref } from "@/components/GameCard";
 import { GameThumb } from "@/components/GameThumb";
+import { LinkPending } from "@/components/ds/link-pending";
 import { PreviewClip, useCardClip } from "@/components/PreviewClip";
 import { isNewThisWeek } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
@@ -88,7 +89,9 @@ export function FeatureCard({ game, i = 0, priority = false }: { game: Game; i?:
         <PreviewClip url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} onDisplace={clip.pause} />
       ) : null}
       {clip.playing ? <PausePreview onPause={clip.pause} /> : null}
-      <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
+      <Link href={gamePath(game)} className={s.hit} aria-label={game.title}>
+        <LinkPending />
+      </Link>
       {game.embeddable ? <span className={s.pill}>Instant play</span> : null}
       <div className={s.glass}>
         <div className={s.gText}>
@@ -158,7 +161,9 @@ export function TallCard({
     >
       <Art game={game} priority={priority} sizes="(min-width: 1181px) 15vw, (min-width: 768px) 24vw, 46vw" ratio="portrait" />
       <span className={s.shine} />
-      <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
+      <Link href={gamePath(game)} className={s.hit} aria-label={game.title}>
+        <LinkPending />
+      </Link>
       {label ? <span className={cn(s.badge, label === "top" && s.badgeTop)}>{label === "top" ? "TOP" : "NEW"}</span> : null}
       {game.likeCount > 0 ? (
         <span className={s.rate}>
@@ -196,7 +201,9 @@ export function WideCard({ game, i = 0 }: { game: Game; i?: number }) {
         <PreviewClip url={game.previewClipUrl} kind={game.previewClipKind ?? "video"} onDisplace={clip.pause} />
       ) : null}
       {clip.playing ? <PausePreview onPause={clip.pause} /> : null}
-      <Link href={gamePath(game)} className={s.hit} aria-label={game.title} />
+      <Link href={gamePath(game)} className={s.hit} aria-label={game.title}>
+        <LinkPending />
+      </Link>
       <div className={s.fText}>
         <div className={s.fTitle}>{game.title}</div>
         <div className={s.fMeta}>

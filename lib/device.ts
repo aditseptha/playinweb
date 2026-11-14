@@ -94,3 +94,17 @@ export function dismissAutoPhone() {
     /* ignore */
   }
 }
+
+/**
+ * A homepage link that keeps the Phone or Desktop choice. "See all" and "Back to home" links are
+ * written without it; following one should not quietly show games that don't play on this device.
+ * Links to other pages, and links that pick a device themselves, are left alone.
+ */
+export function keepDevice(href: string, currentSearch: string): string {
+  const device = parseDevice(new URLSearchParams(currentSearch).get("device"));
+  if (!device) return href;
+  const url = new URL(href, "https://x.invalid");
+  if (url.origin !== "https://x.invalid" || url.pathname !== "/" || url.searchParams.has("device")) return href;
+  url.searchParams.set("device", device);
+  return `/${url.search}${url.hash}`;
+}

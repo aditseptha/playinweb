@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
+import { startNavigation } from "@/lib/nav-progress";
 import { loadNotices, markNoticesSeen, noticesSeenAt, type Notice } from "@/lib/notices";
 
 const KIND_ICON: Record<string, AppIcon> = {
@@ -146,6 +147,7 @@ export function Notices() {
                         if (!path) return;
                         event.preventDefault();
                         setOpen(false);
+                        startNavigation(path);
                         router.push(path);
                       }}
                       className={cn(s.noticeItem, fresh.has(row.id) && s.noticeFresh)}

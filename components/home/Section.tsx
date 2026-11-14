@@ -1,7 +1,7 @@
 "use client";
 
 import { IconChevronLeft, IconChevronRight, type AppIcon } from "@/components/icons";
-import Link from "next/link";
+import { HomeLink } from "@/components/home/HomeLink";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
@@ -96,9 +96,9 @@ export function SectionHead({
 
 export function SeeAll({ href, label = "See all" }: { href: string; label?: string }) {
   return (
-    <Link href={href} scroll={false} className={s.seeAll}>
+    <HomeLink href={href} scroll={false} className={s.seeAll}>
       {label}
-    </Link>
+    </HomeLink>
   );
 }
 

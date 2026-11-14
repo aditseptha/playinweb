@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { WaitingImage } from "@/components/ds/waiting-image";
 import { hueFromId } from "@/lib/format";
 import { objectPosition } from "@/lib/media-standard";
 import { canOptimizeImage } from "@/lib/optimize-image";
@@ -32,24 +32,13 @@ export function GameThumb({
       fit === "contain"
         ? "absolute inset-0 h-full w-full object-contain"
         : "absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out-quint group-hover:scale-[1.03]";
-    const picture = canOptimizeImage(image) ? (
-      <Image
+    const picture = (
+      <WaitingImage
         src={image}
-        alt=""
-        fill
+        optimize={canOptimizeImage(image)}
         sizes={sizes}
         quality={quality}
-        preload={priority}
-        className={className}
-        style={{ objectPosition: position }}
-      />
-    ) : (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={image}
-        alt=""
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
+        priority={priority}
         className={className}
         style={{ objectPosition: position }}
       />

@@ -4,8 +4,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { IconSearch } from "@/components/icons";
 import { filtersHref, parseFilters } from "@/components/home/filters";
+import { replaceHomeUrl } from "@/components/home/HomeLink";
 import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
+import { startNavigation } from "@/lib/nav-progress";
 
 const DEBOUNCE_MS = 250;
 
@@ -39,8 +41,10 @@ export function HeaderSearch() {
     const t = window.setTimeout(() => {
       setSent(q);
       if (onHome) {
-        router.replace(filtersHref({ ...filters, q }), { scroll: false });
+        // The homepage filters what it already has: no trip to the server (#45).
+        replaceHomeUrl(filtersHref({ ...filters, q }));
       } else if (q.trim()) {
+        startNavigation(filtersHref({ q }));
         router.push(filtersHref({ q }));
       }
     }, DEBOUNCE_MS);

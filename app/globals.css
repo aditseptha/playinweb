@@ -391,3 +391,32 @@
     animation-duration: 200ms;
   }
 }
+
+/* Image placeholder (components/ds/waiting-image.tsx): a soft light sweeps across until the picture
+   arrives. The sweep is a transform on a pseudo-element, so it stays off the main thread. Under
+   reduced motion it is a still tint. */
+@keyframes pw-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.pw-shimmer {
+  overflow: hidden;
+  background: var(--pw-surface-3);
+}
+.pw-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, color-mix(in oklab, var(--pw-on-art) 9%, transparent) 50%, transparent 80%);
+  animation: pw-shimmer 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-shimmer::after {
+    animation: none;
+    opacity: 0;
+  }
+}

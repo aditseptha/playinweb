@@ -1,7 +1,7 @@
 "use client";
 
 import { IconBook, IconClose, IconFlame, IconHeart, IconHistory, IconSearch, IconSliders, IconSpark, IconUsers } from "@/components/icons";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ds/button";
 import { EmptyState } from "@/components/ds/empty-state";
@@ -37,7 +37,7 @@ import { pickFeaturedGames } from "@/lib/featured-games";
 import { useHomePickIds } from "@/lib/home-picks.client";
 import { pickHeroGames } from "@/lib/hero-spotlights";
 import type { Game } from "@/lib/types";
-import { DeviceChips } from "@/components/home/DeviceChips";
+import { replaceHomeUrl } from "@/components/home/HomeLink";
 import { DEVICE_LABEL, autoPhoneDismissed, dismissAutoPhone, matchesDevice, readTouchDevice, type Device } from "@/lib/device";
 
 /** Below this many games the page uses the compact sparse layout. */
@@ -56,7 +56,6 @@ export function HomeView({
 }) {
   const store = useGames();
   const { user, loading } = useAuth();
-  const router = useRouter();
   const params = useSearchParams();
   const filters = useMemo(() => parseFilters(params), [params]);
   const [filterSheet, setFilterSheet] = useState(false);
@@ -91,17 +90,16 @@ export function HomeView({
   const heroGames = useMemo(() => pickHeroGames(heroIds, games), [heroIds, games]);
   const featuredGames = useMemo(() => pickFeaturedGames(featuredIds, games, heroIds), [featuredIds, heroIds, games]);
   const browsing = isBrowsing(filters);
-  const hasRail = tags.length > 0 || creators.length > 0;
-  const filterCount = filters.tags.length + filters.creators.length + (filters.view ? 1 : 0);
+  const hasRail = hasControls || tags.length > 0 || creators.length > 0;
+  const filterCount = filters.tags.length + filters.creators.length + (filters.view ? 1 : 0) + (device ? 1 : 0);
 
-  const go = useCallback(
-    (next: Partial<HomeFilters>) => router.replace(filtersHref({ ...filters, ...next }), { scroll: false }),
-    [filters, router],
-  );
+  // Filters change the address through the history API, not the router: the games are already here,
+  // so there is nothing to ask the server for (#45). See components/home/HomeLink.tsx.
+  const go = useCallback((next: Partial<HomeFilters>) => replaceHomeUrl(filtersHref({ ...filters, ...next })), [filters]);
   const reset = useCallback(() => {
     if (filters.device) dismissAutoPhone();
-    router.replace("/", { scroll: false });
-  }, [filters.device, router]);
+    replaceHomeUrl("/");
+  }, [filters.device]);
 
   // A person who turns the chip off, or picks Desktop, keeps that choice: the Phone chip never
   // turns itself back on for them.
@@ -151,9 +149,18 @@ export function HomeView({
       <Hero games={heroGames} />
       <div className={s.frame}>
         <div className={cn(s.wrap, s.layout, !hasRail && s.layoutNoRail)}>
-          {hasRail ? <FilterRail filters={filters} tags={tags} creators={creators} onChange={go} onReset={reset} /> : null}
-          <div className={s.main}>
-            {hasControls ? <DeviceChips value={device} onChange={pickDevice} /> : null}
+          {hasRail ? (
+            <FilterRail
+              filters={filters}
+              tags={tags}
+              creators={creators}
+              device={hasControls ? device : undefined}
+              onDevice={pickDevice}
+              onChange={go}
+              onReset={reset}
+            />
+          ) : null}
+          <div className={s.main} data-catalogue>
             {hasRail ? (
               <button
                 type="button"
@@ -220,10 +227,25 @@ export function HomeView({
           <div className={s.sheet} role="dialog" aria-modal="true" aria-label="Filters">
             <div className={s.grab} />
             <div className={s.sheetBody}>
-              <FilterRail filters={filters} tags={tags} creators={creators} onChange={go} onReset={reset} />
+              <FilterRail
+                filters={filters}
+                tags={tags}
+                creators={creators}
+                device={hasControls ? device : undefined}
+                onDevice={pickDevice}
+                onChange={go}
+                onReset={reset}
+              />
             </div>
             <div className={s.sheetFoot}>
-              <button type="button" className={cn(s.btn, s.btnGhost)} onClick={() => go({ tags: [], creators: [] })}>
+              <button
+                type="button"
+                className={cn(s.btn, s.btnGhost)}
+                onClick={() => {
+                  if (device) dismissAutoPhone();
+                  go({ tags: [], creators: [], device: null });
+                }}
+              >
                 Reset
               </button>
               <button type="button" className={cn(s.btn, s.btnPrimary)} onClick={() => setFilterSheet(false)}>
