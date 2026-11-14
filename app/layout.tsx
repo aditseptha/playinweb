@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Script from "next/script";
+import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/next";
+import { NavProgress } from "@/components/NavProgress";
 import { AuthProvider } from "@/lib/auth";
 import { FeaturesProvider } from "@/lib/features";
 import { GamesProvider } from "@/lib/store";
@@ -74,6 +76,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         ) : null}
       </head>
       <body className="min-h-full bg-bg font-sans text-text">
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
         <GamesProvider>
           <AuthProvider>
             <FeaturesProvider>{children}</FeaturesProvider>

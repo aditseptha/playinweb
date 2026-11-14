@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-// Phone and Desktop chips on the homepage (#38).
+// Phone and Desktop chips in the homepage's filter sidebar (#38). On a phone the sidebar is a sheet
+// behind the Filters button, which counts the chip.
 //
 // CI has no catalogue (placeholder Supabase), and the chips only appear once some game has its
 // controls set, so each test starts with two games in the browser's local catalogue.
@@ -22,8 +23,12 @@ test.describe("on a phone", () => {
 
   test("the Phone chip turns on by itself, and stays off once turned off", async ({ page }) => {
     await page.goto("/");
+    const filters = page.getByRole("button", { name: "Open filters" });
     const phone = page.getByRole("group", { name: "Plays on" }).getByRole("button", { name: /Phone/ });
     await expect(page).toHaveURL(/[?&]device=phone/);
+    // The sheet is closed, but the Filters button shows a filter is on.
+    await expect(filters).toContainText("1");
+    await filters.click();
     await expect(phone).toHaveAttribute("aria-pressed", "true");
     // Only the game that plays on a phone is listed.
     await expect(page.getByText("Tap Tap Tester").first()).toBeVisible();
@@ -34,13 +39,16 @@ test.describe("on a phone", () => {
     await expect(page).not.toHaveURL(/device=/);
 
     await page.reload();
-    await expect(page.getByRole("group", { name: "Plays on" })).toBeVisible();
+    await expect(filters).toBeVisible();
     await expect(page).not.toHaveURL(/device=/);
+    await expect(filters).not.toContainText("1");
+    await filters.click();
     await expect(phone).toHaveAttribute("aria-pressed", "false");
   });
 
   test("a link that picks Desktop keeps Desktop", async ({ page }) => {
     await page.goto("/?device=desktop");
+    await page.getByRole("button", { name: "Open filters" }).click();
     const chips = page.getByRole("group", { name: "Plays on" });
     await expect(chips.getByRole("button", { name: /Desktop/ })).toHaveAttribute("aria-pressed", "true");
     await expect(page).toHaveURL(/device=desktop/);
@@ -48,6 +56,12 @@ test.describe("on a phone", () => {
 });
 
 test.describe("on a computer", () => {
+  test("the chips sit in the filter sidebar, not above the games", async ({ page }) => {
+    await page.goto("/");
+    const sidebar = page.getByRole("complementary", { name: "Filter games" });
+    await expect(sidebar.getByRole("group", { name: "Plays on" })).toBeVisible();
+  });
+
   test("no chip turns on by itself, and picking one updates the link", async ({ page }) => {
     await page.goto("/");
     // Clicks before React hydrates do nothing, so let the page settle first.

@@ -1,5 +1,4 @@
 import { IconHeart, IconPlay, IconPlus, IconUsers } from "@/components/icons";
-import Image from "next/image";
 import Link from "next/link";
 import { formatCompact, formatNumber, gamePath } from "@/lib/format";
 import { canOptimizeImage } from "@/lib/optimize-image";
@@ -7,6 +6,8 @@ import type { Game } from "@/lib/types";
 import { cn } from "@/lib/cn";
 import { Avatar } from "./avatar";
 import { Badge } from "./badge";
+import { LinkPending } from "./link-pending";
+import { WaitingImage } from "./waiting-image";
 import s from "./game-card.module.css";
 import { Skeleton } from "./skeleton";
 import { focusRing, onArt } from "./styles";
@@ -78,27 +79,13 @@ function Cover({ data, variant, priority }: { data: GameCardData; variant: Varia
       </div>
     );
   }
-  if (canOptimizeImage(src)) {
-    return (
-      <Image
-        src={src}
-        alt=""
-        fill
-        sizes={SIZES[variant]}
-        preload={priority}
-        className={img}
-        style={{ objectPosition: position }}
-      />
-    );
-  }
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <WaitingImage
       src={src}
-      alt=""
-      loading={priority ? "eager" : "lazy"}
-      decoding="async"
-      className={cn("absolute inset-0 size-full", img)}
+      optimize={canOptimizeImage(src)}
+      sizes={SIZES[variant]}
+      priority={priority}
+      className={img}
       style={{ objectPosition: position }}
     />
   );
@@ -135,7 +122,11 @@ const frame = cn(
 
 /** Covers the whole card. The visible title is its label, so screen readers hear the game name once. */
 function CardLink({ href, title }: { href: string; title: string }) {
-  return <Link href={href} aria-label={title} className="absolute inset-0 z-[2] rounded-[inherit] outline-none" />;
+  return (
+    <Link href={href} aria-label={title} className="absolute inset-0 z-[2] rounded-[inherit] outline-none">
+      <LinkPending />
+    </Link>
+  );
 }
 
 function PlayButton({ href, title, size = "md" }: { href: string; title: string; size?: "sm" | "md" }) {

@@ -12,6 +12,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-11-14",
+    title: "Loading feedback (#45)",
+    changes: [
+      "New: LinkPending. Put it inside a <Link> that covers a card; the card dims with a spinner while the page loads (useLinkStatus).",
+      "New: WaitingImage. A cover image with a shimmer behind it until it loads, then a fade in. GameCard and GameThumb use it.",
+      "New utility class pw-shimmer in globals.css (reduced motion: a still tint).",
+      "A thin navigation bar at the top of every page (components/NavProgress.tsx). Call startNavigation(href) from lib/nav-progress before router.push.",
+    ],
+  },
+  {
     date: "2026-11-10",
     title: "Phosphor Fill icon set",
     changes: [

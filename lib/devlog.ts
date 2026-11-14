@@ -23,6 +23,19 @@ export type DevlogRelease = {
 
 export const DEVLOG: DevlogRelease[] = [
   {
+    version: "0.9",
+    date: "2026-11-14",
+    title: "No more silent taps",
+    summary: "Every tap now shows that it landed, and filters change instantly.",
+    items: [
+      { kind: "improved", text: "Tapping a game shows it opening right away, with a thin bar at the top until the page is in." },
+      { kind: "improved", text: "Filters, Phone and Desktop, and search on the homepage change the games instantly instead of reloading." },
+      { kind: "improved", text: "Phone and Desktop moved into the Filter sidebar. On a phone, the Filters button shows when one is on." },
+      { kind: "improved", text: "Game pictures shimmer while they load, and more games are ready before you scroll to them." },
+      { kind: "fixed", text: "\"See all\" keeps your Phone or Desktop choice." },
+    ],
+  },
+  {
     version: "0.8",
     date: "2026-11-14",
     title: "Phone and Desktop",

@@ -4,7 +4,9 @@ import { IconCheck, IconChevronUp, IconSliders } from "@/components/icons";
 import { useId, useState, type ReactNode } from "react";
 import { capitalize, toggle, type Creator, type HomeFilters } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
+import { DeviceChips } from "@/components/home/DeviceChips";
 import { cn } from "@/lib/cn";
+import type { Device } from "@/lib/device";
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   const [open, setOpen] = useState(true);
@@ -36,21 +38,31 @@ function CheckRow({ label, checked, onChange }: { label: string; checked: boolea
   );
 }
 
-/** Sidebar filters: library shortcut and categories. Creator picking is hidden for now. */
+/** Sidebar filters: device, library shortcut and categories. Creator picking is hidden for now. */
 export function FilterRail({
   filters,
   tags,
   creators: _creators,
+  device,
+  onDevice,
   onChange,
   onReset,
 }: {
   filters: HomeFilters;
   tags: string[];
   creators: Creator[];
+  /** The Phone or Desktop choice. Undefined hides the group (no game has its controls set yet). */
+  device?: Device | null;
+  onDevice?: (next: Device | null) => void;
   onChange: (next: Partial<HomeFilters>) => void;
   onReset: () => void;
 }) {
-  const dirty = filters.tags.length > 0 || filters.creators.length > 0 || Boolean(filters.q.trim()) || Boolean(filters.view);
+  const dirty =
+    filters.tags.length > 0 ||
+    filters.creators.length > 0 ||
+    Boolean(filters.q.trim()) ||
+    Boolean(filters.view) ||
+    Boolean(device);
   const allCategories = filters.tags.length === 0;
 
   return (
@@ -64,6 +76,12 @@ export function FilterRail({
           Clear all
         </button>
       </div>
+
+      {device !== undefined && onDevice ? (
+        <Group title="Plays on">
+          <DeviceChips value={device} onChange={onDevice} />
+        </Group>
+      ) : null}
 
       <Group title="Library">
         <CheckRow

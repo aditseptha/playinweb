@@ -419,6 +419,7 @@
 /* ---------- layout ---------- */
 .layout { display: grid; grid-template-columns: 248px minmax(0, 1fr); gap: 24px; align-items: start; position: relative; z-index: 3; }
 .layoutNoRail { grid-template-columns: minmax(0, 1fr); }
+.main[data-catalogue] { scroll-margin-top: var(--nav-stack); }
 .main { min-width: 0; display: flex; flex-direction: column; gap: 34px; padding-top: 7px; padding-bottom: 48px; }
 
 /* ---------- filter rail ---------- */

@@ -7,7 +7,7 @@ import { byNewest, filtersHref } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
 import { SectionHead } from "@/components/home/Section";
 import type { Game } from "@/lib/types";
-import Link from "next/link";
+import { HomeLink } from "@/components/home/HomeLink";
 
 const ROWS_PER_LOAD = 2;
 
@@ -26,6 +26,14 @@ function useGridColumns() {
   }, []);
 
   return cols;
+}
+
+function scrollParent(node: HTMLElement): HTMLElement | null {
+  for (let el = node.parentElement; el; el = el.parentElement) {
+    const { overflowY } = getComputedStyle(el);
+    if (overflowY === "auto" || overflowY === "scroll") return el;
+  }
+  return null;
 }
 
 /** All registered games, newest first — grid with lazy-loaded batches of two rows. */
@@ -51,13 +59,16 @@ export function NewestGamesSection({ games, publishSlot }: { games: Game[]; publ
     const node = sentinelRef.current;
     if (!node || visible >= total) return;
 
+    // The homepage scrolls inside its own container, not the window. Watching from the window, the
+    // container clips the sentinel and any margin is ignored, so rows only loaded once on screen.
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
           setVisible((n) => Math.min(total, n + batch));
         }
       },
-      { rootMargin: "240px 0px" },
+      // About a screen ahead, so the next rows (and their pictures) are ready before they scroll in.
+      { root: scrollParent(node), rootMargin: "100% 0px" },
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -73,9 +84,9 @@ export function NewestGamesSection({ games, publishSlot }: { games: Game[]; publ
         icon={IconRocket}
         title="Newest games"
         tools={
-          <Link href={filtersHref({ view: "new", browse: true })} className={s.seeAll}>
+          <HomeLink href={filtersHref({ view: "new", browse: true })} className={s.seeAll}>
             See all
-          </Link>
+          </HomeLink>
         }
       />
       <div className={s.newestGrid}>
