@@ -16,7 +16,7 @@ export function replaceHomeUrl(href: string) {
 }
 
 /** The top of the catalogue column, so "See all" lands on the results, not halfway down them. */
-function revealCatalogue() {
+export function revealCatalogue() {
   const top = document.querySelector<HTMLElement>("[data-catalogue]");
   if (top && top.getBoundingClientRect().top < 0) top.scrollIntoView({ block: "start" });
 }

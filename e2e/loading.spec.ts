@@ -43,7 +43,7 @@ test("a filter chip changes the games without asking the server for the page aga
   await chips.getByRole("button", { name: /Phone/ }).click();
   await expect(page).toHaveURL(/device=phone/);
   await expect(chips.getByRole("button", { name: /Phone/ })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByText("Keyboard Quester")).toHaveCount(0);
+  await expect(page.locator("section[aria-live]").getByText("Keyboard Quester")).toHaveCount(0);
   await page.getByRole("button", { name: "Clear all" }).click();
   await expect(page).not.toHaveURL(/device=/);
   await expect(page.getByText("Keyboard Quester").first()).toBeVisible();

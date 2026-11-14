@@ -1,6 +1,6 @@
 "use client";
 
-import { IconArrow, IconHeart, IconPlay, IconPlus, IconSpark, IconStar, IconUsers } from "@/components/icons";
+import { IconArrow, IconHeart, IconKeyboard, IconPlay, IconPlus, IconSpark, IconStar, IconUsers } from "@/components/icons";
 import Link from "next/link";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { playHref } from "@/components/GameCard";
@@ -10,8 +10,10 @@ import { PreviewClip, useCardClip } from "@/components/PreviewClip";
 import { isNewThisWeek } from "@/components/home/filters";
 import s from "@/components/home/home.module.css";
 import { usePeek } from "@/components/home/Peek";
+import { useTouchDevice } from "@/components/home/useTouchDevice";
 import { cn } from "@/lib/cn";
 import { formatPlays, gamePath } from "@/lib/format";
+import { needsDesktop } from "@/lib/device";
 import { apexHref } from "@/lib/host";
 import type { Game } from "@/lib/types";
 
@@ -47,6 +49,18 @@ function Art({
     <div className={s.art} aria-hidden>
       <GameThumb game={game} priority={priority} sizes={sizes} ratio={ratio} />
     </div>
+  );
+}
+
+/** On a phone, marks a game that needs a keyboard or gamepad, so nobody taps into one by surprise (#47). */
+function DesktopTag({ game }: { game: Game }) {
+  const touch = useTouchDevice();
+  if (!touch || !needsDesktop(game.controls)) return null;
+  return (
+    <span className={s.deskTag}>
+      <IconKeyboard className={cn(s.ic, s.xs)} />
+      Best on desktop
+    </span>
   );
 }
 
@@ -95,6 +109,7 @@ export function FeatureCard({ game, i = 0, priority = false }: { game: Game; i?:
       {game.embeddable ? <span className={s.pill}>Instant play</span> : null}
       <div className={s.glass}>
         <div className={s.gText}>
+          <DesktopTag game={game} />
           <div className={s.gTitle}>{game.title}</div>
           <div className={s.meta}>
             <span className={s.who}>{game.developer}</span>
@@ -170,6 +185,7 @@ export function TallCard({
           <IconHeart className={s.ic} /> <span className={s.tnum}>{formatPlays(game.likeCount)}</span>
         </span>
       ) : null}
+      <DesktopTag game={game} />
       <div className={s.tTitle}>{game.title}</div>
       <div className={s.tMeta}>
         {game.developer} · {formatPlays(game.playCount)} plays
@@ -205,6 +221,7 @@ export function WideCard({ game, i = 0 }: { game: Game; i?: number }) {
         <LinkPending />
       </Link>
       <div className={s.fText}>
+        <DesktopTag game={game} />
         <div className={s.fTitle}>{game.title}</div>
         <div className={s.fMeta}>
           {game.developer} · {formatPlays(game.playCount)} plays

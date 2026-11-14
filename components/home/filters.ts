@@ -46,7 +46,9 @@ export function parseFilters(params: Params): HomeFilters {
 
 /** True when the homepage should show a results grid instead of the curated rows. */
 export function isBrowsing(f: HomeFilters) {
-  if (f.q.trim() || f.tags.length || f.creators.length) return true;
+  // Phone and Desktop are filters like Category (#47): they switch to results, they never hide games
+  // from the hero or the other rows.
+  if (f.q.trim() || f.tags.length || f.creators.length || f.device) return true;
   if (!f.view) return false;
   if (f.view === "recent") return f.browse;
   return true;
