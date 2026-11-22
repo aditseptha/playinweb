@@ -131,9 +131,11 @@ function watchVillagePanel(iframe: HTMLIFrameElement) {
       placeVillagePanel(iframe);
     });
   };
-  const observer = new win.MutationObserver(schedule);
+  // The iframe's Window type does not expose these constructors. The page window can
+  // observe a same-origin game document.
+  const observer = new MutationObserver(schedule);
   observer.observe(doc.body, { attributes: true, attributeFilter: ["class"] });
-  const boxes = new win.ResizeObserver(schedule);
+  const boxes = new ResizeObserver(schedule);
   const app = doc.getElementById("app");
   const hud = doc.getElementById("hud");
   if (app) {
