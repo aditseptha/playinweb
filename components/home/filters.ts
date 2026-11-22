@@ -148,7 +148,7 @@ export function viewGames(
 }
 
 export function matchesFilters(game: Game, f: HomeFilters) {
-  if (!matchesDevice(game.controls, f.device)) return false;
+  if (!matchesDevice(game, f.device)) return false;
   if (f.tags.length && !game.tags.some((t) => f.tags.includes(t))) return false;
   if (f.creators.length && !f.creators.includes(game.channelHandle?.toLowerCase() ?? "")) return false;
   const q = f.q.trim().toLowerCase();

@@ -362,6 +362,8 @@ export type Database = {
           kind: string
           like_count: number
           min_price: number | null
+          mobile_ready: boolean
+          orientation: string | null
           owner_id: string
           play_count: number
           play_url: string
@@ -397,6 +399,8 @@ export type Database = {
           kind?: string
           like_count?: number
           min_price?: number | null
+          mobile_ready?: boolean
+          orientation?: string | null
           owner_id: string
           play_count?: number
           play_url?: string

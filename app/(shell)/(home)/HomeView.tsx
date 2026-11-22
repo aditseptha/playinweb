@@ -44,6 +44,9 @@ import { DEVICE_LABEL, playsOnPhone, type Device } from "@/lib/device";
 /** Below this many games the page uses the compact sparse layout. */
 const SPARSE_LIMIT = 8;
 
+/** The phone row waits for this many games that passed on a phone (#38), so it never looks empty. */
+const PHONE_ROW_MIN = 6;
+
 export function HomeView({
   initialGames,
   heroSpotlightIds = [],
@@ -73,18 +76,21 @@ export function HomeView({
   const allGames = useMemo(() => withInitialGames(store.games, initialGames), [store.games, initialGames]);
   // Phone and Desktop (#38) are filters like Category: picking one shows the matching games as
   // results, and the hero and rows keep every game (#47).
-  // Until some game has its controls set (before the controls migration runs), there is nothing to
-  // filter on: the chips stay hidden and the catalogue shows in full.
+  // Phone shows games an admin passed on a real phone (#38). Until one has (before the migration runs,
+  // or before anyone has tested), Phone would be empty: the chips stay hidden and the catalogue shows
+  // in full.
   const games = allGames;
-  const hasControls = useMemo(() => allGames.some((g) => (g.controls?.length ?? 0) > 0), [allGames]);
-  const device = hasControls ? filters.device : null;
-  const panelFilters = useMemo(() => (hasControls ? filters : { ...filters, device: null }), [filters, hasControls]);
-  // On phones, a row of games that play there, near the top (#47).
+  const hasPhoneGames = useMemo(() => allGames.some((g) => playsOnPhone(g)), [allGames]);
+  const device = hasPhoneGames ? filters.device : null;
+  const panelFilters = useMemo(() => (hasPhoneGames ? filters : { ...filters, device: null }), [filters, hasPhoneGames]);
+  // On phones, a row of games that play there, near the top (#47). Hidden until it has enough games
+  // to look like a row rather than a gap.
   const touch = useTouchDevice();
-  const phoneGames = useMemo(
-    () => (touch && hasControls ? byPopularity(allGames.filter((g) => playsOnPhone(g.controls))) : []),
-    [allGames, hasControls, touch],
-  );
+  const phoneGames = useMemo(() => {
+    if (!touch) return [];
+    const list = byPopularity(allGames.filter((g) => playsOnPhone(g)));
+    return list.length >= PHONE_ROW_MIN ? list : [];
+  }, [allGames, touch]);
   // Curated games (#9) get their own "Curated picks" row (after featured, before hottest this week).
   const own = useMemo(() => games.filter((g) => !g.curated), [games]);
   const curated = useMemo(() => byPopularity(games.filter((g) => g.curated)), [games]);
@@ -95,7 +101,7 @@ export function HomeView({
   const heroGames = useMemo(() => pickHeroGames(heroIds, games), [heroIds, games]);
   const featuredGames = useMemo(() => pickFeaturedGames(featuredIds, games, heroIds), [featuredIds, heroIds, games]);
   const browsing = isBrowsing(panelFilters);
-  const hasRail = hasControls || tags.length > 0 || creators.length > 0;
+  const hasRail = hasPhoneGames || tags.length > 0 || creators.length > 0;
   const filterCount = filters.tags.length + filters.creators.length + (filters.view ? 1 : 0) + (device ? 1 : 0);
 
   // Filters change the address through the history API, not the router: the games are already here,
@@ -144,7 +150,7 @@ export function HomeView({
               filters={filters}
               tags={tags}
               creators={creators}
-              device={hasControls ? device : undefined}
+              device={hasPhoneGames ? device : undefined}
               onDevice={pickDevice}
               onChange={go}
               onReset={reset}
@@ -211,7 +217,7 @@ export function HomeView({
                 filters={filters}
                 tags={tags}
                 creators={creators}
-                device={hasControls ? device : undefined}
+                device={hasPhoneGames ? device : undefined}
                 onDevice={pickDevice}
                 onChange={go}
                 onReset={reset}

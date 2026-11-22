@@ -1,4 +1,5 @@
 import type { Curation } from "./curation";
+import type { Orientation } from "./device";
 
 export type Game = {
   id: string
@@ -26,6 +27,10 @@ export type Game = {
   projectSlug?: string
   /** How the game is controlled (#38): touch, keyboard, mouse, gamepad. Empty when nobody has checked. */
   controls?: string[]
+  /** An admin played it on a real phone and it passed (#38). Phone shows only these games. */
+  mobileReady?: boolean
+  /** How the game wants the phone held (#38). Undefined when nobody has said. */
+  orientation?: Orientation
   /** Set for a curated game by another creator (#9); developer then holds that creator's name. */
   curated?: Curation
 };

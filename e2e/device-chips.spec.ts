@@ -3,14 +3,17 @@ import { expect, test } from "@playwright/test";
 // Phone and Desktop chips in the homepage's filter sidebar (#38). On a phone the sidebar is a sheet
 // behind the Filters button, which counts the chip. Nothing turns on by itself (#47).
 //
-// CI has no catalogue (placeholder Supabase), and the chips only appear once some game has its
-// controls set, so each test starts with two games in the browser's local catalogue.
+// CI has no catalogue (placeholder Supabase). Phone shows only games an admin passed on a real phone
+// (mobileReady), the chips appear once one exists, and the phone row waits for six (#38). So each test
+// starts with six passed games, a keyboard game, and a touch game nobody has tested yet.
+const PASSED = ["Tap Tap Tester", "Swipe Sprinter", "Pocket Puzzler", "Thumb Racer", "Tilt Garden", "Bubble Popper"];
 const GAMES = [
-  { id: "local-tap", title: "Tap Tap Tester", developer: "QA", controls: ["touch", "mouse"] },
-  { id: "local-keys", title: "Keyboard Quester", developer: "QA", controls: ["keyboard"] },
-  // Phone rows show cards in pairs and hide a lone last one, so there are two phone games.
-  { id: "local-swipe", title: "Swipe Sprinter", developer: "QA", controls: ["touch"] },
-].map((g) => ({ ...g, description: "", playUrl: "/", thumbnailUrl: "", screenshots: [], embeddable: false, tags: [], createdAt: "2026-11-14T00:00:00Z", playCount: 1, likeCount: 0, promotionBoost: 0 }));
+  ...PASSED.map((title, i) => ({ id: `local-phone-${i}`, title, controls: ["touch"], mobileReady: true, playCount: 1 })),
+  // The most played, so the hero shows it.
+  { id: "local-keys", title: "Keyboard Quester", controls: ["keyboard"], playCount: 50 },
+  // Lists touch, but has not passed on a phone: stays off Phone.
+  { id: "local-untested", title: "Touchy Untested", controls: ["touch"], playCount: 1 },
+].map((g) => ({ ...g, developer: "QA", description: "", playUrl: "/", thumbnailUrl: "", screenshots: [], embeddable: false, tags: [], createdAt: "2026-11-14T00:00:00Z", likeCount: 0, promotionBoost: 0 }));
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript((games) => {
@@ -47,6 +50,7 @@ test.describe("on a phone", () => {
     await row.scrollIntoViewIfNeeded();
     await expect(row.getByRole("link", { name: "Tap Tap Tester", exact: true })).toHaveCount(1);
     await expect(row.getByRole("link", { name: "Keyboard Quester", exact: true })).toHaveCount(0);
+    await expect(row.getByRole("link", { name: "Touchy Untested", exact: true })).toHaveCount(0);
     // The keyboard game is still on the page, marked.
     const keys = page.locator("article", { has: page.getByRole("link", { name: "Keyboard Quester", exact: true }) }).first();
     await keys.scrollIntoViewIfNeeded();
@@ -97,6 +101,8 @@ test.describe("on a computer", () => {
     await expect(results.getByRole("heading", { name: /Plays on phone/ })).toBeVisible();
     await expect(results.getByRole("link", { name: "Tap Tap Tester", exact: true })).toHaveCount(1);
     await expect(results.getByRole("link", { name: "Keyboard Quester", exact: true })).toHaveCount(0);
+    // Touch in the controls is not enough: only games that passed on a phone (#38).
+    await expect(results.getByRole("link", { name: "Touchy Untested", exact: true })).toHaveCount(0);
     const heroAfter = await heroSlides.evaluateAll((els) => els.map((e) => e.getAttribute("aria-label")));
     expect(heroAfter).toEqual(heroBefore);
     expect(heroBefore).toContain("Show Keyboard Quester");

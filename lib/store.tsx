@@ -14,7 +14,7 @@ import { SEED_GAMES } from "@/data/games";
 import { slugify } from "@/lib/format";
 import { fetchCatalogueGames, readCatalogueCache } from "@/lib/projects";
 import type { Collection, Game, HistoryItem, Profile } from "@/lib/types";
-import { normalizeControls } from "@/lib/device";
+import { normalizeControls, parseOrientation } from "@/lib/device";
 
 const STORAGE_KEY = "showcase.v1";
 const PLAY_DEBOUNCE_MS = 30_000;
@@ -193,6 +193,8 @@ function parseRegistered(value: unknown): Game[] {
         promotionBoost:
           typeof g.promotionBoost === "number" && Number.isFinite(g.promotionBoost) ? g.promotionBoost : 0,
         controls: Array.isArray(g.controls) ? normalizeControls(g.controls.filter((c): c is string => typeof c === "string")) : [],
+        mobileReady: g.mobileReady === true,
+        orientation: parseOrientation(typeof g.orientation === "string" ? g.orientation : null),
       } satisfies Game,
     ];
   });

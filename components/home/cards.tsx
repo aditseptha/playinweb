@@ -55,7 +55,7 @@ function Art({
 /** On a phone, marks a game that needs a keyboard or gamepad, so nobody taps into one by surprise (#47). */
 function DesktopTag({ game }: { game: Game }) {
   const touch = useTouchDevice();
-  if (!touch || !needsDesktop(game.controls)) return null;
+  if (!touch || !needsDesktop(game)) return null;
   return (
     <span className={s.deskTag}>
       <IconKeyboard className={cn(s.ic, s.xs)} />
