@@ -1,8 +1,10 @@
 import { unstable_cache } from "next/cache";
+import { deskopRoomScript } from "@/lib/deskop-room";
 import { contentType, htmlStoragePrefix } from "@/lib/html-game";
 import { apexOrigin } from "@/lib/host";
 import { MEDIA_BUCKET, publicMediaUrl } from "@/lib/media";
 import { createClient as createAnonClient } from "@/lib/supabase/client";
+import { getSupabaseEnv } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -35,6 +37,27 @@ function headers(path: string, cacheControl: string) {
   };
 }
 
+function isDeskop(slug: string) {
+  return slug.toLowerCase() === "deskop";
+}
+
+/** PeerJS rooms in the upload are replaced with Supabase private rooms. */
+function deskopRoomResponse() {
+  const { url, key } = getSupabaseEnv();
+  return new Response(deskopRoomScript(url, key), {
+    headers: headers("net.js", "private, no-store"),
+  });
+}
+
+async function deskopIndex(body: BodyInit) {
+  const html = await new Response(body).text();
+  const rewritten = html.replace(
+    '<script src="net.js"></script>',
+    '<script src="/api/deskop-room"></script>\n<script src="net.js?v=supabase2"></script>',
+  );
+  return new Response(rewritten, { headers: headers("index.html", "private, no-store") });
+}
+
 export async function serveProjectHtml(handle: string, slug: string, rel: string) {
   const path = (rel || "index.html").replace(/\\/g, "/");
   if (!path || path.includes("..") || path.startsWith("/")) {
@@ -43,12 +66,14 @@ export async function serveProjectHtml(handle: string, slug: string, rel: string
 
   const published = await publishedHtmlProject(handle, slug);
   if (published) {
+    if (isDeskop(slug) && path === "net.js") return deskopRoomResponse();
     // Stream from the public bucket instead of buffering the whole file in the function.
     const storagePath = `${htmlStoragePrefix(published.ownerId, published.id)}/${path}`;
     const upstream = await fetch(publicMediaUrl(storagePath.split("/").map(encodeURIComponent).join("/")), {
       cache: "no-store",
     });
     if (!upstream.ok || !upstream.body) return new Response("Not found", { status: 404 });
+    if (isDeskop(slug) && path === "index.html") return deskopIndex(upstream.body);
     // Serve stale while refreshing, so the CDN copy keeps answering after the hour is up.
     return new Response(upstream.body, {
       headers: headers(path, "public, max-age=3600, stale-while-revalidate=86400"),
@@ -83,9 +108,13 @@ async function serveDraftHtml(handle: string, slug: string, path: string) {
     if (!canManage) return new Response("Not found", { status: 404 });
   }
 
+  if (isDeskop(slug) && path === "net.js") return deskopRoomResponse();
+
   const storagePath = `${htmlStoragePrefix(project.owner_id, project.id)}/${path}`;
   const { data, error } = await supabase.storage.from(MEDIA_BUCKET).download(storagePath);
   if (error || !data) return new Response("Not found", { status: 404 });
+
+  if (isDeskop(slug) && path === "index.html") return deskopIndex(data);
 
   return new Response(data, {
     headers: headers(path, project.published ? "public, max-age=3600" : "private, no-store"),

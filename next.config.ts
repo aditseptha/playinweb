@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BUILD_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
   },
+  // DesKop's room page loads this browser build from /api/deskop-supabase.
+  outputFileTracingIncludes: {
+    "/api/deskop-supabase": ["./node_modules/@supabase/supabase-js/dist/umd/supabase.js"],
+  },
   async redirects() {
     return [{ source: "/devlogs", destination: "/devlog", permanent: true }];
   },
