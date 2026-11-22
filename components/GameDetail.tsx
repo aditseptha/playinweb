@@ -26,6 +26,7 @@ import { ProjectCheckout } from "@/components/ProjectCheckout";
 import { ProjectComments } from "@/components/ProjectComments";
 import {
   ProjectHeroRoot,
+  useAutoPlayAllowed,
   ProjectHeroStage,
   ProjectHeroThumbs,
   useProjectHero,
@@ -153,10 +154,12 @@ export function GameDetail({
     () => false,
   );
   const following = persisted && (user ? remoteFollowing : localFollowing);
-  const [isPlaying, setIsPlaying] = useState(autoPlay && game.embeddable && (Boolean(user) || !guestPlayExpired()));
-  const [playerExpanded, setPlayerExpanded] = useState(
-    autoPlay && game.embeddable && (Boolean(user) || !guestPlayExpired()),
-  );
+  // ?play=1 starts the game by itself on a computer, after hydration. A phone waits for a tap on Play,
+  // so the game can open fullscreen (#38).
+  const autoPlayHere = useAutoPlayAllowed();
+  // Both follow the stage through onPlayingChange and onExpandedChange.
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playerExpanded, setPlayerExpanded] = useState(false);
   const layoutWide = isPlaying && playerExpanded;
   const guestExpired = useSyncExternalStore(subscribeStorage, guestPlayExpired, () => false);
   const [guestTimedOut, setGuestTimedOut] = useState(false);
@@ -250,6 +253,8 @@ export function GameDetail({
       openLogin(guestLoginOptions());
       return;
     }
+    // On a phone the game waits for a tap on Play, and onPlay counts that play.
+    if (!autoPlayHere) return;
     if (autoPlayed.current) return;
     autoPlayed.current = true;
     recordPlay(projectId);
@@ -262,7 +267,7 @@ export function GameDetail({
       setPlays((n) => n + 1);
     }
     window.history.replaceState(null, "", window.location.pathname);
-  }, [autoPlay, guestExpired, loading, openLogin, persisted, projectId, recordPlay, user]);
+  }, [autoPlay, autoPlayHere, guestExpired, loading, openLogin, persisted, projectId, recordPlay, user]);
 
   const onCommentCount = useCallback((n: number) => setCommentCount(n), []);
 
@@ -376,7 +381,7 @@ export function GameDetail({
     <ProjectHeroRoot
       game={game}
       trailerUrl={project.trailer_url}
-      autoPlay={autoPlay && game.embeddable && (Boolean(user) || !guestExpired)}
+      autoPlay={autoPlay && autoPlayHere && game.embeddable && (Boolean(user) || !guestExpired)}
       allowPlay={Boolean(user) || !guestExpired}
       playLocked={!user && guestTimedOut}
       onLoginRequest={() => openLogin(guestLoginOptions())}

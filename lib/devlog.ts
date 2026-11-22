@@ -30,6 +30,10 @@ export const DEVLOG: DevlogRelease[] = [
       { kind: "improved", text: "Phone now lists only games our team has played on a real phone: full touch controls, fills the screen, and loads well on mobile data." },
       { kind: "improved", text: "The \"Plays on your phone\" row shows up once there are enough tested games to fill it." },
       { kind: "new", text: "Creators can say whether their game is played with the phone upright or turned sideways." },
+      { kind: "new", text: "On Android, Play opens the game truly fullscreen, and landscape games turn the screen sideways for you." },
+      { kind: "new", text: "On iPhone, a landscape game asks you to turn your phone sideways." },
+      { kind: "improved", text: "Portrait games play in a tall, phone-shaped frame on a computer." },
+      { kind: "improved", text: "On a phone, a link that starts a game waits for your tap on Play, so the game can open fullscreen." },
     ],
   },
   {

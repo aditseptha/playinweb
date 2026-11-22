@@ -1,7 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { Button } from "@/components/ds/button";
 import { Illustration } from "@/components/ds/illustration";
 import { focusRing, onArt } from "@/components/ds/styles";
@@ -13,6 +23,7 @@ import {
   IconExternal,
   IconFullscreen,
   IconFullscreenExit,
+  IconPhone,
   IconPlay,
   IconShrink,
 } from "@/components/icons";
@@ -44,6 +55,51 @@ const PHONE_PLAY_EVENT = "playinweb:phone-play";
 
 function isPhonePlay() {
   return typeof window !== "undefined" && window.matchMedia(PHONE_PLAY).matches;
+}
+
+function subscribePhonePlay(onChange: () => void) {
+  const query = window.matchMedia(PHONE_PLAY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/**
+ * Whether a ?play=1 link may start the game by itself (#38). Not on a phone: a game started without
+ * a tap can't go fullscreen there, so the phone waits for the player to tap Play. Not during the server
+ * render either, which can't tell a phone from a computer; the game starts right after hydration.
+ */
+export function useAutoPlayAllowed() {
+  return useSyncExternalStore(subscribePhonePlay, () => !isPhonePlay(), () => false);
+}
+
+const PORTRAIT = "(orientation: portrait)";
+
+function subscribePortrait(onChange: () => void) {
+  const query = window.matchMedia(PORTRAIT);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/** The screen is taller than it is wide right now. */
+function usePortraitScreen() {
+  return useSyncExternalStore(subscribePortrait, () => window.matchMedia(PORTRAIT).matches, () => false);
+}
+
+// The DOM typings dropped ScreenOrientation.lock while browsers disagree on it; only Chrome on Android
+// honours it, and only in fullscreen.
+type Lockable = { lock?: (orientation: "portrait" | "landscape") => Promise<void>; unlock?: () => void };
+
+function lockOrientation(orientation: "portrait" | "landscape") {
+  const screenOrientation = (typeof screen !== "undefined" ? screen.orientation : undefined) as Lockable | undefined;
+  return screenOrientation?.lock?.(orientation).catch(() => {});
+}
+
+function unlockOrientation() {
+  try {
+    ((typeof screen !== "undefined" ? screen.orientation : undefined) as Lockable | undefined)?.unlock?.();
+  } catch {
+    // Not locked, or not supported.
+  }
 }
 
 /**
@@ -267,10 +323,12 @@ export function ProjectHeroRoot({
   // Open on the cover when there is one: it's the poster for the Play button.
   const [slide, setSlide] = useState(slides.find((s) => s.kind === "cover")?.id ?? slides[0]?.id ?? "");
   const autoStart = autoPlay && game.embeddable && allowPlay;
-  const [playing, setPlaying] = useState(!playLocked && autoPlay && game.embeddable);
-  const [expanded, setExpanded] = useState(!playLocked && autoStart);
+  // A ?play=1 start always arrives as autoStart turning true after the first render (see
+  // useAutoPlayAllowed), so the server never renders the game frame and a phone never loads it unasked.
+  const [playing, setPlaying] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [frameKey, setFrameKey] = useState(0);
-  const [prevAutoStart, setPrevAutoStart] = useState(autoStart);
+  const [prevAutoStart, setPrevAutoStart] = useState(false);
   const [prevPlayLocked, setPrevPlayLocked] = useState(playLocked);
   if (autoStart !== prevAutoStart) {
     setPrevAutoStart(autoStart);
@@ -415,6 +473,14 @@ export function ProjectHeroStage() {
   const stageRef = useRef<HTMLDivElement>(null);
   // Set once the player leaves phone fullscreen, so the open-on-play fallback doesn't pull them back in.
   const leftPhoneFullscreen = useRef(false);
+  // A real fullscreen request is waiting for the browser's answer. The CSS fallback waits too, or it
+  // would switch on underneath a request that is about to succeed.
+  const requesting = useRef(false);
+  // How the game wants the phone held (#38), when someone has said.
+  const wanted = game.orientation === "portrait" || game.orientation === "landscape" ? game.orientation : null;
+  const portraitNow = usePortraitScreen();
+  // "Play anyway" on the turn-your-phone prompt, until the game stops.
+  const [rotateDismissed, setRotateDismissed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   // Fallback for browsers without the Fullscreen API on elements (Safari on iPhone).
   const [pseudo, setPseudo] = useState(false);
@@ -430,7 +496,10 @@ export function ProjectHeroStage() {
 
   useEffect(() => {
     function sync() {
-      setFullscreen(document.fullscreenElement === stageRef.current);
+      const on = document.fullscreenElement === stageRef.current;
+      setFullscreen(on);
+      // The landscape lock only holds in fullscreen; let the phone turn freely again after it.
+      if (!on) unlockOrientation();
     }
     document.addEventListener("fullscreenchange", sync);
     return () => document.removeEventListener("fullscreenchange", sync);
@@ -466,6 +535,7 @@ export function ProjectHeroStage() {
     if (!running) {
       leftPhoneFullscreen.current = false;
       setPseudo(false);
+      setRotateDismissed(false);
     }
   }
 
@@ -496,15 +566,23 @@ export function ProjectHeroStage() {
     };
   }, [pseudo]);
 
+  // Must run inside the tap: requestFullscreen is called before the first await, while the browser
+  // still counts the tap as the reason.
   async function enterFullscreen() {
     const node = stageRef.current;
-    if (!node || pseudo || document.fullscreenElement) return;
+    if (!node || pseudo || document.fullscreenElement || requesting.current) return;
     if (document.fullscreenEnabled && typeof node.requestFullscreen === "function") {
+      requesting.current = true;
       try {
-        await node.requestFullscreen();
+        await node.requestFullscreen({ navigationUI: "hide" });
+        // Chrome on Android can hold the game's orientation while it is fullscreen. Elsewhere this
+        // is refused quietly, and the turn-your-phone prompt asks instead.
+        if (wanted && isPhonePlay()) void lockOrientation(wanted);
         return;
       } catch {
         // Refused (or unsupported for this element): fall through to the CSS fallback.
+      } finally {
+        requesting.current = false;
       }
     }
     setPseudo(true);
@@ -527,7 +605,7 @@ export function ProjectHeroStage() {
   useEffect(() => {
     if (!running || !mobile) return;
     const id = window.setTimeout(() => {
-      if (leftPhoneFullscreen.current || document.fullscreenElement) return;
+      if (leftPhoneFullscreen.current || document.fullscreenElement || requesting.current) return;
       setPseudo(true);
     }, 80);
     return () => window.clearTimeout(id);
@@ -579,6 +657,23 @@ export function ProjectHeroStage() {
   const phoneFull = isFull && mobile;
   const frameSize = playFrameSize(game.curated, game.playUrl);
   const poster = !current || current.kind === "cover" || current.kind === "shot";
+  // A portrait game on a computer plays in a tall, phone-shaped column instead of a wide box (#38).
+  const tall = running && !mobile && game.orientation === "portrait";
+  // On a phone in fullscreen, ask to turn the phone when it is held the other way from the game.
+  const turnTo = phoneFull && wanted && !rotateDismissed && (wanted === "landscape") === portraitNow ? wanted : null;
+  const mediaSize =
+    pseudo || phoneFull || (tall && fullscreen) ? "min-h-0 flex-1" : tall ? "h-[min(78vh,820px)]" : "aspect-video";
+  const frame = running ? (
+    <PlayFrame
+      key={frameKey}
+      src={game.playUrl}
+      title={game.title}
+      size={frameSize}
+      lockLayout={mobile}
+      flushBottom={phoneFull}
+      onLoad={() => setLoadedKey(frameKey)}
+    />
+  ) : null;
 
   return (
     <div
@@ -599,18 +694,17 @@ export function ProjectHeroStage() {
           : undefined
       }
     >
-      <div className={cn("stage-media relative w-full overflow-hidden", pseudo || phoneFull ? "min-h-0 flex-1" : "aspect-video")}>
+      <div className={cn("stage-media relative w-full overflow-hidden", mediaSize)}>
         {running ? (
           <>
-            <PlayFrame
-              key={frameKey}
-              src={game.playUrl}
-              title={game.title}
-              size={frameSize}
-              lockLayout={mobile}
-              flushBottom={phoneFull}
-              onLoad={() => setLoadedKey(frameKey)}
-            />
+            {tall ? (
+              <div data-stage-column className="absolute inset-y-0 left-1/2 aspect-[9/16] max-w-full -translate-x-1/2">
+                {frame}
+              </div>
+            ) : (
+              frame
+            )}
+            {turnTo ? <TurnPhone to={turnTo} onDismiss={() => setRotateDismissed(true)} /> : null}
             {timedOut ? (
               <StageScreen
                 illustration="error"
@@ -760,7 +854,7 @@ export function ProjectHeroStage() {
               Playing <span className="font-semibold">{game.title}</span>
             </span>
           </p>
-          {isFull ? null : (
+          {isFull || tall ? null : (
             <button
               type="button"
               // Wide view only rearranges the lg grid, so below lg it has nothing to change.
@@ -782,6 +876,40 @@ export function ProjectHeroStage() {
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Over a fullscreen game on a phone held the wrong way (#38). It goes away by itself once the phone
+ * turns. Chrome on Android usually turns the screen for the player (the orientation lock), so this
+ * is mostly for iPhone, which cannot.
+ */
+function TurnPhone({ to, onDismiss }: { to: "portrait" | "landscape"; onDismiss: () => void }) {
+  const sideways = to === "landscape";
+  return (
+    <div
+      role="status"
+      className="absolute inset-0 z-30 grid place-items-center bg-[color-mix(in_srgb,var(--pw-night-950)_94%,transparent)] p-6 text-center"
+    >
+      <div className="flex max-w-[18rem] flex-col items-center gap-4">
+        <IconPhone
+          aria-hidden
+          className={cn(
+            "size-14 text-pw-sky",
+            sideways ? "motion-safe:animate-[pw-turn-side_2.4s_ease-in-out_infinite]" : "rotate-90 motion-safe:animate-[pw-turn-up_2.4s_ease-in-out_infinite]",
+          )}
+        />
+        <div className="flex flex-col gap-1">
+          <p className={cn("text-pw-title font-bold", onArt)}>{sideways ? "Turn your phone sideways" : "Turn your phone upright"}</p>
+          <p className={cn("text-pw-body-sm", onArt)}>
+            {sideways ? "This game plays in landscape." : "This game plays in portrait."}
+          </p>
+        </div>
+        <Button variant="ghost" className="text-pw-on-art" onClick={onDismiss}>
+          Play anyway
+        </Button>
+      </div>
     </div>
   );
 }
