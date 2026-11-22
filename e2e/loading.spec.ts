@@ -11,7 +11,8 @@ const PNG = Buffer.from(
   "base64",
 );
 const GAMES = [
-  { id: "local-tap", title: "Tap Tap Tester", controls: ["touch", "mouse"], thumbnailUrl: SLOW_IMAGE },
+  // Passed on a phone (#38), so the Phone and Desktop chips show.
+  { id: "local-tap", title: "Tap Tap Tester", controls: ["touch", "mouse"], mobileReady: true, thumbnailUrl: SLOW_IMAGE },
   { id: "local-keys", title: "Keyboard Quester", controls: ["keyboard"], thumbnailUrl: "" },
 ].map((g) => ({ ...g, developer: "QA", description: "", playUrl: "/", screenshots: [], embeddable: false, tags: [], createdAt: "2026-11-14T00:00:00Z", playCount: 1, likeCount: 0, promotionBoost: 0 }));
 
