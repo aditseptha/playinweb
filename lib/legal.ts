@@ -8,17 +8,17 @@ export type LegalSection = {
 
 export const LEGAL_CONTACT_EMAIL = "support@playinweb.com";
 
-export const LEGAL_UPDATED = "October 4, 2026";
+export const LEGAL_UPDATED = "November 23, 2026";
 
 export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; sections: LegalSection[] }> = {
   privacy: {
     title: "Privacy Policy",
     intro:
-      "PlayInWeb (“we”, “us”, “our”) operates https://www.playinweb.com and related subdomains. This Privacy Policy explains what personal information we collect, how we use and share it, how long we keep it, and what choices you have. It applies when you browse, play games, create an account, sign in with Google, publish games, tip PlayInWeb, or contact us. By using PlayInWeb you agree to this policy. If you do not agree, please do not use the service.",
+      "PlayInWeb (“we”, “us”, “our”) operates https://www.playinweb.com and related subdomains. This Privacy Policy explains what personal information we collect, how we use and share it, how long we keep it, and what choices you have. It applies when you browse, play games, create an account, sign in with Google, publish games, or contact us. By using PlayInWeb you agree to this policy. If you do not agree, please do not use the service.",
     sections: [
       {
         heading: "Who we are and how to contact us",
-        body: `PlayInWeb is the data controller for personal information described in this policy. We are responsible for deciding how your data is used to operate the catalogue, accounts, payments, and support. For privacy questions, account deletion requests, or data access requests, email ${LEGAL_CONTACT_EMAIL} or use Report an issue on the site. We will respond within a reasonable time.`,
+        body: `PlayInWeb is the data controller for personal information described in this policy. We are responsible for deciding how your data is used to operate the catalogue, accounts, and support. For privacy questions, account deletion requests, or data access requests, email ${LEGAL_CONTACT_EMAIL} or use Report an issue on the site. We will respond within a reasonable time.`,
       },
       {
         heading: "Information we collect",
@@ -29,7 +29,7 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
           "Google Sign-In: if you choose Continue with Google, we receive from Google the information you authorize, typically your name, email address, Google account identifier, and profile picture URL. We use this to create or sign in to your PlayInWeb account. We do not receive your Google password. Google’s use of your data is governed by Google’s Privacy Policy at https://policies.google.com/privacy.",
           "Games and uploads: game title, slug, descriptions, tags, cover art, screenshots, trailer links, play URLs, store links, publish status, pricing settings, and HTML or other files you upload for hosted play.",
           "Social and activity: comments and replies, likes on games and comments, follows, library and collection saves, play history stored on our servers where applicable, play counts, view counts, and download activity for files you attach to listings.",
-          "Payments: Polar checkout and payment identifiers, tip amounts, and the name or email you give at checkout. We do not store full payment card numbers.",
+          "Payments: none. PlayInWeb does not take payments right now, so we collect no payment information. Before we add tips or donations, we will update this policy.",
           "Support and reports: subject line and message body from Report an issue, associated account email, and timestamps.",
           "Technical and usage: pages visited, referrer, device/browser type, approximate location derived from IP (as processed by our analytics provider), authentication cookies, and error logs needed to secure and operate the service.",
           "On your device (local storage): theme preference, sidebar state, notification read time, cached catalogue data, guest play timer, local play history, and similar settings that stay in your browser until you clear site data.",
@@ -41,7 +41,6 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
         bullets: [
           "Provide the service: create accounts, authenticate you (including via Google), host and display games, serve your public channel, and keep you signed in.",
           "Operate social features: comments, likes, follows, library, collections, notifications, and popularity rankings.",
-          "Process payments: run Polar checkouts for tips to PlayInWeb and record completed payments.",
           "Safety and integrity: investigate abuse, respond to reports, prevent fraud, enforce our Terms, and protect users and the platform.",
           "Improve PlayInWeb: understand which pages and features are used through aggregate analytics so we can fix bugs and improve performance.",
           "Communicate with you: send account-related messages such as email confirmation and password reset links.",
@@ -50,7 +49,7 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
       },
       {
         heading: "Legal bases (EEA/UK users)",
-        body: "If you are in the European Economic Area or United Kingdom, we process personal data on these bases: (1) contract — to provide the account, hosting, and payment features you request; (2) legitimate interests — to secure the platform, prevent abuse, and improve the service in ways that do not override your rights; (3) consent — where required, for example optional marketing if we add it in future; (4) legal obligation — where we must retain payment or identity records.",
+        body: "If you are in the European Economic Area or United Kingdom, we process personal data on these bases: (1) contract — to provide the account and hosting features you request; (2) legitimate interests — to secure the platform, prevent abuse, and improve the service in ways that do not override your rights; (3) consent — where required, for example optional marketing if we add it in future; (4) legal obligation — where the law requires us to keep records.",
       },
       {
         heading: "What is public",
@@ -64,7 +63,6 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
           "Host, list, and serve games, covers, screenshots, and files.",
           "Count plays and views, and show popularity, history, and notifications.",
           "Run likes, comments, follows, library, collections, and downloads.",
-          "Process tips to PlayInWeb through Polar.",
           "Handle reports, hide or remove content that breaks the terms, and operate admin tools.",
           "Measure traffic with Vercel Analytics so we know which pages are used.",
         ],
@@ -74,7 +72,7 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
         body: "We do not sell your personal information. We share data only as described below:",
         bullets: [
           "Public on PlayInWeb: profile pages, published games, comments, like counts, follower counts, and channel URLs are visible to anyone who visits the site.",
-          "Service providers (processors): Supabase (authentication, database, file storage), Vercel (hosting and analytics), Polar (payment processing), and Google (only when you choose Google Sign-In, under Google’s terms).",
+          "Service providers (processors): Supabase (authentication, database, file storage), Vercel (hosting and analytics), and Google (only when you choose Google Sign-In, under Google’s terms).",
           "Legal and safety: we may disclose information if required by law, court order, or government request, or when we believe disclosure is necessary to protect rights, safety, or property.",
           "Business changes: if PlayInWeb is involved in a merger, acquisition, or asset sale, user information may transfer as part of that transaction with notice where required by law.",
         ],
@@ -85,7 +83,6 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
         bullets: [
           "Supabase — https://supabase.com/privacy (auth, database, storage).",
           "Vercel — https://vercel.com/legal/privacy-policy (hosting, Vercel Analytics).",
-          "Polar — https://polar.sh/legal/privacy (checkout and payments).",
           "Google — https://policies.google.com/privacy (Sign in with Google only, when you use it).",
         ],
       },
@@ -104,7 +101,7 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
       },
       {
         heading: "Retention",
-        body: "Account, profile, games, comments, follows, likes, tips, and reports stay until you delete them or we remove them under the terms (for example abuse). Cached catalogue data expires after a few minutes. Local browser data lasts until you clear site data. Analytics is kept in aggregate form by Vercel under their retention rules.",
+        body: "Account, profile, games, comments, follows, likes, and reports stay until you delete them or we remove them under the terms (for example abuse). Cached catalogue data expires after a few minutes. Local browser data lasts until you clear site data. Analytics is kept in aggregate form by Vercel under their retention rules.",
       },
       {
         heading: "Your choices and rights",
@@ -114,7 +111,7 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
           "Unlike, unfollow, and delete comments you posted where the product allows.",
           "Sign out, clear browser cookies, or clear site data to remove local storage items.",
           "Revoke Google’s access to PlayInWeb in your Google Account security settings at https://myaccount.google.com/permissions.",
-          "Request account deletion by emailing support@playinweb.com or using Report an issue. We will delete or anonymize data we control, except records we must keep for legal, tax, fraud, or payment dispute reasons.",
+          "Request account deletion by emailing support@playinweb.com or using Report an issue. We will delete or anonymize data we control, except records we must keep for legal, tax, or fraud reasons.",
         ],
       },
       {
@@ -123,11 +120,11 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
       },
       {
         heading: "Security",
-        body: "We use HTTPS encryption in transit, access controls on our database and storage, and reputable vendors for authentication and payments. No online service can guarantee absolute security. If we learn of a breach affecting your personal information, we will notify you and regulators as required by law.",
+        body: "We use HTTPS encryption in transit, access controls on our database and storage, and reputable vendors for authentication and hosting. No online service can guarantee absolute security. If we learn of a breach affecting your personal information, we will notify you and regulators as required by law.",
       },
       {
         heading: "International transfers",
-        body: "PlayInWeb is operated from Indonesia. Our service providers (Supabase, Vercel, Polar, Google) may process data in the United States and other countries. Where required, we rely on appropriate safeguards such as standard contractual clauses offered by our vendors. By using PlayInWeb you understand your information may be transferred internationally.",
+        body: "PlayInWeb is operated from Indonesia. Our service providers (Supabase, Vercel, Google) may process data in the United States and other countries. Where required, we rely on appropriate safeguards such as standard contractual clauses offered by our vendors. By using PlayInWeb you understand your information may be transferred internationally.",
       },
       {
         heading: "Children",
@@ -146,23 +143,23 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
   terms: {
     title: "Terms",
     intro:
-      "These terms are a contract between you and PlayInWeb. By browsing, playing, signing up, publishing, or tipping, you agree to them. If you do not agree, do not use the site.",
+      "These terms are a contract between you and PlayInWeb. By browsing, playing, signing up, or publishing, you agree to them. If you do not agree, do not use the site.",
     sections: [
       {
         heading: "The service",
-        body: "PlayInWeb is a catalogue of indie web games. We may list games, host HTML builds you upload, show trailers and store links, and provide accounts, comments, likes, follows, library, collections, downloads, and tips to PlayInWeb. Some items in the navigation may be marked Soon or hidden. We can add, change, or remove features without notice. We do not guarantee uptime, that a game will keep working, or that a checkout will succeed.",
+        body: "PlayInWeb is a catalogue of indie web games. We may list games, host HTML builds you upload, show trailers and store links, and provide accounts, comments, likes, follows, library, collections, and downloads. Some items in the navigation may be marked Soon or hidden. We can add, change, or remove features without notice. We do not guarantee uptime or that a game will keep working.",
       },
       {
         heading: "Eligibility",
-        body: "You must be old enough to form a contract in your country (and at least 13). If you use Polar you must also meet its age and identity rules. You are responsible for keeping your email and password secret and for everything done under your handle.",
+        body: "You must be old enough to form a contract in your country (and at least 13). You are responsible for keeping your email and password secret and for everything done under your handle.",
       },
       {
         heading: "Accounts",
-        body: "One person should use one account. Handles must follow the format we allow and must not impersonate others or use reserved names. We may refuse, suspend, or delete an account that is abusive, fraudulent, inactive, or in breach of these terms. If your account is removed, public comments and listings may be hidden; payment records may be retained.",
+        body: "One person should use one account. Handles must follow the format we allow and must not impersonate others or use reserved names. We may refuse, suspend, or delete an account that is abusive, fraudulent, inactive, or in breach of these terms. If your account is removed, public comments and listings may be hidden.",
       },
       {
         heading: "License to use PlayInWeb",
-        body: "We grant you a limited, revocable, non-exclusive license to use the site for personal play and, if you have an account, to publish games you have the right to share. You may not scrape the site in a way that harms the service, copy another creator's files without permission, bypass payment flows, or probe the site for security holes except through Report an issue.",
+        body: "We grant you a limited, revocable, non-exclusive license to use the site for personal play and, if you have an account, to publish games you have the right to share. You may not scrape the site in a way that harms the service, copy another creator's files without permission, or probe the site for security holes except through Report an issue.",
       },
       {
         heading: "Publishing games",
@@ -173,12 +170,8 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
         body: "Comments, likes, follows, and collection names are your content. Do not harass, spam, or post illegal material. We may remove or hide social content and may limit who can comment. Public social data can be seen by anyone on the site.",
       },
       {
-        heading: "Tips",
-        body: "Tips to PlayInWeb are processed by Polar. Amounts, currency, taxes, and refunds follow Polar's terms and the checkout screen. A tip supports the site and its developer. It does not go to any game creator and does not buy anything on PlayInWeb. We do not store card numbers.",
-      },
-      {
-        heading: "Donations and payouts",
-        body: "PlayInWeb does not currently offer donations to games or payouts to creators. Creators cannot earn or cash out money through PlayInWeb. If we add these features, we will update these terms and the Privacy Policy before they go live.",
+        heading: "Payments",
+        body: "PlayInWeb does not take payments right now. There are no tips, no donations to games, and no payouts to creators, and creators cannot earn or cash out money through PlayInWeb. Before we add any of these, we will update these terms and the Privacy Policy.",
       },
       {
         heading: "Downloads and third-party links",
@@ -192,8 +185,7 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
           "Infringe copyrights, trademarks, or other rights.",
           "Post sexual content involving anyone 17 or under, or any exploitative sexual content.",
           "Harass users, scrape personal data, or spam comments and follows.",
-          "Interfere with Polar or our billing.",
-          "Impersonate PlayInWeb, another creator, or a payment provider.",
+          "Impersonate PlayInWeb or another creator.",
         ],
       },
       {
@@ -214,11 +206,11 @@ export const LEGAL_DOCS: Record<LegalKind, { title: string; intro: string; secti
       },
       {
         heading: "Indemnity",
-        body: "If your content or conduct causes a claim against PlayInWeb (including a Polar dispute we did not cause), you will cover reasonable costs we incur, including legal fees, except where we are solely at fault.",
+        body: "If your content or conduct causes a claim against PlayInWeb, you will cover reasonable costs we incur, including legal fees, except where we are solely at fault.",
       },
       {
         heading: "Changes and contact",
-        body: "We may update these terms. The date at the top is the latest version. If a change is material we may note it on the site. Continued use after an update is acceptance. Questions go through Report an issue. These terms are the whole agreement for use of PlayInWeb and sit alongside Polar's terms for payments.",
+        body: "We may update these terms. The date at the top is the latest version. If a change is material we may note it on the site. Continued use after an update is acceptance. Questions go through Report an issue. These terms are the whole agreement for use of PlayInWeb.",
       },
     ],
   },

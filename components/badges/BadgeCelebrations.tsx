@@ -15,7 +15,9 @@ import { markBadgesSeen, nextGoal, planCelebration, unlockDetail, unlockHeadline
 import { isPlaying, onBadgeCheck, subscribePlaying } from "@/lib/badge-events";
 import { maxLevel, stripeCount, tierFor } from "@/lib/badges";
 import { cn } from "@/lib/cn";
+import { useMoneyFeatures } from "@/lib/features";
 import { apexHref } from "@/lib/host";
+import { badgeOpen } from "@/lib/money-features";
 import { usePrefersReducedMotion } from "@/lib/reduced-motion";
 import { createClient } from "@/lib/supabase/client";
 
@@ -40,6 +42,7 @@ const PROFILE_BADGES = apexHref("/profile#badges");
 export function BadgeCelebrations() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const money = useMoneyFeatures();
   const pathname = usePathname();
   const playing = useSyncExternalStore(subscribePlaying, isPlaying, () => false);
   const [state, setState] = useState<{ owner: string | null; queue: Moment[] }>({ owner: null, queue: [] });
@@ -55,10 +58,12 @@ export function BadgeCelebrations() {
       lastCheck.current = now;
       const { data, error } = await createClient().rpc("my_badges");
       if (error || !data) return null;
-      const moments = planCelebration(data).filter((m) => m.items.some((u) => !shownThisTab.has(unlockKey(u))));
+      // A badge for a feature that is not open yet (Supporter, #53) waits, unseen, until it opens.
+      const open = data.filter((row: { badge: string }) => badgeOpen(row.badge, money));
+      const moments = planCelebration(open).filter((m) => m.items.some((u) => !shownThisTab.has(unlockKey(u))));
       return moments.length ? moments : null;
     },
-    [userId],
+    [userId, money],
   );
 
   const check = useCallback(

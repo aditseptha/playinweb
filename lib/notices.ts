@@ -2,6 +2,7 @@ import { badgeNoticeText } from "@/lib/badge-celebration";
 import { isDummyDonation, isDummyPayout } from "@/lib/dummy-seed";
 import { formatMoney } from "@/lib/format";
 import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
+import { MONEY_CLOSED, badgeOpen, noticeKindOpen, type MoneyFeatures } from "@/lib/money-features";
 import { ownerHandle } from "@/lib/projects";
 import { createClient } from "@/lib/supabase/client";
 
@@ -33,7 +34,11 @@ export function markNoticesSeen() {
 
 type ProfileBit = { handle: string; display_name: string } | null;
 
-export async function loadNotices(userId: string, admin: boolean): Promise<Notice[]> {
+/**
+ * The bell's entries. Donations, payouts and tips are only asked for while their feature is open
+ * (#53), and the Supporter badge only shows once donations or tips are.
+ */
+export async function loadNotices(userId: string, admin: boolean, money: MoneyFeatures = MONEY_CLOSED): Promise<Notice[]> {
   const supabase = createClient();
   const { data: games } = await supabase
     .from("projects")
@@ -51,7 +56,7 @@ export async function loadNotices(userId: string, admin: boolean): Promise<Notic
   );
 
   const [donations, comments, follows, payouts, tips, reports, badges] = await Promise.all([
-    gameIds.length
+    gameIds.length && noticeKindOpen("donation", money)
       ? supabase
           .from("donations")
           .select("id, amount, created_at, donor_handle, donor_email, game_title, game_slug, creator_handle, project_id, user_id")
@@ -77,13 +82,15 @@ export async function loadNotices(userId: string, admin: boolean): Promise<Notic
       .eq("creator_id", userId)
       .order("created_at", { ascending: false })
       .limit(15),
-    supabase
-      .from("payouts")
-      .select("id, amount, status, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(10),
-    admin
+    noticeKindOpen("payout", money)
+      ? supabase
+          .from("payouts")
+          .select("id, amount, status, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] as never[] }),
+    admin && noticeKindOpen("tip", money)
       ? supabase.from("tips").select("id, amount, donor_handle, donor_email, created_at").order("created_at", { ascending: false }).limit(10)
       : Promise.resolve({ data: [] as never[] }),
     admin
@@ -108,6 +115,7 @@ export async function loadNotices(userId: string, admin: boolean): Promise<Notic
 
   // Badges (#30): the latest level of each badge, linked to the owner's badge panel.
   for (const row of badges.data ?? []) {
+    if (!badgeOpen(row.badge, money)) continue;
     const text = badgeNoticeText(row.badge, row.level);
     if (!text) continue;
     out.push({ id: `badge:${row.badge}:${row.level}`, at: row.leveled_at, href: apexHref("/profile#badges"), ...text });

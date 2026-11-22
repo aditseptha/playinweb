@@ -888,7 +888,7 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
         </div>
 
         {curated ? (
-          <p className="text-ui text-text-muted">Comments and donations stay off until the creator claims this game.</p>
+          <p className="text-ui text-text-muted">Comments stay off until the creator claims this game.</p>
         ) : (
           <fieldset>
             <legend className="text-caption font-medium text-text-muted">Community</legend>

@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/auth";
+import type { MoneyFeatures } from "@/lib/money-features";
 import { createClient } from "@/lib/supabase/client";
 
 export type SiteFeature = {
@@ -52,7 +53,8 @@ export const FEATURE_CATALOG: SiteFeature[] = [
     label: "Tip the developer",
     href: "/tip",
     description: "Support link in the sidebar footer.",
-    hidden: false,
+    // Hidden like Donations, so a database without this row (a new project or a preview) keeps Tips off.
+    hidden: true,
     soon: false,
   },
 ];
@@ -173,6 +175,14 @@ export function isFeaturePubliclyEnabled(feature: SiteFeature | null | undefined
   const row = feature ?? (id ? FEATURE_CATALOG.find((item) => item.id === id) : undefined);
   if (!row) return false;
   return !row.hidden && !row.soon;
+}
+
+/** Whether Donations and Tips are open to the public (#53). Admins see the same as everyone. */
+export function useMoneyFeatures(): MoneyFeatures {
+  const { features } = useFeatures();
+  const donations = isFeaturePubliclyEnabled(features.find((item) => item.id === "donations"), "donations");
+  const tip = isFeaturePubliclyEnabled(features.find((item) => item.id === "tip"), "tip");
+  return useMemo(() => ({ donations, tip }), [donations, tip]);
 }
 
 export function useIsAdmin() {

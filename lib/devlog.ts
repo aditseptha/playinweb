@@ -23,6 +23,14 @@ export type DevlogRelease = {
 
 export const DEVLOG: DevlogRelease[] = [
   {
+    version: "0.11",
+    date: "2026-11-23",
+    title: "Only what works today",
+    items: [
+      { kind: "fixed", text: "PlayInWeb no longer talks about donations and tips, which aren't open yet: not in badges, notifications, the claim form, or the Privacy Policy and Terms." },
+    ],
+  },
+  {
     version: "0.10",
     date: "2026-11-14",
     title: "Every game, on every device",
@@ -84,7 +92,7 @@ export const DEVLOG: DevlogRelease[] = [
     title: "Profiles and badges",
     summary: "Profiles got a new look, and every account can now earn badges for playing, commenting and making games.",
     items: [
-      { kind: "new", text: "11 badges in 3D: Explorer, Talk of the Town, Fan, Supporter, First Game, Following, Well Liked, Crowd Pleaser, Complete Page, and the rare Foil badges Early Bird and Claimed." },
+      { kind: "new", text: "10 badges in 3D: Explorer, Talk of the Town, Fan, First Game, Following, Well Liked, Crowd Pleaser, Complete Page, and the rare Foil badges Early Bird and Claimed." },
       { kind: "new", text: "Badges level up from bronze to silver to gold. Hover or tap a badge to see how close the next level is." },
       { kind: "new", text: "A celebration pops up when you earn a badge, with a bigger one for Foil badges. It waits until you stop playing." },
       { kind: "new", text: "Redesigned profiles with a Follow button, stats, and the badges beside your games." },
