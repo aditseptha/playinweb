@@ -59,6 +59,8 @@ type GamesContextValue = Snapshot & {
   saveProfile: (profile: Profile) => void;
   toggleLike: (id: string) => void;
   toggleLibrary: (id: string) => void;
+  /** Replace the browser's Library, after it synced with the account (components/LibrarySync.tsx). */
+  setLibrary: (ids: string[]) => void;
   removeFromHistory: (id: string) => void;
   createCollection: (name: string, gameId?: string) => Collection | null;
   addToCollection: (collectionId: string, gameId: string) => void;
@@ -375,6 +377,13 @@ export function GamesProvider({ children }: { children: ReactNode }) {
     writePersist(persist);
   }, []);
 
+  const setLibrary = useCallback((ids: string[]) => {
+    const persist = readPersist();
+    if (persist.library.length === ids.length && persist.library.every((id, i) => id === ids[i])) return;
+    persist.library = [...ids];
+    writePersist(persist);
+  }, []);
+
   const createCollection = useCallback((name: string, gameId?: string): Collection | null => {
     const trimmed = name.trim();
     if (!trimmed) return null;
@@ -420,6 +429,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
         saveProfile,
         toggleLike,
         toggleLibrary,
+        setLibrary,
         removeFromHistory,
         createCollection,
         addToCollection,
@@ -434,6 +444,7 @@ export function GamesProvider({ children }: { children: ReactNode }) {
       saveProfile,
       toggleLike,
       toggleLibrary,
+      setLibrary,
       removeFromHistory,
       createCollection,
       addToCollection,

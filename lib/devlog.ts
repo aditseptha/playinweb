@@ -34,6 +34,7 @@ export const DEVLOG: DevlogRelease[] = [
       { kind: "new", text: "On iPhone, a landscape game asks you to turn your phone sideways." },
       { kind: "improved", text: "Portrait games play in a tall, phone-shaped frame on a computer." },
       { kind: "improved", text: "On a phone, a link that starts a game waits for your tap on Play, so the game can open fullscreen." },
+      { kind: "improved", text: "Your Library follows your account: save a game on your phone and it's there on your computer when you sign in." },
     ],
   },
   {

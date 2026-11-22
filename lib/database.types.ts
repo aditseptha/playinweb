@@ -341,6 +341,12 @@ export type Database = {
         Update: { project_id?: string; tag?: string }
         Relationships: []
       }
+      library_items: {
+        Row: { user_id: string; project_id: string; created_at: string }
+        Insert: { user_id: string; project_id: string; created_at?: string }
+        Update: { user_id?: string; project_id?: string; created_at?: string }
+        Relationships: []
+      }
       projects: {
         Row: {
           classification: string
