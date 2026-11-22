@@ -47,12 +47,15 @@ function isPhonePlay() {
 }
 
 /**
- * Same-origin games (DesKop) pin their buttons with position:fixed. Inside an iframe that sticks
- * to the page, not the frame, so the button lands below the stage and gets clipped. A transform
- * on the game document holds those buttons inside the frame.
+ * Same-origin games (DesKop) pin Sautan and the main button with position:fixed. A transform on
+ * <html> does not hold those buttons inside an iframe, so they land under the phone screen and
+ * get clipped. A transform on <body> does.
  *
  * `flush` drops the game's own bottom safe-area. The player bar already sits on the screen edge,
  * so that padding would leave a gap under the game's cards.
+ *
+ * DesKop also sizes the map with 100vh. On a phone that is the whole screen, taller than this
+ * frame, so the village panel (anchored to the map bottom) slides down behind the role cards.
  */
 function lockFrameLayout(iframe: HTMLIFrameElement, on: boolean, flush: boolean) {
   try {
@@ -62,10 +65,12 @@ function lockFrameLayout(iframe: HTMLIFrameElement, on: boolean, flush: boolean)
     if (!doc || !root || !body) return;
     root.style.height = on ? "100%" : "";
     root.style.overflow = on ? "hidden" : "";
-    root.style.transform = on ? "translateZ(0)" : "";
+    root.style.transform = "";
     root.style.paddingBottom = on && flush ? "0px" : "";
+    body.style.position = on ? "relative" : "";
     body.style.height = on ? "100%" : "";
     body.style.overflow = on ? "hidden" : "";
+    body.style.transform = on ? "translateZ(0)" : "";
     let fit = doc.getElementById("pw-frame-fit");
     if (on && flush) {
       if (!fit) {
@@ -73,14 +78,81 @@ function lockFrameLayout(iframe: HTMLIFrameElement, on: boolean, flush: boolean)
         fit.id = "pw-frame-fit";
         doc.head.appendChild(fit);
       }
-      fit.textContent = ".bar,.homesheet,.mbox,.lfoot,.qz{padding-bottom:8px !important}";
-      iframe.contentWindow?.dispatchEvent(new Event("resize"));
+      fit.textContent = [
+        ".bar,.homesheet,.mbox,.lfoot,.qz{padding-bottom:8px !important}",
+        "#world,#hud,#labels{height:100% !important;max-height:100% !important}",
+      ].join("");
+      body.style.removeProperty("--mapH");
     } else {
       fit?.remove();
+      body.style.removeProperty("--mapH");
+      doc.querySelectorAll<HTMLElement>(".hud-bot").forEach((el) => {
+        el.style.bottom = "";
+      });
     }
   } catch {
     // A cross-origin embed can't be restyled. Fullscreen still gives it the whole screen.
   }
+}
+
+/** Keep Desaku above the role cards after DesKop's own dock measurement goes stale. */
+function placeVillagePanel(iframe: HTMLIFrameElement) {
+  const doc = iframe.contentDocument;
+  const body = doc?.body;
+  if (!doc || !body) return;
+  const bar = doc.querySelector<HTMLElement>(".bar");
+  if (bar) {
+    const nextBar = `${Math.ceil(bar.getBoundingClientRect().height)}px`;
+    if (body.style.getPropertyValue("--barH") !== nextBar) body.style.setProperty("--barH", nextBar);
+  }
+  const hud = doc.getElementById("hud");
+  const bot = doc.querySelector<HTMLElement>(".hud-bot");
+  if (!hud || !bot) return;
+  const app = doc.getElementById("app");
+  const hudBox = hud.getBoundingClientRect();
+  const appBox = app?.getBoundingClientRect();
+  const barBox = bar?.getBoundingClientRect();
+  const limitTop = appBox && appBox.height > 8 ? appBox.top : barBox ? barBox.top : hudBox.bottom;
+  const gap = body.classList.contains("m-home") ? 14 : 8;
+  const bottom = Math.max(gap, Math.round(hudBox.bottom - limitTop + gap));
+  const current = parseFloat(bot.style.bottom);
+  if (!Number.isFinite(current) || Math.abs(current - bottom) > 1) bot.style.bottom = `${bottom}px`;
+}
+
+function watchVillagePanel(iframe: HTMLIFrameElement) {
+  const doc = iframe.contentDocument;
+  const win = iframe.contentWindow;
+  if (!doc?.body || !win) return () => {};
+  let frame = 0;
+  const schedule = () => {
+    if (frame) return;
+    frame = win.requestAnimationFrame(() => {
+      frame = 0;
+      placeVillagePanel(iframe);
+    });
+  };
+  const observer = new win.MutationObserver(schedule);
+  observer.observe(doc.body, { attributes: true, attributeFilter: ["class"] });
+  const boxes = new win.ResizeObserver(schedule);
+  const app = doc.getElementById("app");
+  const hud = doc.getElementById("hud");
+  if (app) {
+    observer.observe(app, { childList: true });
+    boxes.observe(app);
+  }
+  if (hud) {
+    observer.observe(hud, { childList: true });
+    boxes.observe(hud);
+  }
+  schedule();
+  return () => {
+    if (frame) win.cancelAnimationFrame(frame);
+    observer.disconnect();
+    boxes.disconnect();
+    doc.querySelectorAll<HTMLElement>(".hud-bot").forEach((el) => {
+      el.style.bottom = "";
+    });
+  };
 }
 
 type HeroCtx = {
@@ -927,11 +999,20 @@ function PlayFrame({
   useEffect(() => {
     const el = iframeRef.current;
     if (!el) return;
-    const apply = () => lockFrameLayout(el, lockLayout, flushBottom);
+    let stopWatch = () => {};
+    const apply = () => {
+      stopWatch();
+      lockFrameLayout(el, lockLayout, flushBottom);
+      stopWatch = lockLayout && flushBottom ? watchVillagePanel(el) : () => {};
+    };
     apply();
     el.addEventListener("load", apply);
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
     return () => {
       el.removeEventListener("load", apply);
+      observer.disconnect();
+      stopWatch();
       lockFrameLayout(el, false, false);
     };
   }, [lockLayout, flushBottom, src]);
