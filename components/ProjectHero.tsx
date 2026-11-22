@@ -38,6 +38,34 @@ type Slide = { id: string; kind: "trailer" | "cover" | "shot" | "clip"; src?: st
 /** A game that hasn't signalled it loaded after this long gets the "didn't load" screen. */
 const LOAD_TIMEOUT_MS = 25_000;
 
+// Phones and small tablets. A coarse pointer keeps a resized desktop window out of this.
+const PHONE_PLAY = "(pointer: coarse) and (max-width: 1024px)";
+const PHONE_PLAY_EVENT = "playinweb:phone-play";
+
+function isPhonePlay() {
+  return typeof window !== "undefined" && window.matchMedia(PHONE_PLAY).matches;
+}
+
+/**
+ * Same-origin games (DesKop) pin their buttons with position:fixed. Inside an iframe that sticks
+ * to the page, not the frame, so the button lands below the stage and gets clipped. A transform
+ * on the game document holds those buttons inside the frame.
+ */
+function lockFrameLayout(iframe: HTMLIFrameElement, on: boolean) {
+  try {
+    const root = iframe.contentDocument?.documentElement;
+    const body = iframe.contentDocument?.body;
+    if (!root || !body) return;
+    root.style.height = on ? "100%" : "";
+    root.style.overflow = on ? "hidden" : "";
+    root.style.transform = on ? "translateZ(0)" : "";
+    body.style.height = on ? "100%" : "";
+    body.style.overflow = on ? "hidden" : "";
+  } catch {
+    // A cross-origin embed can't be restyled. Fullscreen still gives it the whole screen.
+  }
+}
+
 type HeroCtx = {
   game: Game;
   trailer: Trailer | null;
@@ -192,6 +220,8 @@ export function ProjectHeroRoot({
           }
           setPlaying(true);
           setExpanded(true);
+          // During the tap, so the Fullscreen API still counts it as a user gesture.
+          if (isPhonePlay()) window.dispatchEvent(new Event(PHONE_PLAY_EVENT));
         }
         onPlay();
       },
@@ -271,9 +301,14 @@ export function ProjectHeroStage() {
     expand,
   } = useProjectHero();
   const stageRef = useRef<HTMLDivElement>(null);
+  // Set once the player leaves phone fullscreen, so the open-on-play fallback doesn't pull them back in.
+  const leftPhoneFullscreen = useRef(false);
   const [fullscreen, setFullscreen] = useState(false);
   // Fallback for browsers without the Fullscreen API on elements (Safari on iPhone).
   const [pseudo, setPseudo] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  // The visible screen, not 100dvh, which on a phone still runs under the browser bar.
+  const [frameBox, setFrameBox] = useState<{ top: number; height: number } | null>(null);
   // Which frame (by frameKey) has finished loading, and which one timed out.
   const [loadedKey, setLoadedKey] = useState<number | null>(null);
   const [timedOutKey, setTimedOutKey] = useState<number | null>(null);
@@ -287,6 +322,14 @@ export function ProjectHeroStage() {
     }
     document.addEventListener("fullscreenchange", sync);
     return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+
+  useEffect(() => {
+    const query = window.matchMedia(PHONE_PLAY);
+    const sync = () => setMobile(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
   }, []);
 
   const [prevLoadEpoch, setPrevLoadEpoch] = useState({ running, frameKey });
@@ -308,11 +351,19 @@ export function ProjectHeroStage() {
   const [prevRunning, setPrevRunning] = useState(running);
   if (running !== prevRunning) {
     setPrevRunning(running);
-    if (!running) setPseudo(false);
+    if (!running) {
+      leftPhoneFullscreen.current = false;
+      setPseudo(false);
+    }
   }
 
   // A dialog is opening (sign in, report, ...): drop the fallback fullscreen so it can be seen.
-  useEffect(() => onLeaveFullscreen(() => setPseudo(false)), []);
+  useEffect(() => {
+    return onLeaveFullscreen(() => {
+      leftPhoneFullscreen.current = true;
+      setPseudo(false);
+    });
+  }, []);
 
   useEffect(() => {
     if (!pseudo) return;
@@ -321,7 +372,10 @@ export function ProjectHeroStage() {
     if (root) root.style.overflow = "hidden";
     // Esc only reaches the page when focus is outside the game, so the Exit button stays visible too.
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setPseudo(false);
+      if (e.key === "Escape") {
+        leftPhoneFullscreen.current = true;
+        setPseudo(false);
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => {
@@ -330,17 +384,9 @@ export function ProjectHeroStage() {
     };
   }, [pseudo]);
 
-  async function toggleFullscreen() {
+  async function enterFullscreen() {
     const node = stageRef.current;
-    if (!node) return;
-    if (pseudo) {
-      setPseudo(false);
-      return;
-    }
-    if (document.fullscreenElement) {
-      await document.exitFullscreen().catch(() => {});
-      return;
-    }
+    if (!node || pseudo || document.fullscreenElement) return;
     if (document.fullscreenEnabled && typeof node.requestFullscreen === "function") {
       try {
         await node.requestFullscreen();
@@ -352,13 +398,73 @@ export function ProjectHeroStage() {
     setPseudo(true);
   }
 
+  const enterFullscreenRef = useRef(enterFullscreen);
+  enterFullscreenRef.current = enterFullscreen;
+
+  // Play on a phone opens the game fullscreen. A later fallback covers the case where the
+  // Fullscreen API is missing (iPhone) or the play started without a tap (?play=1).
+  useEffect(() => {
+    function onPhonePlay() {
+      setMobile(true);
+      void enterFullscreenRef.current();
+    }
+    window.addEventListener(PHONE_PLAY_EVENT, onPhonePlay);
+    return () => window.removeEventListener(PHONE_PLAY_EVENT, onPhonePlay);
+  }, []);
+
+  useEffect(() => {
+    if (!running || !mobile) return;
+    const id = window.setTimeout(() => {
+      if (leftPhoneFullscreen.current || document.fullscreenElement) return;
+      setPseudo(true);
+    }, 80);
+    return () => window.clearTimeout(id);
+  }, [running, mobile]);
+
+  useEffect(() => {
+    if (!pseudo || !mobile) return;
+    const viewport = window.visualViewport;
+    const apply = () => {
+      const next = {
+        top: viewport?.offsetTop ?? 0,
+        height: viewport?.height ?? window.innerHeight,
+      };
+      setFrameBox((prev) => (prev && prev.top === next.top && prev.height === next.height ? prev : next));
+    };
+    apply();
+    viewport?.addEventListener("resize", apply);
+    viewport?.addEventListener("scroll", apply);
+    window.addEventListener("resize", apply);
+    return () => {
+      viewport?.removeEventListener("resize", apply);
+      viewport?.removeEventListener("scroll", apply);
+      window.removeEventListener("resize", apply);
+      setFrameBox(null);
+    };
+  }, [pseudo, mobile]);
+
+  async function toggleFullscreen() {
+    const node = stageRef.current;
+    if (!node) return;
+    if (pseudo || document.fullscreenElement) {
+      leftPhoneFullscreen.current = true;
+      setPseudo(false);
+      if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+      return;
+    }
+    leftPhoneFullscreen.current = false;
+    await enterFullscreen();
+  }
+
   async function collapse() {
     if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+    leftPhoneFullscreen.current = true;
     setPseudo(false);
     shrink();
   }
 
   const isFull = fullscreen || pseudo;
+  const phoneFull = isFull && mobile;
   const frameSize = playFrameSize(game.curated, game.playUrl);
   const poster = !current || current.kind === "cover" || current.kind === "shot";
 
@@ -367,13 +473,21 @@ export function ProjectHeroStage() {
       ref={stageRef}
       id="game-stage"
       className={cn(
-        "project-stage dark relative flex flex-col overflow-hidden border border-[color-mix(in_srgb,var(--pw-sky)_18%,transparent)] bg-pw-night-950 shadow-pw-3",
+        "project-stage dark flex flex-col overflow-hidden bg-pw-night-950 shadow-pw-3",
+        // `fixed` has to replace `relative`. Tailwind keeps whichever rule comes last in the
+        // stylesheet, so listing both leaves the stage in the page and the game's bottom is clipped.
         pseudo
-          ? "fixed inset-x-0 top-0 z-[100] h-dvh overscroll-contain rounded-none border-0 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
-          : "rounded-[22px]",
+          ? "fixed inset-x-0 z-[100] overscroll-contain rounded-none border-0"
+          : "relative rounded-[22px] border border-[color-mix(in_srgb,var(--pw-sky)_18%,transparent)]",
+        pseudo && !frameBox && "top-0 h-dvh",
       )}
+      style={
+        pseudo && frameBox
+          ? { position: "fixed", left: 0, right: 0, top: frameBox.top, height: frameBox.height, zIndex: 100 }
+          : undefined
+      }
     >
-      <div className={cn("stage-media relative w-full overflow-hidden", pseudo ? "min-h-0 flex-1" : "aspect-video")}>
+      <div className={cn("stage-media relative w-full overflow-hidden", pseudo || phoneFull ? "min-h-0 flex-1" : "aspect-video")}>
         {running ? (
           <>
             <PlayFrame
@@ -381,6 +495,7 @@ export function ProjectHeroStage() {
               src={game.playUrl}
               title={game.title}
               size={frameSize}
+              lockLayout={mobile}
               onLoad={() => setLoadedKey(frameKey)}
             />
             {timedOut ? (
@@ -509,7 +624,26 @@ export function ProjectHeroStage() {
         ) : null}
       </div>
 
-      {running ? (
+      {phoneFull ? (
+        <button
+          type="button"
+          aria-label="Exit fullscreen"
+          className={cn(stageIconButton, "z-30 h-11 shadow-pw-3")}
+          style={{
+            position: "absolute",
+            top: "max(10px, env(safe-area-inset-top))",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 30,
+          }}
+          onClick={() => void toggleFullscreen()}
+        >
+          <IconFullscreenExit aria-hidden className="size-4" />
+          Exit
+        </button>
+      ) : null}
+
+      {running && !phoneFull ? (
         <div className="flex shrink-0 items-center gap-2 border-t border-[color-mix(in_srgb,var(--pw-sky)_12%,transparent)] bg-pw-night-900 px-3 py-2">
           <p className="mr-auto flex min-w-0 items-center gap-2 text-pw-body-sm text-pw-on-art">
             <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-pw-success" />
@@ -724,11 +858,13 @@ function PlayFrame({
   src,
   title,
   size,
+  lockLayout,
   onLoad,
 }: {
   src: string;
   title: string;
   size: { width: number; height: number } | null;
+  lockLayout: boolean;
   onLoad: () => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -771,6 +907,18 @@ function PlayFrame({
       if (reveal !== undefined) window.clearTimeout(reveal);
     };
   }, [src, notifyLoaded]);
+
+  useEffect(() => {
+    const el = iframeRef.current;
+    if (!el) return;
+    const apply = () => lockFrameLayout(el, lockLayout);
+    apply();
+    el.addEventListener("load", apply);
+    return () => {
+      el.removeEventListener("load", apply);
+      lockFrameLayout(el, false);
+    };
+  }, [lockLayout, src]);
 
   useEffect(() => {
     const box = boxRef.current;
