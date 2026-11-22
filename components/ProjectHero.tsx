@@ -463,11 +463,12 @@ export function ProjectHeroStage() {
   const [prevRunning, setPrevRunning] = useState(running);
   if (running !== prevRunning) {
     setPrevRunning(running);
-    if (!running) {
-      leftPhoneFullscreen.current = false;
-      setPseudo(false);
-    }
+    if (!running) setPseudo(false);
   }
+  // The next game may open fullscreen again. A ref, so it is written after render, not during it.
+  useEffect(() => {
+    if (!running) leftPhoneFullscreen.current = false;
+  }, [running]);
 
   // A dialog is opening (sign in, report, ...): drop the fallback fullscreen so it can be seen.
   useEffect(() => {
@@ -510,8 +511,12 @@ export function ProjectHeroStage() {
     setPseudo(true);
   }
 
+  // The tap handler below always reaches the latest enterFullscreen. Updated after each render, since
+  // refs must not be written during one.
   const enterFullscreenRef = useRef(enterFullscreen);
-  enterFullscreenRef.current = enterFullscreen;
+  useEffect(() => {
+    enterFullscreenRef.current = enterFullscreen;
+  });
 
   // Play on a phone opens the game fullscreen. A later fallback covers the case where the
   // Fullscreen API is missing (iPhone) or the play started without a tap (?play=1).
