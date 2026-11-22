@@ -29,17 +29,43 @@ export function WaitingImage(props: Props) {
 
 function Waiting({ src, optimize, sizes, quality, priority = false, className, style }: Props) {
   const [state, setState] = useState<"unknown" | "loading" | "done">("unknown");
-  const ref = useCallback((img: HTMLImageElement | null) => {
-    if (img) setState(img.complete && img.naturalWidth > 0 ? "done" : "loading");
-  }, []);
-  // A broken image stops the shimmer too: waiting forever reads as "still loading".
+  // The optimizer can refuse a new cover (quota, or a size this browser has not cached).
+  // The file on storage still displays, so use that instead of leaving a blank card.
+  const [direct, setDirect] = useState(false);
   const done = useCallback(() => setState("done"), []);
+  const fail = useCallback(() => {
+    if (optimize && !direct) {
+      setDirect(true);
+      setState("loading");
+      return;
+    }
+    setState("done");
+  }, [optimize, direct]);
+  const ref = useCallback(
+    (img: HTMLImageElement | null) => {
+      if (!img) return;
+      const reveal = () => {
+        if (img.naturalWidth > 0) setState("done");
+        else if (img.complete) fail();
+      };
+      if (img.complete) {
+        reveal();
+        return;
+      }
+      setState("loading");
+      img.addEventListener("load", reveal, { once: true });
+      img.addEventListener("error", () => fail(), { once: true });
+      if (img.complete) reveal();
+    },
+    [fail],
+  );
   const cls = cn(className, "transition-[transform,opacity]", state === "loading" && "opacity-0");
+  const optimized = optimize && !direct;
 
   return (
     <>
       {state === "done" ? null : <span aria-hidden data-image-wait="" className="pw-shimmer absolute inset-0" />}
-      {optimize ? (
+      {optimized ? (
         <Image
           ref={ref}
           src={src}
@@ -51,7 +77,7 @@ function Waiting({ src, optimize, sizes, quality, priority = false, className, s
           className={cls}
           style={style}
           onLoad={done}
-          onError={done}
+          onError={fail}
         />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
@@ -64,7 +90,7 @@ function Waiting({ src, optimize, sizes, quality, priority = false, className, s
           className={cn("absolute inset-0 size-full", cls)}
           style={style}
           onLoad={done}
-          onError={done}
+          onError={fail}
         />
       )}
     </>
