@@ -70,7 +70,9 @@ function lockFrameLayout(iframe: HTMLIFrameElement, on: boolean, flush: boolean)
     body.style.position = on ? "relative" : "";
     body.style.height = on ? "100%" : "";
     body.style.overflow = on ? "hidden" : "";
-    body.style.transform = on ? "translateZ(0)" : "";
+    // A 2D transform keeps position:fixed inside the frame. translateZ would put the
+    // game canvas on a 3D layer that paints over the buttons while they stay clickable.
+    body.style.transform = on ? "translate(0px, 0px)" : "";
     let fit = doc.getElementById("pw-frame-fit");
     if (on && flush) {
       if (!fit) {
@@ -95,11 +97,27 @@ function lockFrameLayout(iframe: HTMLIFrameElement, on: boolean, flush: boolean)
   }
 }
 
+/**
+ * DesKop inserts the action bar inside #app, and #app scrolls. Once the frame contains
+ * position:fixed, that scroll clips the bar's pixels, so Sautan and Ketok palu stay
+ * clickable and disappear. The bar belongs on the document, above the cards.
+ */
+function liftActionBar(doc: Document) {
+  const app = doc.getElementById("app");
+  const fresh = app?.querySelector<HTMLElement>(".bar");
+  if (!fresh) return;
+  doc.querySelectorAll<HTMLElement>(".bar").forEach((el) => {
+    if (el !== fresh) el.remove();
+  });
+  if (fresh.parentElement !== doc.body) doc.body.appendChild(fresh);
+}
+
 /** Keep Desaku above the role cards after DesKop's own dock measurement goes stale. */
 function placeVillagePanel(iframe: HTMLIFrameElement) {
   const doc = iframe.contentDocument;
   const body = doc?.body;
   if (!doc || !body) return;
+  liftActionBar(doc);
   const bar = doc.querySelector<HTMLElement>(".bar");
   if (bar) {
     const nextBar = `${Math.ceil(bar.getBoundingClientRect().height)}px`;
@@ -154,6 +172,9 @@ function watchVillagePanel(iframe: HTMLIFrameElement) {
     doc.querySelectorAll<HTMLElement>(".hud-bot").forEach((el) => {
       el.style.bottom = "";
     });
+    const app = doc.getElementById("app");
+    const bar = doc.querySelector<HTMLElement>(".bar");
+    if (app && bar && bar.parentElement !== app) app.appendChild(bar);
   };
 }
 
