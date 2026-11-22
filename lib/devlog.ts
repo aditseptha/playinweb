@@ -28,6 +28,7 @@ export const DEVLOG: DevlogRelease[] = [
     title: "Phone games we actually tested",
     items: [
       { kind: "improved", text: "Phone now lists only games our team has played on a real phone: full touch controls, fills the screen, and loads well on mobile data." },
+      { kind: "new", text: "New games made for phones: puzzles, a deckbuilder, a strategy game, a platformer, a little LCD adventure and a few cozy toys." },
       { kind: "improved", text: "The \"Plays on your phone\" row shows up once there are enough tested games to fill it." },
       { kind: "new", text: "Creators can say whether their game is played with the phone upright or turned sideways." },
       { kind: "new", text: "On Android, Play opens the game truly fullscreen, and landscape games turn the screen sideways for you." },
