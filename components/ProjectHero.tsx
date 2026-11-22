@@ -50,17 +50,34 @@ function isPhonePlay() {
  * Same-origin games (DesKop) pin their buttons with position:fixed. Inside an iframe that sticks
  * to the page, not the frame, so the button lands below the stage and gets clipped. A transform
  * on the game document holds those buttons inside the frame.
+ *
+ * `flush` drops the game's own bottom safe-area. The player bar already sits on the screen edge,
+ * so that padding would leave a gap under the game's cards.
  */
-function lockFrameLayout(iframe: HTMLIFrameElement, on: boolean) {
+function lockFrameLayout(iframe: HTMLIFrameElement, on: boolean, flush: boolean) {
   try {
-    const root = iframe.contentDocument?.documentElement;
-    const body = iframe.contentDocument?.body;
-    if (!root || !body) return;
+    const doc = iframe.contentDocument;
+    const root = doc?.documentElement;
+    const body = doc?.body;
+    if (!doc || !root || !body) return;
     root.style.height = on ? "100%" : "";
     root.style.overflow = on ? "hidden" : "";
     root.style.transform = on ? "translateZ(0)" : "";
+    root.style.paddingBottom = on && flush ? "0px" : "";
     body.style.height = on ? "100%" : "";
     body.style.overflow = on ? "hidden" : "";
+    let fit = doc.getElementById("pw-frame-fit");
+    if (on && flush) {
+      if (!fit) {
+        fit = doc.createElement("style");
+        fit.id = "pw-frame-fit";
+        doc.head.appendChild(fit);
+      }
+      fit.textContent = ".bar,.homesheet,.mbox,.lfoot,.qz{padding-bottom:8px !important}";
+      iframe.contentWindow?.dispatchEvent(new Event("resize"));
+    } else {
+      fit?.remove();
+    }
   } catch {
     // A cross-origin embed can't be restyled. Fullscreen still gives it the whole screen.
   }
@@ -496,6 +513,7 @@ export function ProjectHeroStage() {
               title={game.title}
               size={frameSize}
               lockLayout={mobile}
+              flushBottom={phoneFull}
               onLoad={() => setLoadedKey(frameKey)}
             />
             {timedOut ? (
@@ -627,19 +645,15 @@ export function ProjectHeroStage() {
       {phoneFull ? (
         <button
           type="button"
-          aria-label="Exit fullscreen"
-          className={cn(stageIconButton, "z-30 h-11 shadow-pw-3")}
-          style={{
-            position: "absolute",
-            top: "max(10px, env(safe-area-inset-top))",
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 30,
-          }}
           onClick={() => void toggleFullscreen()}
+          className={cn(
+            "flex w-full shrink-0 items-center justify-center gap-1.5 border-t border-white/10 bg-pw-night-950 text-[13px] leading-none font-semibold text-pw-on-art",
+            focusRing,
+          )}
+          style={{ boxSizing: "content-box", height: 34, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         >
-          <IconFullscreenExit aria-hidden className="size-4" />
-          Exit
+          <IconFullscreenExit aria-hidden className="size-3.5" />
+          Exit fullscreen
         </button>
       ) : null}
 
@@ -859,12 +873,14 @@ function PlayFrame({
   title,
   size,
   lockLayout,
+  flushBottom,
   onLoad,
 }: {
   src: string;
   title: string;
   size: { width: number; height: number } | null;
   lockLayout: boolean;
+  flushBottom: boolean;
   onLoad: () => void;
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -911,14 +927,14 @@ function PlayFrame({
   useEffect(() => {
     const el = iframeRef.current;
     if (!el) return;
-    const apply = () => lockFrameLayout(el, lockLayout);
+    const apply = () => lockFrameLayout(el, lockLayout, flushBottom);
     apply();
     el.addEventListener("load", apply);
     return () => {
       el.removeEventListener("load", apply);
-      lockFrameLayout(el, false);
+      lockFrameLayout(el, false, false);
     };
-  }, [lockLayout, src]);
+  }, [lockLayout, flushBottom, src]);
 
   useEffect(() => {
     const box = boxRef.current;
