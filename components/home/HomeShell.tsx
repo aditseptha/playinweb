@@ -248,6 +248,9 @@ function PrimaryNav() {
   );
 }
 
+/** Matches the phone breakpoint in home.module.css, where the nav links hide and the menu sheet takes over. */
+const PHONE_MQ = "(max-width: 767px)";
+
 function Nav({ compact, onReport }: { compact: boolean; onReport: () => void }) {
   const { user, profile, loading, signOut } = useAuth();
   const { openLogin } = useLoginDialog();
@@ -291,7 +294,11 @@ function Nav({ compact, onReport }: { compact: boolean; onReport: () => void }) 
                     aria-label="Account menu"
                     aria-haspopup="menu"
                     aria-expanded={accountOpen}
-                    onClick={() => setAccountOpen((v) => !v)}
+                    onClick={() => {
+                      // Phones get the full menu sheet (Browse and You); the avatar replaces the burger there.
+                      if (window.matchMedia(PHONE_MQ).matches) setSheet(true);
+                      else setAccountOpen((v) => !v);
+                    }}
                   >
                     <Avatar
                       name={profile?.display_name ?? ""}
@@ -365,14 +372,17 @@ function Nav({ compact, onReport }: { compact: boolean; onReport: () => void }) 
                 </button>
               </>
             )}
-            <button
-              type="button"
-              className={cn(s.iconBtn, s.menuBtn)}
-              aria-label="Open menu"
-              onClick={() => setSheet(true)}
-            >
-              <IconMenu className={s.ic} />
-            </button>
+            {/* Signed in, the avatar opens the menu sheet on phones, so the burger is only for guests. */}
+            {user ? null : (
+              <button
+                type="button"
+                className={cn(s.iconBtn, s.menuBtn)}
+                aria-label="Open menu"
+                onClick={() => setSheet(true)}
+              >
+                <IconMenu className={s.ic} />
+              </button>
+            )}
           </div>
           </div>
         </div>
@@ -439,8 +449,15 @@ function MenuSheet({
         <div className={cn(s.sheetBody, s.menuSheet)}>
           {signedIn && profile ? (
             <div className={s.menuSheetHead}>
-              <b>{profile.display_name || profile.handle}</b>
-              {profile.handle ? <small>@{profile.handle}</small> : null}
+              <Avatar
+                name={profile.display_name ?? ""}
+                src={publicMediaUrl(profile.avatar_path) || undefined}
+                size={44}
+              />
+              <div>
+                <b>{profile.display_name || profile.handle}</b>
+                {profile.handle ? <small>@{profile.handle}</small> : null}
+              </div>
             </div>
           ) : null}
 
@@ -466,7 +483,8 @@ function MenuSheet({
                   Add game
                 </Link>
               ) : null}
-              {ACCOUNT_LINKS.filter((l) => visible(l.href)).map((l) => (
+              {/* Library is already under Browse, so the sheet lists it once. */}
+              {ACCOUNT_LINKS.filter((l) => visible(l.href) && !NAV.some((n) => n.href === l.href)).map((l) => (
                 <Link
                   key={l.href}
                   href={hrefFor(l.href)}
@@ -566,7 +584,12 @@ function Footer({ onReport }: { onReport: () => void }) {
   return (
     <footer className={cn(s.footer, s.frame)}>
       <div className={s.footerGrid} style={{ "--mosaic-crest": "116px" } as CSSProperties} aria-hidden>
-        <MosaicGrid cols={160} omitBefore={16} omitFrom={192} shadeSolid={false} />
+        {/* Solid rows run to the footer's bottom edge (it clips the rest), so text that stacks on phones,
+            or sits above the game page's Play bar, stays on the blue. Cells stay 16px. */}
+        <MosaicGrid cols={160} omitBefore={16} shadeSolid={false} padRows={8} className={s.mosaicWide} />
+        {/* Phones: fewer filled rows between the varied top edge and the text (solidRows 13 → 8, shifted up 32px in CSS).
+            The edge is drawn relative to solidRows, so it keeps its shape. padRows fills down past the Play bar. */}
+        <MosaicGrid cols={160} omitBefore={16} solidRows={8} shadeSolid={false} padRows={8} className={s.mosaicPhone} />
       </div>
       <div className={s.wrap}>
         <div className={s.fTop}>

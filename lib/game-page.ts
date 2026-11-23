@@ -38,21 +38,6 @@ export const getGameById = cache(async (id: string) => {
   return withCredit(supabase, toRecord(data));
 });
 
-/** How many published games the creator has, for "{n} games" on the creator card. */
-export const getCreatorGameCount = cache(async (ownerId: string) => {
-  const supabase = await createClient();
-  const { count, error } = await supabase
-    .from("projects")
-    .select("id", { count: "exact", head: true })
-    .eq("owner_id", ownerId)
-    .eq("published", true);
-  if (error) {
-    console.error(error);
-    return null;
-  }
-  return count ?? null;
-});
-
 export const getGameByHandleSlug = cache(async (handle: string, slug: string) => {
   const supabase = await createClient();
   const { data: profile } = await supabase.from("profiles").select("id").eq("handle", handle).maybeSingle();
