@@ -4,7 +4,7 @@ import { IconBookmark, IconPlay, IconPlus } from "@/components/icons";
 import { GameThumb } from "@/components/GameThumb";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type TouchEvent } from "react";
 import { playHref } from "@/components/GameCard";
 import s from "@/components/home/home.module.css";
 import { useHomeUi } from "@/components/home/Peek";
@@ -127,10 +127,35 @@ export function Hero({ games }: { games: Game[] }) {
     return () => window.clearInterval(id);
   }, [count, reduceMotion, paused, slideKey]);
 
+  // Swipe left or right to change slides on touch screens. A mostly vertical move is a page scroll.
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: TouchEvent) => {
+    if (count < 2 || e.touches.length !== 1) return;
+    touchStart.current = { x: e.touches[0]!.clientX, y: e.touches[0]!.clientY };
+    setPaused(true);
+  };
+  const onTouchEnd = (e: TouchEvent) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    setPaused(false);
+    const t = e.changedTouches[0];
+    if (!start || !t) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    setIndex((i) => (i + (dx < 0 ? 1 : count - 1)) % count);
+  };
+
   return (
     <section
       className={cn(s.hero, s.onDark)}
       aria-labelledby="hero-title"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={() => {
+        touchStart.current = null;
+        setPaused(false);
+      }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
@@ -201,9 +226,16 @@ export function Hero({ games }: { games: Game[] }) {
                     <IconPlay className={s.ic} />
                     Play now
                   </Link>
-                  <button type="button" className={cn(s.btn, s.btnDark)} aria-pressed={saved} onClick={() => toggleSave(active)}>
+                  <button
+                    type="button"
+                    className={cn(s.btn, s.btnDark, s.heroSave)}
+                    aria-pressed={saved}
+                    aria-label={saved ? "Saved" : "Save"}
+                    onClick={() => toggleSave(active)}
+                  >
                     <IconBookmark className={cn(s.ic, saved && s.saved)} filled={saved} />
-                    {saved ? "Saved" : "Save"}
+                    {/* Icon only on phones, so Play, Save and the slide thumbnails share one row. */}
+                    <span className={s.heroSaveLabel}>{saved ? "Saved" : "Save"}</span>
                   </button>
                 </>
               ) : (
@@ -225,7 +257,10 @@ export function Hero({ games }: { games: Game[] }) {
                     className={cn(s.heroThumb, i === index && s.heroThumbOn)}
                     onClick={() => setIndex(i)}
                   >
-                    <GameThumb game={game} sizes="40px" ratio="portrait" />
+                    {/* Thumbnails on larger screens; on phones the CSS shows a dot instead. */}
+                    <span className={s.heroThumbArt}>
+                      <GameThumb game={game} sizes="40px" ratio="portrait" />
+                    </span>
                   </button>
                 ))}
               </div>

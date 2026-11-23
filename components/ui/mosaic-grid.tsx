@@ -75,6 +75,22 @@ function buildCells(cols: number, fade: number, rowCount = ROWS, solidRows = SOL
   return cells;
 }
 
+/**
+ * Extra filled rows under the grid. A separate random stream, so adding them never reshuffles the
+ * cells above (the varied top edge is drawn on purpose).
+ */
+function buildPadCells(cols: number, startY: number, padRows: number, shadeSolid: boolean) {
+  const random = mulberry32(0xb0770);
+  const [min, max] = shadeSolid ? TEXT_ZONE_SHADE : EDGE_ZONE_SHADE;
+  const cells: Cell[] = [];
+  for (let r = 0; r < padRows; r++) {
+    for (let col = 0; col < cols; col++) {
+      cells.push({ x: col * CELL, y: startY + r * CELL, shade: min + random() * (max - min) });
+    }
+  }
+  return cells;
+}
+
 export function MosaicGrid({
   className,
   cols = COLS,
@@ -84,6 +100,7 @@ export function MosaicGrid({
   omitBefore = 0,
   omitFrom = Number.POSITIVE_INFINITY,
   shadeSolid = true,
+  padRows = 0,
 }: {
   className?: string;
   cols?: number;
@@ -99,12 +116,17 @@ export function MosaicGrid({
   omitFrom?: number;
   /** Darken the solid rows so text on them stays readable. Off keeps every cell in the lighter range. */
   shadeSolid?: boolean;
+  /** Filled rows added under the grid, for a container taller than the grid. Leaves the cells above unchanged. */
+  padRows?: number;
 }) {
   const cells = useMemo(
-    () => buildCells(cols, fade, rows, solidRows, shadeSolid).filter((cell) => cell.y >= omitBefore && cell.y < omitFrom),
-    [cols, fade, rows, solidRows, shadeSolid, omitBefore, omitFrom],
+    () => [
+      ...buildCells(cols, fade, rows, solidRows, shadeSolid),
+      ...buildPadCells(cols, (rows + fade) * CELL, padRows, shadeSolid),
+    ].filter((cell) => cell.y >= omitBefore && cell.y < omitFrom),
+    [cols, fade, rows, solidRows, shadeSolid, omitBefore, omitFrom, padRows],
   );
-  const height = (rows + fade) * CELL;
+  const height = (rows + fade + padRows) * CELL;
   const rawId = useId();
   const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
   const cellsId = `mosaic-cells-${id}`;
