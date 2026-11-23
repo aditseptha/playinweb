@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { BEFORE_TURNING_ON } from "@/lib/money-features";
 
 export function FeatureList({
   features,
@@ -61,6 +62,9 @@ export function FeatureList({
               <div className="min-w-0">
                 <p className="text-ui font-medium">{feature.label}</p>
                 <p className="mt-0.5 text-caption text-text-subtle">{feature.description}</p>
+                {BEFORE_TURNING_ON[feature.id] && feature.hidden ? (
+                  <p className="mt-1 text-caption text-warning">{BEFORE_TURNING_ON[feature.id]}</p>
+                ) : null}
                 {message ? (
                   <p className={`mt-1 text-caption ${message === "Saved." ? "text-text-muted" : "text-danger"}`}>
                     {message}

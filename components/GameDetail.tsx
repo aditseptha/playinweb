@@ -35,6 +35,7 @@ import { ReportDialog } from "@/components/ReportDialog";
 import { useSignupDialog } from "@/components/SignupDialog";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
+import { useMoneyFeatures } from "@/lib/features";
 import { licenseLabel, shortUrl, type Curation } from "@/lib/curation";
 import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { formatJoined, formatPlays } from "@/lib/format";
@@ -42,6 +43,7 @@ import { addGuestPlayMs, GUEST_PLAY_LIMIT_MS, guestPlayExpired, guestPlayRemaini
 import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
 import { LEGAL_CONTACT_EMAIL } from "@/lib/legal";
 import { cachedAvatarUrl } from "@/lib/media";
+import { claimIntro } from "@/lib/money-features";
 import { RELEASE_STATUSES, STORES } from "@/lib/project-fields";
 import { isPersistedId, projectToGame, type ProjectRecord } from "@/lib/projects";
 import { moreFromCreator, similarGames } from "@/lib/related-games";
@@ -118,6 +120,7 @@ export function GameDetail({
   const { user, loading } = useAuth();
   const { openLogin } = useLoginDialog();
   const { openSignup } = useSignupDialog();
+  const money = useMoneyFeatures();
   const persisted = isPersistedId(project.id) && Boolean(project.owner_id);
   const game = projectToGame(project);
   const creator = project.profiles;
@@ -482,7 +485,7 @@ export function GameDetail({
           onClose={() => setClaimOpen(false)}
           copy={{
             title: "Claim this game",
-            intro: "Made this game? We will move it to your account, with its plays and likes, and you can edit it, open comments and take donations.",
+            intro: claimIntro(money),
             detailsPlaceholder: "How can we confirm it is yours? For example a link to your profile or repo, or an email from the address on your game page.",
             submit: "Send claim",
             sent: "Thanks. We will check it and reply to your account email.",

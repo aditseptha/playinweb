@@ -12,6 +12,8 @@ import { isAdminEmail } from "@/lib/admin";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { startNavigation } from "@/lib/nav-progress";
+import { useMoneyFeatures } from "@/lib/features";
+import { noticesEmptyText } from "@/lib/money-features";
 import { loadNotices, markNoticesSeen, noticesSeenAt, type Notice } from "@/lib/notices";
 
 const KIND_ICON: Record<string, AppIcon> = {
@@ -37,6 +39,7 @@ export function Notices() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
+  const money = useMoneyFeatures();
   const [items, setItems] = useState<Notice[] | null>(null);
   // Lazy read is hydration-safe: nothing renders until auth finishes loading on the client.
   const [seen, setSeen] = useState(noticesSeenAt);
@@ -52,7 +55,7 @@ export function Notices() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    loadNotices(user.id, isAdminEmail(user.email))
+    loadNotices(user.id, isAdminEmail(user.email), money)
       .then((rows) => {
         if (!cancelled) setItems(rows);
       })
@@ -62,7 +65,7 @@ export function Notices() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, money]);
 
   useEffect(() => {
     if (!open) return;
@@ -131,7 +134,7 @@ export function Notices() {
             <div className={s.noticeEmpty}>
               <Illustration name="no-notifications" size="s" />
               <b>No notifications yet</b>
-              <span>Donations, comments, follows, and payouts show up here.</span>
+              <span>{noticesEmptyText(money)}</span>
             </div>
           ) : (
             <ul className={s.noticeList}>

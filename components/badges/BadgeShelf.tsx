@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { BadgeSvg } from "@/components/badges/BadgeSvg";
 import type { BadgeRenderer, BadgeView } from "@/components/badges/badge-engine";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ds/popover";
@@ -20,7 +20,9 @@ import {
   type BadgeState,
 } from "@/lib/badges";
 import { cn } from "@/lib/cn";
+import { useMoneyFeatures } from "@/lib/features";
 import { formatDate } from "@/lib/format";
+import { badgeOpen } from "@/lib/money-features";
 import { usePrefersReducedMotion } from "@/lib/reduced-motion";
 import { createClient } from "@/lib/supabase/client";
 
@@ -65,7 +67,13 @@ export function BadgeShelf({
   id?: string;
   className?: string;
 }) {
-  const load = useBadgeBoard(profileId, viewerId);
+  const all = useBadgeBoard(profileId, viewerId);
+  const money = useMoneyFeatures();
+  // Badges for features that are not open yet (Supporter, #53) stay off the shelf and out of the count.
+  const load = useMemo<Load>(
+    () => (all.status === "ready" ? { status: "ready", board: all.board.filter((b) => badgeOpen(b.def.id, money)) } : all),
+    [all, money],
+  );
   if (load.status === "error") return null;
   const unlocked = load.status === "ready" ? load.board.filter((b) => b.level > 0).length : 0;
   return (
