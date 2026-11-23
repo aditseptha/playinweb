@@ -11,7 +11,7 @@ import {
   IconLineGraph,
   IconLogout,
   IconMore,
-  IconPlay,
+  IconGamepad,
   IconPlus,
   IconSettings,
   IconShare,
@@ -92,7 +92,7 @@ function Buttons() {
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="primary">
-            <IconPlay className="fill-current" aria-hidden /> Play now
+            <IconGamepad className="fill-current" aria-hidden /> Play now
           </Button>
           <Button variant="secondary">
             <IconHeart aria-hidden /> Save

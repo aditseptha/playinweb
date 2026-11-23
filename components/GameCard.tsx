@@ -1,7 +1,7 @@
 import { Silkscreen } from "next/font/google";
 import Link from "next/link";
 import { GameThumb } from "@/components/GameThumb";
-import { IconPlay } from "@/components/icons";
+import { IconGamepad } from "@/components/icons";
 import { LinkButton } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { channelPath, formatPlays, gamePath } from "@/lib/format";
@@ -152,7 +152,7 @@ export function GameCard({
             </Link>
           </h3>
           <LinkButton href={playHref(game)} variant="primary" size="sm" className="gap-1.5">
-            <IconPlay className="h-3.5 w-3.5" />
+            <IconGamepad className="h-3.5 w-3.5" />
             Play
           </LinkButton>
         </div>
@@ -194,7 +194,7 @@ export function GameCard({
           <Meta game={game} />
         </div>
         <LinkButton href={playHref(game)} variant="primary" size="sm" className="absolute right-3 top-3 z-10 gap-1.5">
-          <IconPlay className="h-3.5 w-3.5" />
+          <IconGamepad className="h-3.5 w-3.5" />
           Play
         </LinkButton>
       </article>

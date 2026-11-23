@@ -1,6 +1,6 @@
 "use client";
 
-import { IconComment, IconGamepad, IconInbox, IconPlay, IconPlus, IconTrash } from "@/components/icons";
+import { IconComment, IconGamepad, IconInbox, IconPlus, IconTrash } from "@/components/icons";
 import { useRef, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
@@ -109,7 +109,7 @@ function Templates() {
             aside={
               <>
                 <Button variant="primary" size="lg">
-                  <IconPlay className="fill-current" aria-hidden /> Play now
+                  <IconGamepad className="fill-current" aria-hidden /> Play now
                 </Button>
                 <div className="rounded-pw-xl border border-pw-line bg-pw-surface-1 p-4 text-pw-body-sm text-pw-text-soft">
                   Released {formatDate(DEMO_NOW)} · Adventure

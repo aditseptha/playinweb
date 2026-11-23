@@ -16,7 +16,7 @@ import {
   IconClock,
   IconHeart,
   IconLineGraph,
-  IconPlay,
+  IconGamepad,
   IconTrophy,
   IconUsers,
 } from "@/components/icons";
@@ -384,7 +384,7 @@ function PodiumCard({ game, rank, range, periods }: { game: Game; rank: Rank; ra
               focusRing,
             )}
           >
-            <IconPlay aria-hidden className={big ? "ml-0.5 size-5" : "ml-0.5 size-4"} />
+            <IconGamepad aria-hidden className={big ? "size-5" : "size-4"} />
           </Link>
         </div>
       </div>
@@ -508,7 +508,7 @@ function RankedRow({ game, rank, range, periods }: { game: Game; rank: number; r
       <Stats game={game} range={range} periods={periods} className="hidden text-[13.5px] font-bold text-pw-text sm:inline-flex" />
       <Button variant="primary" size="sm" asChild className="relative z-[2] max-sm:size-11 max-sm:px-0">
         <Link href={playHref(game)} aria-label={`Play ${game.title}`}>
-          <IconPlay aria-hidden />
+          <IconGamepad aria-hidden />
           <span className="max-sm:sr-only">Play</span>
         </Link>
       </Button>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { GameThumb } from "@/components/GameThumb";
-import { IconCalendar, IconCheck, IconClock, IconPlay, IconTrophy } from "@/components/icons";
+import { IconCalendar, IconCheck, IconClock, IconGamepad, IconTrophy } from "@/components/icons";
 import { useLoginDialog } from "@/components/LoginDialog";
 import { Button } from "@/components/ds/button";
 import { EmptyState } from "@/components/ds/empty-state";
@@ -466,7 +466,7 @@ function RankRow({ game, rank, bid }: { game: Game; rank: number; bid: number })
         </small>
       </Link>
       <Link href={play} className={cn(s.btn, s.btnPrimary)}>
-        <IconPlay className="h-3.5 w-3.5" />
+        <IconGamepad className="h-3.5 w-3.5" />
         Play
       </Link>
     </article>
