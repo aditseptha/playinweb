@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
     return [{ source: "/devlogs", destination: "/devlog", permanent: true }];
   },
   images: {
+    // Vercel's image optimization quota ran out (402 OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED), which
+    // blanked every cover and avatar it hadn't cached yet. Serve the stored files directly until uploads
+    // are resized at upload time; then this can come back on.
+    unoptimized: true,
     qualities: [75, 90],
     remotePatterns: [
       ...(supabaseHost
