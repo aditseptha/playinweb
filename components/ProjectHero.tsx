@@ -23,6 +23,8 @@ import {
   IconExternal,
   IconFullscreen,
   IconFullscreenExit,
+  IconBookmark,
+  IconKeyboard,
   IconPhone,
   IconPlay,
   IconShrink,
@@ -256,7 +258,16 @@ type HeroCtx = {
   shrink: () => void;
   expand: () => void;
   pickSlide: (id: string) => void;
+  /** On a phone, Play was tapped on a game that hasn't passed on a phone (#38): suggest a computer. */
+  desktopPrompt: boolean;
+  closeDesktopPrompt: () => void;
+  /** "Play here anyway": starts the game from the same tap, so fullscreen still works. */
+  playHereAnyway: () => void;
+  /** Save to Library from the desktop prompt. */
+  library?: HeroLibrary;
 };
+
+export type HeroLibrary = { saved: boolean; signedIn: boolean; onSave: () => void; onSignIn: () => void };
 
 const HeroContext = createContext<HeroCtx | null>(null);
 
@@ -279,6 +290,8 @@ export function ProjectHeroRoot({
   onPlay,
   onExpandedChange,
   onPlayingChange,
+  phoneGate = false,
+  library,
   children,
 }: {
   game: Game;
@@ -286,6 +299,9 @@ export function ProjectHeroRoot({
   autoPlay?: boolean;
   allowPlay?: boolean;
   playLocked?: boolean;
+  /** Phones get the desktop prompt instead of the game (#38). Set when the switch is on and the game isn't mobile ready. */
+  phoneGate?: boolean;
+  library?: HeroLibrary;
   onLoginRequest?: () => void;
   onSignupRequest?: () => void;
   onReport?: () => void;
@@ -357,8 +373,36 @@ export function ProjectHeroRoot({
     onPlayingChange?.(playing);
   }, [onPlayingChange, playing]);
 
-  const value = useMemo<HeroCtx>(
-    () => ({
+  // The desktop prompt (#38), and whether the player chose to play here anyway on this visit.
+  const [desktopPrompt, setDesktopPrompt] = useState(false);
+  const [playAnyway, setPlayAnyway] = useState(false);
+
+  const value = useMemo<HeroCtx>(() => {
+    // Starts the game: the guest limit, the move to the canonical address, then play.
+    function begin() {
+      if (!canPlay) return;
+      if (!allowPlay) {
+        onDeniedPlay?.();
+        return;
+      }
+      if (game.embeddable) {
+        const here = `${window.location.origin}${window.location.pathname}`.replace(/\/$/, "");
+        const canonical = listingUrl.replace(/\/$/, "");
+        if (canonical && here !== canonical) {
+          // Hard navigation: the canonical listing lives on the apex origin, which may differ from this host.
+          const url = new URL(listingUrl);
+          url.searchParams.set("play", "1");
+          window.location.assign(url.href);
+          return;
+        }
+        setPlaying(true);
+        setExpanded(true);
+        // During the tap, so the Fullscreen API still counts it as a user gesture.
+        if (isPhonePlay()) window.dispatchEvent(new Event(PHONE_PLAY_EVENT));
+      }
+      onPlay();
+    }
+    return {
       game,
       trailer,
       slides,
@@ -372,28 +416,25 @@ export function ProjectHeroRoot({
       onLoginRequest,
       onSignupRequest,
       onReport,
+      desktopPrompt,
+      library,
       startPlay() {
         if (!canPlay) return;
-        if (!allowPlay) {
-          onDeniedPlay?.();
+        // A phone, a game nobody has passed on a phone, and the switch on: suggest a computer (#38).
+        if (phoneGate && !playAnyway && isPhonePlay()) {
+          setDesktopPrompt(true);
+          document.getElementById("game-stage")?.scrollIntoView({ block: "start" });
           return;
         }
-        if (game.embeddable) {
-          const here = `${window.location.origin}${window.location.pathname}`.replace(/\/$/, "");
-          const canonical = listingUrl.replace(/\/$/, "");
-          if (canonical && here !== canonical) {
-            // Hard navigation: the canonical listing lives on the apex origin, which may differ from this host.
-            const url = new URL(listingUrl);
-            url.searchParams.set("play", "1");
-            window.location.assign(url.href);
-            return;
-          }
-          setPlaying(true);
-          setExpanded(true);
-          // During the tap, so the Fullscreen API still counts it as a user gesture.
-          if (isPhonePlay()) window.dispatchEvent(new Event(PHONE_PLAY_EVENT));
-        }
-        onPlay();
+        begin();
+      },
+      closeDesktopPrompt() {
+        setDesktopPrompt(false);
+      },
+      playHereAnyway() {
+        setPlayAnyway(true);
+        setDesktopPrompt(false);
+        begin();
       },
       restart() {
         setFrameKey((k) => k + 1);
@@ -412,29 +453,33 @@ export function ProjectHeroRoot({
       pickSlide(id: string) {
         setPlaying(false);
         setExpanded(false);
+        setDesktopPrompt(false);
         setSlide(id);
       },
-    }),
-    [
-      game,
-      trailer,
-      slides,
-      slide,
-      playing,
-      expanded,
-      current,
-      canPlay,
-      playLocked,
-      frameKey,
-      onLoginRequest,
-      onSignupRequest,
-      onReport,
-      allowPlay,
-      listingUrl,
-      onDeniedPlay,
-      onPlay,
-    ],
-  );
+    };
+  }, [
+    game,
+    trailer,
+    slides,
+    slide,
+    playing,
+    expanded,
+    current,
+    canPlay,
+    playLocked,
+    frameKey,
+    onLoginRequest,
+    onSignupRequest,
+    onReport,
+    allowPlay,
+    listingUrl,
+    onDeniedPlay,
+    onPlay,
+    desktopPrompt,
+    library,
+    phoneGate,
+    playAnyway,
+  ]);
 
   return <HeroContext.Provider value={value}>{children}</HeroContext.Provider>;
 }
@@ -469,6 +514,10 @@ export function ProjectHeroStage() {
     stop,
     shrink,
     expand,
+    desktopPrompt,
+    closeDesktopPrompt,
+    playHereAnyway,
+    library,
   } = useProjectHero();
   const stageRef = useRef<HTMLDivElement>(null);
   // Set once the player leaves phone fullscreen, so the open-on-play fallback doesn't pull them back in.
@@ -668,8 +717,16 @@ export function ProjectHeroStage() {
   const tall = running && !mobile && game.orientation === "portrait";
   // On a phone in fullscreen, ask to turn the phone when it is held the other way from the game.
   const turnTo = phoneFull && wanted && !rotateDismissed && (wanted === "landscape") === portraitNow ? wanted : null;
+  // The desktop prompt (#38) needs more room than a 16:9 box on a phone gives it.
+  const prompting = desktopPrompt && !running && !playLocked;
   const mediaSize =
-    pseudo || phoneFull || (tall && fullscreen) ? "min-h-0 flex-1" : tall ? "h-[min(78vh,820px)]" : "aspect-video";
+    pseudo || phoneFull || (tall && fullscreen)
+      ? "min-h-0 flex-1"
+      : tall
+        ? "h-[min(78vh,820px)]"
+        : prompting
+          ? "min-h-[24rem]"
+          : "aspect-video";
   const frame = running ? (
     <PlayFrame
       key={frameKey}
@@ -836,6 +893,9 @@ export function ProjectHeroStage() {
             ) : null}
           </>
         ) : null}
+        {prompting ? (
+          <PlayOnComputer library={library} onAnyway={playHereAnyway} onClose={closeDesktopPrompt} />
+        ) : null}
       </div>
 
       {phoneFull ? (
@@ -883,6 +943,71 @@ export function ProjectHeroStage() {
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * On a phone, after Play on a game nobody has passed on a phone, while the switch is on (#38).
+ * Saving puts it in the account's Library, so it is waiting on the computer; guests sign in first.
+ * "Play here anyway" stays, small: we can be wrong about a game, and the player decides.
+ */
+function PlayOnComputer({
+  library,
+  onAnyway,
+  onClose,
+}: {
+  library?: HeroLibrary;
+  onAnyway: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="region"
+      aria-label="Best played on a computer"
+      className="absolute inset-0 z-20 grid place-items-center bg-[color-mix(in_srgb,var(--pw-night-950)_90%,transparent)] px-5 py-6 text-center"
+    >
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className={cn("absolute top-3 right-3 grid size-9 place-items-center rounded-pw-pill text-pw-on-art", focusRing)}
+      >
+        <IconClose aria-hidden className="size-4" />
+      </button>
+      <div className="flex max-w-[20rem] flex-col items-center gap-3">
+        <span className="grid size-12 place-items-center rounded-full bg-[color-mix(in_srgb,var(--pw-sky)_16%,transparent)] text-pw-sky">
+          <IconKeyboard aria-hidden className="size-6" />
+        </span>
+        <div className="flex flex-col gap-1">
+          <p className={cn("text-pw-title font-bold", onArt)}>Best played on a computer</p>
+          <p className={cn("text-pw-body-sm", onArt)}>
+            This game may need a keyboard or a bigger screen. Save it and play it on your computer.
+          </p>
+        </div>
+        {library ? (
+          library.signedIn ? (
+            <Button variant="primary" onClick={library.onSave} aria-pressed={library.saved}>
+              <IconBookmark aria-hidden filled={library.saved} />
+              {library.saved ? "Saved to your Library" : "Save to Library"}
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={library.onSignIn}>
+              Sign in to save it
+            </Button>
+          )
+        ) : null}
+        {library?.saved ? (
+          <p className={cn("text-pw-caption", onArt)}>Open your Library on your computer to play it.</p>
+        ) : null}
+        <button
+          type="button"
+          onClick={onAnyway}
+          className={cn("mt-1 rounded-pw-sm text-pw-body-sm text-pw-on-art underline underline-offset-4", focusRing)}
+        >
+          Play here anyway
+        </button>
+      </div>
     </div>
   );
 }

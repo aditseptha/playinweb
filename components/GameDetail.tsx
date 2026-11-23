@@ -36,6 +36,7 @@ import { useSignupDialog } from "@/components/SignupDialog";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { licenseLabel, shortUrl, type Curation } from "@/lib/curation";
+import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { formatJoined, formatPlays } from "@/lib/format";
 import { addGuestPlayMs, GUEST_PLAY_LIMIT_MS, guestPlayExpired, guestPlayRemainingMs } from "@/lib/guest-play";
 import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
@@ -287,6 +288,16 @@ export function GameDetail({
   const stores = project.project_store_links ?? [];
   const own = Boolean(user && user.id === project.owner_id);
   const saved = library.includes(projectId);
+  // Phones get "Best played on a computer" for a game nobody has passed on a phone, once an admin
+  // turns the switch on (#38). Off while the feature list loads.
+  const { feature: phoneGateFeature } = useFeature("phone-gate");
+  const phoneGate = isFeaturePubliclyEnabled(phoneGateFeature, "phone-gate") && !game.mobileReady;
+  const heroLibrary = {
+    saved,
+    signedIn: Boolean(user),
+    onSave: () => toggleLibrary(projectId),
+    onSignIn: () => openLogin(),
+  };
   const removeHref = `mailto:${LEGAL_CONTACT_EMAIL}?subject=${encodeURIComponent(
     `Remove: ${project.title} (${shareUrl})`,
   )}&body=${encodeURIComponent("I made this game and want it removed from PlayInWeb. Link to my original game page:\n\n")}`;
@@ -396,6 +407,8 @@ export function GameDetail({
       }}
       onExpandedChange={setPlayerExpanded}
       onPlayingChange={setIsPlaying}
+      phoneGate={phoneGate}
+      library={heroLibrary}
       onPlay={() => {
         if (game.embeddable) void onPlay();
         else if (game.playUrl) {
