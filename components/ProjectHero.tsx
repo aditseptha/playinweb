@@ -24,6 +24,7 @@ import {
   IconFullscreen,
   IconFullscreenExit,
   IconBookmark,
+  IconGamepad,
   IconKeyboard,
   IconPhone,
   IconPlay,
@@ -857,7 +858,15 @@ export function ProjectHeroStage() {
                   aria-hidden
                   className="pointer-events-none absolute inset-0 z-[5] bg-[radial-gradient(60%_60%_at_50%_50%,color-mix(in_srgb,var(--pw-night-950)_35%,transparent),transparent_70%),linear-gradient(to_top,color-mix(in_srgb,var(--pw-night-950)_70%,transparent),transparent_45%)]"
                 />
-                <div className="absolute inset-0 z-10 grid place-items-center p-4">
+                {/* Phones: Play sits in the corner so the cover stays visible; computers keep it centred. */}
+                <div className="absolute right-3 bottom-3 z-10 md:hidden">
+                  <Button variant="primary" onClick={startPlay} aria-label={`Play ${game.title}`}>
+                    <IconGamepad aria-hidden />
+                    Play
+                    {game.embeddable ? null : <IconExternal aria-hidden />}
+                  </Button>
+                </div>
+                <div className="absolute inset-0 z-10 hidden place-items-center p-4 md:grid">
                   {game.embeddable ? (
                     <button
                       type="button"
