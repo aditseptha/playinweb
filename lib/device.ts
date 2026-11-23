@@ -1,8 +1,11 @@
 // Phone and Desktop filters (#38): which games play on which device, and which device this is.
 //
-// A game stores how it is controlled (projects.controls), not a device, because the controls decide
-// it: a tablet with a keyboard, a laptop with a touchscreen and a phone with a gamepad all exist.
-// An empty list means nobody has checked yet.
+// Phone means an admin played the game on a real phone and it passed (projects.mobile_ready): full
+// touch controls, fits the screen, loads fine on 4G. Touch in the controls list is not enough; plenty
+// of games that list it still need a keyboard or leave half the screen black.
+//
+// Desktop still reads how the game is controlled (projects.controls). An empty list means nobody has
+// checked yet.
 
 export const CONTROLS = ["touch", "keyboard", "mouse", "gamepad"] as const;
 export type Control = (typeof CONTROLS)[number];
@@ -24,11 +27,30 @@ export function normalizeControls(value: readonly string[] | null | undefined): 
   return CONTROLS.filter((c) => set.has(c));
 }
 
-/**
- * Plays on a phone: it supports touch, or it only needs a mouse (a tap acts as a click).
- * A game that needs a keyboard, or one nobody has checked, does not.
- */
-export function playsOnPhone(controls: readonly string[] | null | undefined): boolean {
+export const ORIENTATIONS = ["portrait", "landscape", "any"] as const;
+export type Orientation = (typeof ORIENTATIONS)[number];
+
+export const ORIENTATION_LABEL: Record<Orientation, string> = {
+  portrait: "Portrait",
+  landscape: "Landscape",
+  any: "Either way",
+};
+
+/** A stored orientation, or undefined for anything else (unset included). */
+export function parseOrientation(value: string | null | undefined): Orientation | undefined {
+  return ORIENTATIONS.find((o) => o === value);
+}
+
+/** What the device filters read from a game. */
+export type DeviceFacts = { controls?: readonly string[] | null; mobileReady?: boolean | null };
+
+/** Plays on a phone: an admin tested it on a real phone and it passed. */
+export function playsOnPhone(game: DeviceFacts): boolean {
+  return game.mobileReady === true;
+}
+
+/** The controls alone suggest a phone could work: touch, or a mouse and no keyboard (a tap is a click). */
+function touchFriendly(controls: readonly string[] | null | undefined): boolean {
   const c = normalizeControls(controls);
   return c.includes("touch") || (c.includes("mouse") && !c.includes("keyboard"));
 }
@@ -43,23 +65,28 @@ export function playsOnDesktop(controls: readonly string[] | null | undefined): 
 }
 
 /**
- * Worth a "Best on desktop" label on a phone (#47): somebody checked it, and it does not play on a
- * phone. Unchecked games get no label, because we do not know.
+ * Worth a "Best on desktop" label on a phone (#47): somebody checked its controls, they need a keyboard
+ * or gamepad, and nobody has passed it on a phone. Unchecked games get no label, because we do not know.
  */
-export function needsDesktop(controls: readonly string[] | null | undefined): boolean {
-  return normalizeControls(controls).length > 0 && !playsOnPhone(controls);
+export function needsDesktop(game: DeviceFacts): boolean {
+  if (playsOnPhone(game)) return false;
+  return normalizeControls(game.controls).length > 0 && !touchFriendly(game.controls);
 }
 
-export function matchesDevice(controls: readonly string[] | null | undefined, device: Device | null): boolean {
-  if (device === "phone") return playsOnPhone(controls);
-  if (device === "desktop") return playsOnDesktop(controls);
+export function matchesDevice(game: DeviceFacts, device: Device | null): boolean {
+  if (device === "phone") return playsOnPhone(game);
+  if (device === "desktop") return playsOnDesktop(game.controls);
   return true;
 }
 
-/** Supabase's error for a column that does not exist yet (the migration has not run). */
+/** Supabase's error for a column that does not exist yet (its migration has not run). */
 export function isMissingColumnError(error: { code?: string; message?: string } | null | undefined): boolean {
   if (!error) return false;
-  return error.code === "PGRST204" || error.code === "42703" || /column .*controls/i.test(error.message ?? "");
+  return (
+    error.code === "PGRST204" ||
+    error.code === "42703" ||
+    /column .*(controls|mobile_ready|orientation)/i.test(error.message ?? "")
+  );
 }
 
 export function parseDevice(value: string | null | undefined): Device | null {

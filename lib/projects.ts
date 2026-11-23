@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import type { Game } from "@/lib/types";
-import { normalizeControls } from "@/lib/device";
+import { normalizeControls, parseOrientation } from "@/lib/device";
 
 type Project = Database["public"]["Tables"]["projects"]["Row"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -65,6 +65,9 @@ const CATALOGUE_MEDIA_SELECT = `
 // controls arrive with 20261114130000_project_controls.sql (#38). Until it runs, the catalogue read
 // falls back to the select without it, so the homepage keeps working.
 const CATALOGUE_DEVICE_SELECT = CATALOGUE_MEDIA_SELECT.replace("created_at, embeddable", "created_at, controls, embeddable");
+// mobile_ready and orientation arrive with 20261122120000_project_mobile_ready.sql (#38), with the
+// same fallback.
+const CATALOGUE_MOBILE_SELECT = CATALOGUE_DEVICE_SELECT.replace("controls,", "controls, mobile_ready, orientation,");
 
 const CURATION_SELECT_BASE =
   "project_id, status, play_mode, creator_name, creator_url, source_url, source_code_url, license, license_url, modified";
@@ -132,6 +135,12 @@ function writeCatalogueCache(games: Game[]) {
 }
 
 async function selectCatalogue(supabase: ReturnType<typeof createClient>) {
+  const mobile = await supabase
+    .from("projects")
+    .select(CATALOGUE_MOBILE_SELECT)
+    .eq("published", true)
+    .order("created_at", { ascending: false });
+  if (!mobile.error) return mobile;
   const device = await supabase
     .from("projects")
     .select(CATALOGUE_DEVICE_SELECT)
@@ -451,6 +460,9 @@ export function projectToGame(project: ProjectRecord): Game {
     tags: (project.project_tags ?? []).map((t) => t.tag),
     // Undefined when the catalogue was read before the controls migration ran.
     controls: normalizeControls(project.controls),
+    // Unset when it was read before the mobile ready migration ran.
+    mobileReady: project.mobile_ready === true,
+    orientation: parseOrientation(project.orientation),
     createdAt: project.created_at,
     playCount: project.play_count,
     viewCount: project.view_count,
@@ -489,6 +501,8 @@ export function gameToProjectRecord(game: Game): ProjectRecord {
     owner_id: "",
     classification: "games",
     controls: game.controls ?? [],
+    mobile_ready: game.mobileReady ?? false,
+    orientation: game.orientation ?? null,
     community: "disabled",
     contains_ai: false,
     custom_noun: "game",
