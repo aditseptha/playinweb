@@ -1,6 +1,6 @@
 "use client";
 
-import { IconArrow, IconHeart, IconKeyboard, IconPlay, IconPlus, IconSpark, IconStar, IconUsers } from "@/components/icons";
+import { IconArrow, IconHeart, IconKeyboard, IconGamepad, IconPlus, IconSpark, IconStar, IconUsers } from "@/components/icons";
 import Link from "next/link";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { playHref } from "@/components/GameCard";
@@ -29,7 +29,7 @@ function canTilt() {
 function PlayButton({ game }: { game: Game }) {
   return (
     <Link href={playHref(game)} className={s.play} aria-label={`Play ${game.title}`}>
-      <IconPlay className={s.ic} />
+      <IconGamepad className={s.ic} />
     </Link>
   );
 }

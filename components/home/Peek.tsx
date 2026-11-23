@@ -1,6 +1,6 @@
 "use client";
 
-import { IconBook, IconBookmark, IconHeart, IconPlay, IconUsers } from "@/components/icons";
+import { IconBook, IconBookmark, IconHeart, IconGamepad, IconUsers } from "@/components/icons";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -140,7 +140,7 @@ export function HomeUiProvider({ children }: { children: ReactNode }) {
                 {saved ? "Saved" : "Save"}
               </button>
               <Link href={playHref(sheet)} className={cn(s.btn, s.btnPrimary)} onClick={() => setSheet(null)}>
-                <IconPlay className={cn(s.ic, s.sm)} />
+                <IconGamepad className={cn(s.ic, s.sm)} />
                 Play now
               </Link>
             </div>

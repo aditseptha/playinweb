@@ -1,6 +1,6 @@
 "use client";
 
-import { IconBookmark, IconPlay, IconPlus } from "@/components/icons";
+import { IconBookmark, IconGamepad, IconPlus } from "@/components/icons";
 import { GameThumb } from "@/components/GameThumb";
 import Image from "next/image";
 import Link from "next/link";
@@ -223,7 +223,7 @@ export function Hero({ games }: { games: Game[] }) {
               {active ? (
                 <>
                   <Link href={playHref(active)} className={cn(s.btn, s.btnPrimary)}>
-                    <IconPlay className={s.ic} />
+                    <IconGamepad className={s.ic} />
                     Play now
                   </Link>
                   <button

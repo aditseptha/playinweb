@@ -27,7 +27,6 @@ import {
   IconGamepad,
   IconKeyboard,
   IconPhone,
-  IconPlay,
   IconShrink,
 } from "@/components/icons";
 import { cn } from "@/lib/cn";
@@ -875,14 +874,14 @@ export function ProjectHeroStage() {
                       className={cn("group flex flex-col items-center gap-2 rounded-pw-xl", focusRing)}
                     >
                       <span className="grid size-16 place-items-center rounded-full bg-linear-to-b from-pw-primary-hi to-pw-primary-lo text-pw-on-primary shadow-pw-glow transition-transform duration-150 ease-pw-out group-hover:scale-105 group-active:scale-95 motion-reduce:transition-none md:size-[72px]">
-                        <IconPlay aria-hidden className="ml-1 size-7" />
+                        <IconGamepad aria-hidden className="size-7" />
                       </span>
                       <span className={cn("text-pw-body font-bold", onArt)}>Play</span>
                     </button>
                   ) : (
                     <div className="flex flex-col items-center gap-2">
                       <Button variant="primary" size="lg" onClick={startPlay}>
-                        <IconPlay aria-hidden className="fill-current" />
+                        <IconGamepad aria-hidden className="fill-current" />
                         Play
                         <IconExternal aria-hidden />
                       </Button>
@@ -895,7 +894,7 @@ export function ProjectHeroStage() {
               // A clip or trailer is showing: keep it watchable and put Play in the corner.
               <div className="absolute right-3 bottom-3 z-10">
                 <Button variant="primary" size="sm" onClick={startPlay}>
-                  <IconPlay aria-hidden className="fill-current" />
+                  <IconGamepad aria-hidden className="fill-current" />
                   {game.embeddable ? "Play game" : "Play"}
                 </Button>
               </div>
@@ -1170,7 +1169,7 @@ export function ProjectHeroThumbs() {
               {item.kind === "trailer" || item.kind === "clip" ? (
                 <span className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--pw-night-950)_35%,transparent)]">
                   <span className="grid size-7 place-items-center rounded-full bg-[color-mix(in_srgb,var(--pw-night-950)_75%,transparent)] text-pw-white">
-                    <IconPlay aria-hidden className="ml-0.5 size-3.5" />
+                    <IconGamepad aria-hidden className="size-3.5" />
                   </span>
                 </span>
               ) : null}
@@ -1203,7 +1202,7 @@ function ClipStage({
         <GameThumb game={game} src={poster} sizes={PROJECT_STAGE_IMAGE_SIZES} />
         <span className="absolute inset-0 grid place-items-center">
           <span className="grid size-12 place-items-center rounded-full bg-[color-mix(in_srgb,var(--pw-night-950)_75%,transparent)] text-pw-white">
-            <IconPlay aria-hidden className="ml-0.5 size-5" />
+            <IconGamepad aria-hidden className="size-5" />
           </span>
         </span>
       </button>

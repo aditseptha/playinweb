@@ -17,7 +17,6 @@ import {
   IconFlag,
   IconGamepad,
   IconHeart,
-  IconPlay,
   IconShare,
 } from "@/components/icons";
 import { NavBackdrop } from "@/components/home/NavBackdrop";
@@ -675,7 +674,7 @@ function PlayCard({ className, actions }: { className?: string; actions: Actions
             </Button>
           ) : (
             <Button variant="primary" size="lg" className="h-14 w-full text-[17px]" onClick={startPlay}>
-              <IconPlay aria-hidden className="fill-current" />
+              <IconGamepad aria-hidden className="fill-current" />
               Play
               {game.embeddable ? <span className="sr-only"> {game.title}</span> : <IconExternal aria-hidden />}
             </Button>
@@ -1058,7 +1057,7 @@ function StickyPlayBar({ title, meta }: { title: string; meta: string }) {
           <p className="truncate text-pw-caption text-pw-text-soft">{meta}</p>
         </div>
         <Button variant="primary" onClick={play}>
-          <IconPlay aria-hidden className="fill-current" />
+          <IconGamepad aria-hidden className="fill-current" />
           Play
           <span className="sr-only"> {title}</span>
         </Button>

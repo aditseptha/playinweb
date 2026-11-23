@@ -1,4 +1,4 @@
-import { IconHeart, IconPlay, IconPlus, IconUsers } from "@/components/icons";
+import { IconHeart, IconGamepad, IconPlus, IconUsers } from "@/components/icons";
 import Link from "next/link";
 import { formatCompact, formatNumber, gamePath } from "@/lib/format";
 import { canOptimizeImage } from "@/lib/optimize-image";
@@ -140,7 +140,7 @@ function PlayButton({ href, title, size = "md" }: { href: string; title: string;
         focusRing,
       )}
     >
-      <IconPlay aria-hidden className="ml-0.5 size-5 fill-current" />
+      <IconGamepad aria-hidden className="size-5 fill-current" />
     </Link>
   );
 }
