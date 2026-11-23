@@ -313,6 +313,34 @@
     transform: scale(0.96);
   }
 }
+/* The turn-your-phone prompt over a fullscreen game (#38): the phone icon turns, holds, and comes back.
+   Upright starts from Tailwind's rotate-90 (the `rotate` property), so it turns back by -90deg. */
+@keyframes pw-turn-side {
+  0%,
+  15% {
+    transform: rotate(0deg);
+  }
+  45%,
+  75% {
+    transform: rotate(90deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+@keyframes pw-turn-up {
+  0%,
+  15% {
+    transform: rotate(0deg);
+  }
+  45%,
+  75% {
+    transform: rotate(-90deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
 @keyframes pw-sheet-up {
   from {
     transform: translateY(100%);

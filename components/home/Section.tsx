@@ -2,6 +2,7 @@
 
 import { IconChevronLeft, IconChevronRight, type AppIcon } from "@/components/icons";
 import { HomeLink } from "@/components/home/HomeLink";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import s from "@/components/home/home.module.css";
 import { cn } from "@/lib/cn";
@@ -55,12 +56,18 @@ function Arrow({ dir, edge, go, className }: { dir: -1 | 1; edge: Edge; go: (dir
   );
 }
 
-export function Arrows({ edge, go }: { edge: Edge; go: (dir: -1 | 1) => void }) {
+/**
+ * A scrolling track with paging arrows over its left and right edges. Every home row uses this one
+ * placement (the Featured games approach). The arrows hide on touch-size screens, where people swipe.
+ */
+export function Carousel({ edge, go, children }: { edge: Edge; go: (dir: -1 | 1) => void; children: ReactNode }) {
+  const scrollable = !(edge.l && edge.r);
   return (
-    <>
-      <Arrow dir={-1} edge={edge} go={go} />
-      <Arrow dir={1} edge={edge} go={go} />
-    </>
+    <div className={s.carousel}>
+      {scrollable ? <Arrow dir={-1} edge={edge} go={go} className={cn(s.side, s.sideL)} /> : null}
+      {children}
+      {scrollable ? <Arrow dir={1} edge={edge} go={go} className={cn(s.side, s.sideR)} /> : null}
+    </div>
   );
 }
 
@@ -95,6 +102,14 @@ export function SectionHead({
 }
 
 export function SeeAll({ href, label = "See all" }: { href: string; label?: string }) {
+  // The homepage and its filters ("/", "/?view=…") stay on the page through HomeLink; any other page is a normal link.
+  if (href !== "/" && !href.startsWith("/?")) {
+    return (
+      <Link href={href} className={s.seeAll}>
+        {label}
+      </Link>
+    );
+  }
   return (
     <HomeLink href={href} scroll={false} className={s.seeAll}>
       {label}
@@ -102,51 +117,38 @@ export function SeeAll({ href, label = "See all" }: { href: string; label?: stri
   );
 }
 
-/** A titled carousel row: paging arrows next to the title (or over the edges for the featured row). */
+/** A titled carousel row: the link next to the title, paging arrows over the track's edges. */
 export function Row({
   icon,
   title,
   href,
+  linkLabel,
   kind,
-  sideArrows = false,
+  phoneScroll = false,
+  className,
   children,
 }: {
   icon: AppIcon;
   title: string;
   href?: string;
+  /** Text of the link next to the title. Defaults to "See all". */
+  linkLabel?: string;
   kind: "tall" | "wide";
-  sideArrows?: boolean;
+  /** On phones, keep a horizontal swipe strip instead of the 2-column grid other rows turn into. */
+  phoneScroll?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   const { ref, edge, go } = useScroller();
-  const scrollable = !(edge.l && edge.r);
-  const track = (
-    <div ref={ref} className={cn(s.track, kind === "tall" ? s.trackTall : s.trackWide)}>
-      {children}
-    </div>
-  );
 
   return (
-    <section className={s.reveal}>
-      <SectionHead
-        icon={icon}
-        title={title}
-        tools={
-          <>
-            {!sideArrows && scrollable ? <Arrows edge={edge} go={go} /> : null}
-            {href ? <SeeAll href={href} /> : null}
-          </>
-        }
-      />
-      {sideArrows ? (
-        <div className={s.carousel}>
-          {scrollable ? <Arrow dir={-1} edge={edge} go={go} className={cn(s.side, s.sideL)} /> : null}
-          {track}
-          {scrollable ? <Arrow dir={1} edge={edge} go={go} className={cn(s.side, s.sideR)} /> : null}
+    <section className={cn(s.reveal, className)}>
+      <SectionHead icon={icon} title={title} tools={href ? <SeeAll href={href} label={linkLabel} /> : null} />
+      <Carousel edge={edge} go={go}>
+        <div ref={ref} className={cn(s.track, kind === "tall" ? s.trackTall : s.trackWide, phoneScroll && s.trackPhoneScroll)}>
+          {children}
         </div>
-      ) : (
-        track
-      )}
+      </Carousel>
     </section>
   );
 }

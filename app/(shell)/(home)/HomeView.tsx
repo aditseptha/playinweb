@@ -3,6 +3,7 @@
 import { IconBook, IconClose, IconFlame, IconHeart, IconHistory, IconKeyboard, IconPhone, IconSearch, IconSliders, IconSpark, IconUsers } from "@/components/icons";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Chip } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
 import { EmptyState } from "@/components/ds/empty-state";
 import { CreatorCTA, GuestBanner } from "@/components/home/Banners";
@@ -28,7 +29,7 @@ import {
 import { Hero } from "@/components/home/Hero";
 import s from "@/components/home/home.module.css";
 import { HomeUiProvider } from "@/components/home/Peek";
-import { Arrows, Row, SectionHead, SeeAll, useScroller } from "@/components/home/Section";
+import { Carousel, Row, SectionHead, SeeAll, useScroller } from "@/components/home/Section";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { formatPlays, initials } from "@/lib/format";
@@ -43,6 +44,9 @@ import { DEVICE_LABEL, playsOnPhone, type Device } from "@/lib/device";
 
 /** Below this many games the page uses the compact sparse layout. */
 const SPARSE_LIMIT = 8;
+
+/** The phone row waits for this many games that passed on a phone (#38), so it never looks empty. */
+const PHONE_ROW_MIN = 6;
 
 export function HomeView({
   initialGames,
@@ -73,29 +77,40 @@ export function HomeView({
   const allGames = useMemo(() => withInitialGames(store.games, initialGames), [store.games, initialGames]);
   // Phone and Desktop (#38) are filters like Category: picking one shows the matching games as
   // results, and the hero and rows keep every game (#47).
-  // Until some game has its controls set (before the controls migration runs), there is nothing to
-  // filter on: the chips stay hidden and the catalogue shows in full.
+  // Phone shows games an admin passed on a real phone (#38). Until one has (before the migration runs,
+  // or before anyone has tested), Phone would be empty: the chips stay hidden and the catalogue shows
+  // in full.
   const games = allGames;
-  const hasControls = useMemo(() => allGames.some((g) => (g.controls?.length ?? 0) > 0), [allGames]);
-  const device = hasControls ? filters.device : null;
-  const panelFilters = useMemo(() => (hasControls ? filters : { ...filters, device: null }), [filters, hasControls]);
-  // On phones, a row of games that play there, near the top (#47).
+  const hasPhoneGames = useMemo(() => allGames.some((g) => playsOnPhone(g)), [allGames]);
+  const device = hasPhoneGames ? filters.device : null;
+  const panelFilters = useMemo(() => (hasPhoneGames ? filters : { ...filters, device: null }), [filters, hasPhoneGames]);
+  // On phones, a row of games that play there, near the top (#47). Hidden until it has enough games
+  // to look like a row rather than a gap.
   const touch = useTouchDevice();
-  const phoneGames = useMemo(
-    () => (touch && hasControls ? byPopularity(allGames.filter((g) => playsOnPhone(g.controls))) : []),
-    [allGames, hasControls, touch],
-  );
+  const phoneGames = useMemo(() => {
+    if (!touch) return [];
+    const list = byPopularity(allGames.filter((g) => playsOnPhone(g)));
+    return list.length >= PHONE_ROW_MIN ? list : [];
+  }, [allGames, touch]);
   // Curated games (#9) get their own "Curated picks" row (after featured, before hottest this week).
   const own = useMemo(() => games.filter((g) => !g.curated), [games]);
   const curated = useMemo(() => byPopularity(games.filter((g) => g.curated)), [games]);
   const tags = useMemo(() => catalogueTags(games), [games]);
   const creators = useMemo(() => creatorsOf(own), [own]);
   const popular = useMemo(() => byPopularity(own), [own]);
+  // Plays in the last 7 days, the same numbers and games as Rankings → This week, so its #1 matches.
+  const weeklyTop = useMemo(
+    () =>
+      games
+        .filter((g) => (weeklyPlays[g.id] ?? 0) > 0)
+        .sort((a, b) => (weeklyPlays[b.id] ?? 0) - (weeklyPlays[a.id] ?? 0)),
+    [games, weeklyPlays],
+  );
   const { heroIds, featuredIds } = useHomePickIds(heroSpotlightIds, featuredGameIds);
   const heroGames = useMemo(() => pickHeroGames(heroIds, games), [heroIds, games]);
   const featuredGames = useMemo(() => pickFeaturedGames(featuredIds, games, heroIds), [featuredIds, heroIds, games]);
   const browsing = isBrowsing(panelFilters);
-  const hasRail = hasControls || tags.length > 0 || creators.length > 0;
+  const hasRail = hasPhoneGames || tags.length > 0 || creators.length > 0;
   const filterCount = filters.tags.length + filters.creators.length + (filters.view ? 1 : 0) + (device ? 1 : 0);
 
   // Filters change the address through the history API, not the router: the games are already here,
@@ -144,7 +159,7 @@ export function HomeView({
               filters={filters}
               tags={tags}
               creators={creators}
-              device={hasControls ? device : undefined}
+              device={hasPhoneGames ? device : undefined}
               onDevice={pickDevice}
               onChange={go}
               onReset={reset}
@@ -152,16 +167,26 @@ export function HomeView({
           ) : null}
           <div className={s.main} data-catalogue>
             {hasRail ? (
-              <button
-                type="button"
-                className={cn(s.btn, s.btnSoft, s.mobileFilter)}
-                onClick={() => setFilterSheet(true)}
-                aria-label="Open filters"
-              >
-                <IconSliders className={cn(s.ic, s.sm)} />
-                Filters
-                {filterCount > 0 ? <b className={s.tnum}>{filterCount}</b> : null}
-              </button>
+              <div className={s.mobileFilterRow}>
+                <button
+                  type="button"
+                  className={cn(s.btn, s.btnSoft, s.mobileFilter)}
+                  onClick={() => setFilterSheet(true)}
+                  aria-label="Open filters"
+                >
+                  <IconSliders className={cn(s.ic, s.sm)} />
+                  Filters
+                  {filterCount > 0 ? <b className={s.tnum}>{filterCount}</b> : null}
+                </button>
+                {/* The sidebar's "Recently played" box, one tap away on phones and tablets. */}
+                <Chip
+                  pressed={filters.view === "recent"}
+                  onClick={() => go({ view: filters.view === "recent" ? null : "recent", browse: false })}
+                >
+                  <IconHistory />
+                  Recently played
+                </Chip>
+              </div>
             ) : null}
             {browsing ? (
               <Results games={results} filters={panelFilters} creators={creators} onChange={go} onReset={reset} />
@@ -186,6 +211,7 @@ export function HomeView({
                     featured={featuredGames}
                     phone={phoneGames}
                     popular={popular}
+                    weeklyTop={weeklyTop}
                     curated={curated}
                     tags={tags}
                     creators={creators}
@@ -211,7 +237,7 @@ export function HomeView({
                 filters={filters}
                 tags={tags}
                 creators={creators}
-                device={hasControls ? device : undefined}
+                device={hasPhoneGames ? device : undefined}
                 onDevice={pickDevice}
                 onChange={go}
                 onReset={reset}
@@ -239,7 +265,7 @@ export function HomeView({
 function FeaturedRow({ games }: { games: Game[] }) {
   if (games.length === 0) return null;
   return (
-    <Row icon={IconSpark} title="Featured games" href="/?view=featured" kind="tall" sideArrows>
+    <Row icon={IconSpark} title="Featured games" href="/?view=featured" kind="tall">
       {games.map((g, i) => (
         <TallCard key={g.id} game={g} i={i} priority={i < 3} />
       ))}
@@ -269,7 +295,7 @@ function RecentRow({ games }: { games: Game[] }) {
     );
   }
   return (
-    <Row icon={IconHistory} title="Recently played" href={filtersHref({ view: "recent", browse: true })} kind="tall" sideArrows>
+    <Row icon={IconHistory} title="Recently played" href={filtersHref({ view: "recent", browse: true })} kind="tall">
       {games.slice(0, 12).map((g, i) => (
         <TallCard key={g.id} game={g} i={i} priority={i < 3} />
       ))}
@@ -283,6 +309,7 @@ function Full({
   featured,
   phone,
   popular,
+  weeklyTop,
   curated,
   tags,
   creators,
@@ -296,6 +323,8 @@ function Full({
   featured: Game[];
   phone: Game[];
   popular: Game[];
+  /** Most played in the last 7 days. */
+  weeklyTop: Game[];
   curated: Game[];
   tags: string[];
   creators: Creator[];
@@ -310,17 +339,26 @@ function Full({
   return (
     <>
       <FeaturedRow games={featured} />
+      {weeklyTop.length > 0 ? (
+        <>
+          {/* Portrait cards on tablets and computers… */}
+          <Row icon={IconFlame} title="Most played this week" href="/top" linkLabel="See ranking" kind="tall" className={s.notPhone}>
+            {weeklyTop.slice(0, 12).map((g, i) => (
+              <TallCard key={g.id} game={g} i={i} badge={i < 2 ? "top" : null} />
+            ))}
+          </Row>
+          {/* …landscape cards in a swipe strip on phones. CSS shows one; the hidden one loads no images. */}
+          <Row icon={IconFlame} title="Most played this week" href="/top" linkLabel="See ranking" kind="wide" phoneScroll className={s.onlyPhone}>
+            {weeklyTop.slice(0, 12).map((g, i) => (
+              <WideCard key={g.id} game={g} i={i} />
+            ))}
+          </Row>
+        </>
+      ) : null}
       <PhoneRow games={phone} />
       {curated.length > 0 ? <CuratedPicks games={curated} /> : null}
       {showGuestBanner ? <GuestBanner recent={recent} popular={popular} /> : null}
       <NewestGamesSection games={catalogue} />
-      {popular.length > 0 ? (
-        <Row icon={IconFlame} title="Most played" href="/?view=popular" kind="tall">
-          {popular.slice(0, 12).map((g, i) => (
-            <TallCard key={g.id} game={g} i={i} badge={i < 2 ? "top" : null} />
-          ))}
-        </Row>
-      ) : null}
       {tag && tagged.length > 0 ? (
         <Row icon={IconBook} title={`${capitalize(tag)} games`} href={filtersHref({ tags: [tag] })} kind="wide">
           {tagged.map((g, i) => (
@@ -391,30 +429,31 @@ function Creators({
   onPick: (handle: string) => void;
 }) {
   const { ref, edge, go } = useScroller();
-  const scrollable = !(edge.l && edge.r);
   return (
     <section id="creators" className={cn(s.creators, s.revealSelf)}>
-      <SectionHead icon={IconUsers} title="Popular creators" tools={scrollable ? <Arrows edge={edge} go={go} /> : null} />
-      <div className={s.chips} ref={ref}>
-        {creators.map((c, i) => (
-          <button key={c.handle} type="button" className={s.chip} aria-pressed={selected.includes(c.handle)} onClick={() => onPick(c.handle)}>
-            <span className={s.ini} style={{ background: CREATOR_COLORS[i % CREATOR_COLORS.length] }}>
-              {c.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={c.avatarUrl} alt="" />
-              ) : (
-                initials(c.name)
-              )}
-            </span>
-            <span>
-              <b>{c.name}</b>
-              <small className={s.tnum}>
-                {c.games} {c.games === 1 ? "game" : "games"} · {formatPlays(c.plays)} plays
-              </small>
-            </span>
-          </button>
-        ))}
-      </div>
+      <SectionHead icon={IconUsers} title="Popular creators" />
+      <Carousel edge={edge} go={go}>
+        <div className={s.chips} ref={ref}>
+          {creators.map((c, i) => (
+            <button key={c.handle} type="button" className={s.chip} aria-pressed={selected.includes(c.handle)} onClick={() => onPick(c.handle)}>
+              <span className={s.ini} style={{ background: CREATOR_COLORS[i % CREATOR_COLORS.length] }}>
+                {c.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.avatarUrl} alt="" />
+                ) : (
+                  initials(c.name)
+                )}
+              </span>
+              <span>
+                <b>{c.name}</b>
+                <small className={s.tnum}>
+                  {c.games} {c.games === 1 ? "game" : "games"} · {formatPlays(c.plays)} plays
+                </small>
+              </span>
+            </button>
+          ))}
+        </div>
+      </Carousel>
     </section>
   );
 }

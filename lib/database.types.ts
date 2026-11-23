@@ -341,6 +341,12 @@ export type Database = {
         Update: { project_id?: string; tag?: string }
         Relationships: []
       }
+      library_items: {
+        Row: { user_id: string; project_id: string; created_at: string }
+        Insert: { user_id: string; project_id: string; created_at?: string }
+        Update: { user_id?: string; project_id?: string; created_at?: string }
+        Relationships: []
+      }
       projects: {
         Row: {
           classification: string
@@ -362,6 +368,8 @@ export type Database = {
           kind: string
           like_count: number
           min_price: number | null
+          mobile_ready: boolean
+          orientation: string | null
           owner_id: string
           play_count: number
           play_url: string
@@ -397,6 +405,8 @@ export type Database = {
           kind?: string
           like_count?: number
           min_price?: number | null
+          mobile_ready?: boolean
+          orientation?: string | null
           owner_id: string
           play_count?: number
           play_url?: string

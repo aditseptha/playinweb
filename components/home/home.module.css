@@ -347,6 +347,7 @@
   transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .heroThumb:hover { opacity: 0.95; transform: scale(1); }
+.heroThumbArt { display: contents; }
 .heroThumbOn {
   opacity: 1;
   transform: scale(1);
@@ -457,7 +458,9 @@
 .kpop { margin-top: 10px; max-height: 240px; overflow-y: auto; background: var(--input-bg); border: 1px solid var(--line); border-radius: 14px; padding: 6px 10px; }
 
 /* ---------- tab bar ---------- */
-.mobileFilter { display: none; width: 100%; height: 46px; gap: 10px; font-weight: 700; }
+/* Phones and tablets: a compact Filters button on the left, quick chips beside it. */
+.mobileFilterRow { display: none; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mobileFilter { display: none; flex: none; width: auto; height: 44px; margin-top: 0; padding: 0 18px; gap: 10px; font-weight: 700; }
 .mobileFilter[aria-label] b { margin-left: 4px; min-width: 1.25rem; height: 1.25rem; padding: 0 6px; border-radius: var(--r-pill); font-size: 12px; line-height: 1.25rem; background: rgba(10, 132, 255, 0.2); color: var(--text); }
 .search { flex: 0 1 208px; min-width: 150px; height: 44px; border-radius: var(--r-pill); background: var(--input-bg); border: 1px solid var(--line); display: flex; align-items: center; padding: 0 14px; gap: 8px; color: var(--muted); }
 .navSearch {
@@ -900,11 +903,14 @@
 .channelSignOut { margin-top: 28px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 14px; font-weight: 700; cursor: pointer; }
 .channelSignOut:hover { color: var(--text); }
 
-.footer { position: relative; isolation: isolate; flex-shrink: 0; overflow: hidden; background: var(--bg); padding-block: 120px 28px; }
+/* --bottom-bar: height of the game page's fixed Play bar while it shows (GameDetail), so it never covers the footer. */
+.footer { position: relative; isolation: isolate; flex-shrink: 0; overflow: hidden; background: var(--bg); padding-block: 120px calc(28px + var(--bottom-bar, 0px)); }
 .footerGrid { display: contents; color: var(--brand-blue, #0073f8); }
 /* Solid block starts 128px into the mosaic. Pin that edge to the divider; the breakup sits above it. */
 .footerGrid svg { position: absolute; left: 0; z-index: 0; pointer-events: none; top: calc(anchor(--footer-rule top) - var(--mosaic-crest, 128px)); bottom: auto; }
 .footer .wrap { position: relative; z-index: 1; }
+.footerGrid .mosaicPhone { display: none; }
+.onlyPhone { display: none; }
 .fTop { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 40px; }
 .fCols { display: grid; grid-template-columns: repeat(4, auto); gap: 72px; }
 .fCols h5 { margin: 0 0 12px; font-size: 15px; font-weight: 700; color: var(--text); }
@@ -934,10 +940,14 @@
 .sheetFoot .btn { flex: 1; height: 48px; }
 .menuSheet { padding-top: 4px; }
 .menuSheetHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 4px 4px 12px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 4px;
 }
+.menuSheetHead > div { min-width: 0; }
 .menuSheetHead b { display: block; font-size: 17px; font-weight: 700; }
 .menuSheetHead small { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); font-weight: 500; }
 .menuSheetLabel {
@@ -1041,7 +1051,8 @@
 @media (max-width: 1023px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
   .layout > .rail { display: none; }
-  .mobileFilter { display: flex; width: 100%; }
+  .mobileFilterRow { display: flex; }
+  .mobileFilter { display: flex; }
   .guest { grid-template-columns: minmax(0, 1fr); }
   .recent { max-width: 420px; }
   .trackWide { grid-auto-columns: calc((100% - 16px) / 2); }
@@ -1061,19 +1072,45 @@
   .logoStack, .logoMark, .logoStill { width: 36px; height: 36px; }
   .nav .wrap { gap: 8px; min-width: 0; }
   .nav .logo { flex-shrink: 0; gap: 0; }
-  .navActions { gap: 2px; margin-left: 0; }
+  /* Room between the bell and the avatar, so a thumb hits the one it means. */
+  .navActions { gap: 10px; margin-left: 0; }
   .navRight { gap: 2px; height: 38px; }
   .navTools { height: 38px; gap: 0; }
   .nav .btn { height: 38px; padding: 0 14px; font-size: 14px; }
   .iconBtn, .bell button { width: 38px; height: 38px; }
+  .bell button, .navCompact .bell button { width: 40px; height: 40px; }
+  /* Scrolled: the search bar stays next to the logo instead of jumping right. */
+  .navCompact .navSearch { margin-left: 0; max-width: none; }
   .heroArtWrap { width: max(100%, 900px); opacity: 0.6; -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent 95%); mask-image: linear-gradient(180deg, #000 40%, transparent 95%); }
   .hero { --hero-title-max: 100%; }
-  .heroBody { padding-top: 88px; padding-bottom: 32px; }
-  .channel { min-height: 0; padding-top: 220px; padding-bottom: 12px; }
+  /* Taller on phones, so more of the game art shows above the title. */
+  .heroBody { padding-top: 150px; padding-bottom: 21px; }
+  /* 173px: the 96px avatar overlaps the 240px cover by 70% (240 - 0.7 × 96 ≈ 173). */
+  .channel { min-height: 0; padding-top: 173px; padding-bottom: 12px; }
   .channelMedia { width: 100%; height: 240px; bottom: auto; }
+  /* Dark wash at the top of the cover, so the header's logo, search and avatar stay readable on any art. */
+  .channelMedia::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 130px;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(5, 13, 24, 0.88) 0%, rgba(5, 13, 24, 0.5) 55%, transparent 100%);
+  }
   .channelArt { -webkit-mask-image: linear-gradient(180deg, #000 42%, transparent 96%); mask-image: linear-gradient(180deg, #000 42%, transparent 96%); }
-  .channelRow { flex-direction: column; align-items: flex-start; }
-  .channelActions { justify-content: flex-start; }
+  .channelRow { flex-direction: column; align-items: stretch; }
+  /* Avatar above the name, so the name, stats and buttons get the full width. */
+  .channelWho { flex-direction: column; gap: 14px; }
+  .channelWho > .min-w-0, .channelWho > :last-child { width: 100%; }
+  .channelTitle { font-size: clamp(34px, 10vw, 44px); max-width: none; }
+  .channelStats { margin-top: 10px; font-size: 14px; }
+  /* One even row. "View public profile" is left out on phones; desktop keeps it. */
+  .channelActions { gap: 8px; margin-top: 18px; }
+  .channelActions .btn { height: 44px; justify-content: center; }
+  .channelActions .btnPrimary { display: none; }
+  .channelActions .btnGhost { flex: 1 1 0; min-width: 0; padding: 0 12px; white-space: nowrap; }
+  .channelActions .btnGhost[aria-label="Admin"] { flex: none; width: 44px; padding: 0; }
   .channelEdit { top: 76px; }
   .heroTitle { font-size: clamp(32px, 9.5vw, 44px); }
   .heroSub {
@@ -1084,15 +1121,15 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  /* One row on phones: Play fills the space, Save is a square icon, thumbnails scroll on the right. */
   .heroActions {
-    margin-top: 20px;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
+    margin-top: 24px;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
   }
-  .heroCta { width: 100%; }
+  .heroCta { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; gap: 8px; }
   .heroCta .btn {
-    flex: 1 1 calc(50% - 6px);
     min-width: 0;
     height: 46px;
     min-height: 46px;
@@ -1100,19 +1137,59 @@
     font-size: 15px;
     justify-content: center;
   }
+  .heroCta .btnPrimary { flex: none; padding: 0 22px; white-space: nowrap; }
+  /* White square with a dark icon, so Save reads as a button next to Play. */
+  .heroCta .heroSave { flex: none; width: 46px; padding: 0; background: #fff; border: 0; color: var(--pw-navy); }
+  .heroCta .heroSave:hover { background: var(--pw-mist-100); }
+  .heroCta .heroSave .saved { color: var(--pw-gold-deep); }
+  .heroSaveLabel { display: none; }
+  /* Dots instead of thumbnails on phones. Each dot keeps a 24px tap target. */
   .heroActions .heroPager {
-    margin-left: 0;
-    width: 100%;
+    flex: none;
+    align-items: center;
+    gap: 0;
+    margin-left: auto;
     max-width: none;
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 2px;
+    overflow: visible;
+    padding: 0;
   }
-  .secHead { flex-wrap: wrap; row-gap: 10px; align-items: flex-start; }
+  /* :hover stays on the last tapped dot on touch screens, so it must not change the size or the dots shift. */
+  .heroThumb,
+  .heroThumb:hover {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    min-height: 24px;
+    aspect-ratio: auto;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    opacity: 1;
+    transform: none;
+    overflow: visible;
+  }
+  .heroThumbArt { display: none; }
+  .heroThumb::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: var(--r-pill);
+    background: rgba(255, 255, 255, 0.4);
+    transition: width 0.2s, background 0.2s;
+  }
+  .heroThumb.heroThumbOn { width: 34px; box-shadow: none; transform: none; }
+  .heroThumb.heroThumbOn::after { width: 20px; background: var(--gold); }
+  .heroThumb:focus-visible { outline: 2px solid var(--gold); outline-offset: 0; border-radius: var(--r-pill); }
+  /* Swipes change slides; vertical moves still scroll the page. */
+  .hero { touch-action: pan-y; }
+  /* Icon, title and "See all" share one centre line. */
+  .secHead { flex-wrap: wrap; row-gap: 10px; align-items: center; }
   .secTitle { flex: 1 1 0; min-width: 0; line-height: 1.2; }
   .secTools { margin-left: auto; flex-shrink: 0; }
-  .main { gap: 28px; padding-bottom: 40px; }
+  .main { gap: 36px; padding-bottom: 40px; }
+  /* The avatar plus its 2px ring matches the 38px search bar. */
+  .avatarBtn > * { width: 34px !important; height: 34px !important; min-width: 34px !important; min-height: 34px !important; }
   .navSearch {
     flex: 1 1 0%;
     min-width: 0;
@@ -1129,11 +1206,28 @@
   .trackWide { grid-template-columns: minmax(0, 1fr); }
   .newestGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .trackTall { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .trackTall > :last-child:nth-child(odd) { display: none; }
-  /* Stacked rows get long fast; "See all" has the rest. */
-  .trackTall > :nth-child(n + 7), .trackWide > :nth-child(n + 4) { display: none; }
+  .trackTall:not(.trackPhoneScroll) > :last-child:nth-child(odd) { display: none; }
+  /* Stacked rows get long fast; "See all" has the rest. Swipe strips keep every card. */
+  .trackTall:not(.trackPhoneScroll) > :nth-child(n + 7), .trackWide:not(.trackPhoneScroll) > :nth-child(n + 4) { display: none; }
+  /* Rows marked phoneScroll (Most played this week) stay a horizontal swipe strip, bleeding to the screen
+     edges, with the first card lined up with the title. Portrait cards: about 2.4 in view; landscape: 1 plus a peek. */
+  .track.trackPhoneScroll {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: 40%;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin: -8px -16px;
+    padding: 8px 16px;
+    scroll-padding-inline: 16px;
+  }
+  .track.trackWide.trackPhoneScroll { grid-auto-columns: 82%; }
+  /* A row rendered twice, one per card shape: phones see .onlyPhone, larger screens .notPhone. */
+  .notPhone { display: none; }
+  .onlyPhone { display: block; }
   .community { gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .secTitle { font-size: 18px; line-height: 1.25; }
+  .secTitle { font-size: 21px; font-weight: 700; line-height: 1.2; }
   .seeAll { height: 32px; padding: 0 12px; font-size: 13px; }
   .secTools .arrow { display: none; }
   .gTitle { font-size: 18px; }
@@ -1144,7 +1238,13 @@
   .ctaBtns .btn { flex: 1 1 140px; }
   .chips { grid-auto-columns: 72%; }
   .fCols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
-  .fBot { flex-direction: column; align-items: flex-start; }
+  /* 40px instead of 120px above the footer logo, so the last section isn't followed by a screen of empty space. */
+  .footer { padding-top: 40px; }
+  /* Less than the 120px default: the phone mosaic has fewer filled rows, and the links keep a 20px gap above it. */
+  .fBot { flex-direction: column; align-items: flex-start; margin-top: 88px; }
+  .footerGrid .mosaicWide { display: none; }
+  /* Two rows (32px) higher than the shared 116px crest, so the text sits on filled boxes. */
+  .footerGrid .mosaicPhone { display: block; top: calc(anchor(--footer-rule top) - 148px); }
 }
 
 .showRanges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }

@@ -57,6 +57,16 @@ export const FEATURE_CATALOG: SiteFeature[] = [
     hidden: true,
     soon: false,
   },
+  {
+    // Not a page: a switch (#38). Off (hidden) until enough games are marked Mobile ready.
+    // The href matches no menu item, so it never hides one.
+    id: "phone-gate",
+    label: "Desktop games on phones",
+    href: "/admin#phone-gate",
+    description: 'Phones see "Best played on a computer" for games not marked Mobile ready. Visible = on.',
+    hidden: true,
+    soon: false,
+  },
 ];
 
 type FeaturesValue = {

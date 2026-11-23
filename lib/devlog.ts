@@ -23,11 +23,27 @@ export type DevlogRelease = {
 
 export const DEVLOG: DevlogRelease[] = [
   {
-    version: "0.11",
+    version: "0.12",
     date: "2026-11-23",
     title: "Only what works today",
     items: [
       { kind: "fixed", text: "PlayInWeb no longer talks about donations and tips, which aren't open yet: not in badges, notifications, the claim form, or the Privacy Policy and Terms." },
+    ],
+  },
+  {
+    version: "0.11",
+    date: "2026-11-22",
+    title: "Phone games we actually tested",
+    items: [
+      { kind: "improved", text: "Phone now lists only games our team has played on a real phone: full touch controls, fills the screen, and loads well on mobile data." },
+      { kind: "new", text: "New games made for phones: puzzles, a deckbuilder, a strategy game, a platformer, a little LCD adventure and a few cozy toys." },
+      { kind: "improved", text: "The \"Plays on your phone\" row shows up once there are enough tested games to fill it." },
+      { kind: "new", text: "Creators can say whether their game is played with the phone upright or turned sideways." },
+      { kind: "new", text: "On Android, Play opens the game truly fullscreen, and landscape games turn the screen sideways for you." },
+      { kind: "new", text: "On iPhone, a landscape game asks you to turn your phone sideways." },
+      { kind: "improved", text: "Portrait games play in a tall, phone-shaped frame on a computer." },
+      { kind: "improved", text: "On a phone, a link that starts a game waits for your tap on Play, so the game can open fullscreen." },
+      { kind: "improved", text: "Your Library follows your account: save a game on your phone and it's there on your computer when you sign in." },
     ],
   },
   {

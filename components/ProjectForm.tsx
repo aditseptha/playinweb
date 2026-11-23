@@ -53,7 +53,18 @@ import {
 } from "@/lib/project-fields";
 import { clearCatalogueCache, type ProjectRecord } from "@/lib/projects";
 import { createClient } from "@/lib/supabase/client";
-import { CONTROLS, CONTROL_LABEL, isMissingColumnError, normalizeControls, playsOnPhone, type Control } from "@/lib/device";
+import { isAdminEmail } from "@/lib/admin";
+import {
+  CONTROLS,
+  CONTROL_LABEL,
+  ORIENTATIONS,
+  ORIENTATION_LABEL,
+  isMissingColumnError,
+  normalizeControls,
+  parseOrientation,
+  type Control,
+  type Orientation,
+} from "@/lib/device";
 
 const KIND_CHOICES: { id: ProjectKind; title: string; hint: string }[] = [
   { id: "html", title: "Playable on PlayInWeb", hint: "Upload a game people play here" },
@@ -125,8 +136,13 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
     project ? (project.contains_ai ? "yes" : "no") : "",
   );
   const [tags, setTags] = useState<string[]>((project?.project_tags ?? []).map((t) => t.tag));
-  // How the game is played (#38): decides whether it shows under the Phone or Desktop chip.
+  // How the game is played (#38): decides whether it shows under Desktop.
   const [controls, setControls] = useState<Control[]>(normalizeControls(project?.controls));
+  // How the game wants the phone held, and (admins only) whether it passed a test on a real phone,
+  // which is what puts it under Phone (#38).
+  const [orientation, setOrientation] = useState<Orientation | null>(parseOrientation(project?.orientation) ?? null);
+  const [mobileReady, setMobileReady] = useState(project?.mobile_ready === true);
+  const admin = isAdminEmail(user?.email);
   const [tagDraft, setTagDraft] = useState("");
   const [storeUrls, setStoreUrls] = useState<Record<string, string>>(
     Object.fromEntries((project?.project_store_links ?? []).map((l) => [l.store, l.url])),
@@ -442,6 +458,15 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
         .eq("id", projectId)
         .eq("owner_id", uid);
       if (controlsError && !isMissingColumnError(controlsError)) throw controlsError;
+
+      // Also on its own, for the mobile ready migration. The database keeps mobile_ready as it was for
+      // anyone but an admin, so sending it only from the admin's form just keeps the request honest.
+      const { error: phoneError } = await supabase
+        .from("projects")
+        .update({ orientation, ...(admin ? { mobile_ready: mobileReady } : {}) })
+        .eq("id", projectId)
+        .eq("owner_id", uid);
+      if (phoneError && !isMissingColumnError(phoneError)) throw phoneError;
 
       if (kind === "html" && htmlBuild) {
         const packed = await filesFromHtmlUpload(htmlBuild.name, await htmlBuild.arrayBuffer());
@@ -833,8 +858,7 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
         <fieldset>
           <legend className="text-caption font-medium text-text-muted">Controls</legend>
           <p className="mt-1 text-caption text-text-subtle">
-            Tick every way the game can be played. Games with Touchscreen, or with Mouse and no Keyboard, show under
-            Phone; the rest show under Desktop.
+            Tick every way the game can be played. Games with Keyboard, Mouse or Gamepad show under Desktop.
           </p>
           <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
             {CONTROLS.map((control) => (
@@ -852,13 +876,46 @@ export function ProjectForm({ project, curated }: { project?: ProjectRecord; cur
               </label>
             ))}
           </div>
-          <p className="mt-2 text-caption text-text-muted">
-            {controls.length === 0
-              ? "Not set yet: the game shows under Desktop only."
-              : playsOnPhone(controls)
-                ? "Shows under Phone and Desktop."
-                : "Shows under Desktop only."}
+          {controls.length === 0 ? (
+            <p className="mt-2 text-caption text-text-muted">Not set yet: the game shows under Desktop.</p>
+          ) : null}
+        </fieldset>
+
+        <fieldset>
+          <legend className="text-caption font-medium text-text-muted">On a phone</legend>
+          <p className="mt-1 text-caption text-text-subtle">
+            How the game wants the phone held. Landscape games ask players to turn their phone sideways.
           </p>
+          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2" role="radiogroup" aria-label="Orientation">
+            {ORIENTATIONS.map((o) => (
+              <label key={o} className="flex items-center gap-2 text-ui">
+                <input type="radio" name="orientation" value={o} checked={orientation === o} onChange={() => setOrientation(o)} />
+                {ORIENTATION_LABEL[o]}
+              </label>
+            ))}
+            <label className="flex items-center gap-2 text-ui">
+              <input type="radio" name="orientation" value="" checked={orientation === null} onChange={() => setOrientation(null)} />
+              Not sure
+            </label>
+          </div>
+          {admin ? (
+            <label className="mt-3 flex items-start gap-2 text-ui">
+              <input type="checkbox" name="mobile_ready" checked={mobileReady} onChange={(e) => setMobileReady(e.target.checked)} />
+              <span>
+                Mobile ready
+                <span className="block text-caption text-text-subtle">
+                  Tested on a real phone: full touch controls, fills the screen, loads fine on 4G. Only these games show
+                  under Phone. Admins only.
+                </span>
+              </span>
+            </label>
+          ) : project?.mobile_ready ? (
+            <p className="mt-3 text-caption text-text-muted">Passed our phone test: this game shows under Phone.</p>
+          ) : (
+            <p className="mt-3 text-caption text-text-muted">
+              Games show under Phone after the PlayInWeb team tests them on a real phone.
+            </p>
+          )}
         </fieldset>
 
         <fieldset>

@@ -26,6 +26,7 @@ import { ProjectCheckout } from "@/components/ProjectCheckout";
 import { ProjectComments } from "@/components/ProjectComments";
 import {
   ProjectHeroRoot,
+  useAutoPlayAllowed,
   ProjectHeroStage,
   ProjectHeroThumbs,
   useProjectHero,
@@ -36,6 +37,7 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { useMoneyFeatures } from "@/lib/features";
 import { licenseLabel, shortUrl, type Curation } from "@/lib/curation";
+import { isFeaturePubliclyEnabled, useFeature } from "@/lib/features";
 import { formatJoined, formatPlays } from "@/lib/format";
 import { addGuestPlayMs, GUEST_PLAY_LIMIT_MS, guestPlayExpired, guestPlayRemainingMs } from "@/lib/guest-play";
 import { apexHref, projectPublicUrl, siteOrigin } from "@/lib/host";
@@ -50,27 +52,10 @@ import { requestBadgeCheck, setPlaying } from "@/lib/badge-events";
 import { useGames } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 
-const LOCAL_FOLLOWS_KEY = "showcase.follows.v1";
 /** A gentle heads-up this long before a guest's play time runs out. */
 const GUEST_WARNING_MS = 30_000;
 /** A signed-in play counts toward the Explorer and Crowd Pleaser badges (#30) after a minute in the player. */
 const RECORD_PLAY_AFTER_MS = 60_000;
-
-function readLocalFollows(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(LOCAL_FOLLOWS_KEY);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeLocalFollows(ids: string[]) {
-  window.localStorage.setItem(LOCAL_FOLLOWS_KEY, JSON.stringify(ids));
-  window.dispatchEvent(new StorageEvent("storage", { key: LOCAL_FOLLOWS_KEY }));
-}
 
 function subscribeStorage(onChange: () => void) {
   window.addEventListener("storage", onChange);
@@ -124,11 +109,9 @@ const STATUS_TONE: Record<string, "success" | "warning" | "neutral"> = {
 
 export function GameDetail({
   project,
-  creatorGameCount,
   notice,
 }: {
   project: ProjectRecord;
-  creatorGameCount?: number | null;
   /** Shown above the game, for example the Draft notice for the owner. */
   notice?: ReactNode;
 }) {
@@ -148,18 +131,12 @@ export function GameDetail({
   const views = project.view_count ?? 0;
   const [plays, setPlays] = useState(Math.min(project.play_count, views));
   const [commentCount, setCommentCount] = useState(project.comment_count ?? 0);
-  const [followers, setFollowers] = useState(project.profiles?.follower_count ?? 0);
-  const [remoteFollowing, setRemoteFollowing] = useState(false);
-  const localFollowing = useSyncExternalStore(
-    subscribeStorage,
-    () => readLocalFollows().includes(project.owner_id),
-    () => false,
-  );
-  const following = persisted && (user ? remoteFollowing : localFollowing);
-  const [isPlaying, setIsPlaying] = useState(autoPlay && game.embeddable && (Boolean(user) || !guestPlayExpired()));
-  const [playerExpanded, setPlayerExpanded] = useState(
-    autoPlay && game.embeddable && (Boolean(user) || !guestPlayExpired()),
-  );
+  // ?play=1 starts the game by itself on a computer, after hydration. A phone waits for a tap on Play,
+  // so the game can open fullscreen (#38).
+  const autoPlayHere = useAutoPlayAllowed();
+  // Both follow the stage through onPlayingChange and onExpandedChange.
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playerExpanded, setPlayerExpanded] = useState(false);
   const layoutWide = isPlaying && playerExpanded;
   const guestExpired = useSyncExternalStore(subscribeStorage, guestPlayExpired, () => false);
   const [guestTimedOut, setGuestTimedOut] = useState(false);
@@ -188,14 +165,7 @@ export function GameDetail({
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => setLiked(!!data));
-    supabase
-      .from("profile_follows")
-      .select("creator_id")
-      .eq("creator_id", project.owner_id)
-      .eq("follower_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => setRemoteFollowing(!!data));
-  }, [persisted, user, projectId, project.owner_id]);
+  }, [persisted, user, projectId]);
 
   useEffect(() => {
     if (!persisted) return;
@@ -253,6 +223,8 @@ export function GameDetail({
       openLogin(guestLoginOptions());
       return;
     }
+    // On a phone the game waits for a tap on Play, and onPlay counts that play.
+    if (!autoPlayHere) return;
     if (autoPlayed.current) return;
     autoPlayed.current = true;
     recordPlay(projectId);
@@ -265,7 +237,7 @@ export function GameDetail({
       setPlays((n) => n + 1);
     }
     window.history.replaceState(null, "", window.location.pathname);
-  }, [autoPlay, guestExpired, loading, openLogin, persisted, projectId, recordPlay, user]);
+  }, [autoPlay, autoPlayHere, guestExpired, loading, openLogin, persisted, projectId, recordPlay, user]);
 
   const onCommentCount = useCallback((n: number) => setCommentCount(n), []);
 
@@ -283,8 +255,17 @@ export function GameDetail({
   const genre = project.genre && project.genre !== "No genre" ? project.genre : null;
   const tags = (project.project_tags ?? []).map((t) => t.tag).filter(Boolean);
   const stores = project.project_store_links ?? [];
-  const own = Boolean(user && user.id === project.owner_id);
   const saved = library.includes(projectId);
+  // Phones get "Best played on a computer" for a game nobody has passed on a phone, once an admin
+  // turns the switch on (#38). Off while the feature list loads.
+  const { feature: phoneGateFeature } = useFeature("phone-gate");
+  const phoneGate = isFeaturePubliclyEnabled(phoneGateFeature, "phone-gate") && !game.mobileReady;
+  const heroLibrary = {
+    saved,
+    signedIn: Boolean(user),
+    onSave: () => toggleLibrary(projectId),
+    onSignIn: () => openLogin(),
+  };
   const removeHref = `mailto:${LEGAL_CONTACT_EMAIL}?subject=${encodeURIComponent(
     `Remove: ${project.title} (${shareUrl})`,
   )}&body=${encodeURIComponent("I made this game and want it removed from PlayInWeb. Link to my original game page:\n\n")}`;
@@ -318,28 +299,6 @@ export function GameDetail({
       setLiked(true);
       setLikes((n) => n + 1);
       if (!error) requestBadgeCheck();
-    }
-  }
-
-  async function onFollow() {
-    if (!persisted || loading) return;
-    if (!user) {
-      const ids = readLocalFollows();
-      const next = following ? ids.filter((id) => id !== project.owner_id) : [...ids, project.owner_id];
-      writeLocalFollows(next);
-      setFollowers((n) => (following ? Math.max(0, n - 1) : n + 1));
-      return;
-    }
-    if (user.id === project.owner_id) return;
-    const supabase = createClient();
-    if (following) {
-      await supabase.from("profile_follows").delete().eq("creator_id", project.owner_id).eq("follower_id", user.id);
-      setRemoteFollowing(false);
-      setFollowers((n) => Math.max(0, n - 1));
-    } else {
-      await supabase.from("profile_follows").insert({ creator_id: project.owner_id, follower_id: user.id });
-      setRemoteFollowing(true);
-      setFollowers((n) => n + 1);
     }
   }
 
@@ -379,7 +338,7 @@ export function GameDetail({
     <ProjectHeroRoot
       game={game}
       trailerUrl={project.trailer_url}
-      autoPlay={autoPlay && game.embeddable && (Boolean(user) || !guestExpired)}
+      autoPlay={autoPlay && autoPlayHere && game.embeddable && (Boolean(user) || !guestExpired)}
       allowPlay={Boolean(user) || !guestExpired}
       playLocked={!user && guestTimedOut}
       onLoginRequest={() => openLogin(guestLoginOptions())}
@@ -394,6 +353,8 @@ export function GameDetail({
       }}
       onExpandedChange={setPlayerExpanded}
       onPlayingChange={setIsPlaying}
+      phoneGate={phoneGate}
+      library={heroLibrary}
       onPlay={() => {
         if (game.embeddable) void onPlay();
         else if (game.playUrl) {
@@ -406,7 +367,7 @@ export function GameDetail({
       <div className="relative">
         <NavBackdrop />
         <div className="px-4 md:px-6">
-        <div className="mx-auto w-full max-w-[1440px] pt-[84px] pb-16 md:pt-[100px]">
+        <div className="mx-auto w-full max-w-[1440px] pt-[84px] pb-10 md:pt-[100px] md:pb-16">
           {notice ? <div className="mb-4">{notice}</div> : null}
           {/* One grid. Below lg the two columns use display: contents and their blocks are ordered
             for phones; at lg they are real columns. The stage is its own item and never moves:
@@ -475,20 +436,7 @@ export function GameDetail({
                   onClaim={() => setClaimOpen(true)}
                   removeHref={removeHref}
                 />
-              ) : (
-                <CreatorCard
-                  className="max-lg:order-4"
-                  name={creatorName}
-                  url={creatorUrl ?? siteOrigin(creator.handle)}
-                  avatar={avatar}
-                  bio={creator.bio}
-                  followers={followers}
-                  games={creatorGameCount ?? null}
-                  canFollow={persisted && !own}
-                  following={following}
-                  onFollow={() => void onFollow()}
-                />
-              )}
+              ) : null}
               {curated ? null : (
                 <div className="max-lg:order-7 min-w-0 empty:hidden">
                   <ProjectCheckout project={project} creatorName={creatorName} />
@@ -784,79 +732,6 @@ function PlayCard({ className, actions }: { className?: string; actions: Actions
   );
 }
 
-function CreatorCard({
-  className,
-  name,
-  url,
-  avatar,
-  bio,
-  followers,
-  games,
-  canFollow,
-  following,
-  onFollow,
-}: {
-  className?: string;
-  name: string;
-  url: string;
-  avatar?: string;
-  bio?: string | null;
-  followers: number;
-  games: number | null;
-  canFollow: boolean;
-  following: boolean;
-  onFollow: () => void;
-}) {
-  return (
-    <section aria-label="Creator" className={cn(card, "flex flex-col gap-3", className)}>
-      <div className="flex items-center gap-3">
-        <Avatar name={name} src={avatar} size="lg" />
-        <div className="min-w-0 flex-1">
-          <Link
-            href={url}
-            className={cn(
-              "block truncate rounded-pw-sm text-pw-body font-bold text-pw-text hover:underline",
-              focusRing,
-            )}
-          >
-            {name}
-          </Link>
-          <p className="truncate text-pw-body-sm text-pw-text-soft tabular-nums">
-            {formatPlays(followers)} {followers === 1 ? "follower" : "followers"}
-            {games !== null ? (
-              <span className="lg:hidden">
-                {" "}
-                · {games} {games === 1 ? "game" : "games"}
-              </span>
-            ) : null}
-          </p>
-        </div>
-        {canFollow ? (
-          <Button variant={following ? "secondary" : "primary"} size="sm" onClick={onFollow} aria-pressed={following}>
-            {following ? "Following" : "Follow"}
-          </Button>
-        ) : null}
-      </div>
-      {bio?.trim() ? (
-        <p className="line-clamp-3 text-pw-body-sm text-pw-text-soft max-lg:hidden">{bio.trim()}</p>
-      ) : null}
-      {games !== null && games > 0 ? (
-        <Link
-          href={url}
-          className={cn(
-            "flex items-center gap-2 rounded-pw-md bg-pw-surface-2 px-3 py-2.5 text-pw-body-sm font-semibold text-pw-link transition-colors hover:bg-pw-surface-3 max-lg:hidden",
-            focusRing,
-          )}
-        >
-          <IconGamepad aria-hidden className="size-4" />
-          {games} {games === 1 ? "game" : "games"}
-          <IconArrow aria-hidden className="ml-auto size-4" />
-        </Link>
-      ) : null}
-    </section>
-  );
-}
-
 /** In place of the creator card on a curated game (#9): the credit, and how its creator claims or removes it. */
 function CuratedCreditCard({
   className,
@@ -1055,7 +930,7 @@ function Shelves({
           title={`More from ${creatorName}`}
           link={creatorUrl ? { href: creatorUrl, label: "See all games" } : undefined}
         >
-          <ul className="scrollbar-hide -mx-4 flex snap-x gap-4 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-4">
+          <ul className="scrollbar-hide -mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 lg:grid-cols-4">
             {loadingCatalogue
               ? Array.from({ length: 4 }, (_, i) => (
                   <li key={i} className="w-[78vw] shrink-0 snap-start md:w-auto">
@@ -1077,7 +952,7 @@ function Shelves({
           title={similar.kind === "similar" ? "Similar games" : "Popular games"}
           link={{ href: apexHref("/"), label: "Browse games" }}
         >
-          <ul className="scrollbar-hide -mx-4 flex snap-x gap-4 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 lg:grid-cols-6">
+          <ul className="scrollbar-hide -mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 lg:grid-cols-6">
             {loadingCatalogue
               ? Array.from({ length: 6 }, (_, i) => (
                   <li key={i} className="w-[42vw] shrink-0 snap-start md:w-auto">
@@ -1149,7 +1024,19 @@ function StickyPlayBar({ title, meta }: { title: string; meta: string }) {
     return () => observer.disconnect();
   }, []);
 
-  if (!canPlay || playing || stageVisible) return null;
+  const shown = canPlay && !playing && !stageVisible;
+  // The bar is fixed over the page bottom; the footer reads this to keep its links clear of it.
+  useEffect(() => {
+    // Same breakpoint as the bar's lg:hidden.
+    if (!shown || !window.matchMedia("(max-width: 1023px)").matches) return;
+    const root = document.documentElement;
+    root.style.setProperty("--bottom-bar", "88px");
+    return () => {
+      root.style.removeProperty("--bottom-bar");
+    };
+  }, [shown]);
+
+  if (!shown) return null;
 
   function play() {
     // The game starts in the stage, so bring it back into view first.

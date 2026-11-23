@@ -79,11 +79,11 @@ export function BadgeShelf({
   return (
     <section id={id} aria-labelledby="badges-heading" className={cn("scroll-mt-28 rounded-pw-lg border border-pw-line bg-pw-surface-1 p-5", className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="badges-heading" className="font-pw-pixel text-pw-label uppercase tracking-[0.18em] text-pw-highlight">
+        <h2 id="badges-heading" className="font-pw-pixel text-pw-body-sm uppercase tracking-[0.18em] text-pw-highlight">
           Badges
         </h2>
         {showCount && load.status === "ready" ? (
-          <p className="text-pw-caption text-pw-muted">
+          <p className="text-pw-body-sm text-pw-muted">
             <span className="font-pw-display text-pw-title font-extrabold italic tabular-nums text-pw-highlight">{unlocked}</span> of {load.board.length} unlocked
           </p>
         ) : null}
@@ -232,8 +232,8 @@ function BadgeCell({
               <span data-badge-view={def.id} className="relative block size-20">
                 {flat ? <BadgeSvg badge={def.id} tier={tier} stripeCount={stripeCount(def, level)} className="absolute inset-[12%] size-[76%]" /> : null}
               </span>
-              <span className="text-center text-pw-caption font-semibold leading-tight text-pw-text">{def.name}</span>
-              <span className="text-pw-caption text-pw-muted">{label}</span>
+              <span className="text-center text-pw-body font-semibold leading-tight text-pw-text">{def.name}</span>
+              <span className="text-pw-body-sm text-pw-muted">{label}</span>
               {tiered ? <LevelDots level={level} max={maxLevel(def)} /> : <span className="h-1.5" aria-hidden />}
             </button>
           </PopoverTrigger>

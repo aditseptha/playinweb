@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import Script from "next/script";
 import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/next";
+import { LibrarySync } from "@/components/LibrarySync";
 import { NavProgress } from "@/components/NavProgress";
 import { AuthProvider } from "@/lib/auth";
 import { FeaturesProvider } from "@/lib/features";
@@ -81,6 +82,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <GamesProvider>
           <AuthProvider>
+            <LibrarySync />
             <FeaturesProvider>{children}</FeaturesProvider>
           </AuthProvider>
         </GamesProvider>

@@ -145,6 +145,8 @@ export function ProfileScreen() {
       <div className={s.frame}>
         <div className={cn(s.wrap, "pb-16")}>
           <ProfileColumns
+            // Room between the profile header and the badges, which come first on phones.
+            className="mt-8 lg:mt-0"
             sideFirstOnPhone
             main={
               <div className="grid gap-12">
