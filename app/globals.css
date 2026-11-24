@@ -313,6 +313,43 @@
     transform: scale(0.96);
   }
 }
+/* The award popup (#30): slow light rays turning behind the medal, a soft glow, and small stars. */
+@keyframes pw-award-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pw-award-spin-back {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes pw-award-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+@keyframes pw-award-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+  70% {
+    opacity: 0.2;
+    transform: scale(0.6) rotate(70deg);
+  }
+}
 /* The turn-your-phone prompt over a fullscreen game (#38): the phone icon turns, holds, and comes back.
    Upright starts from Tailwind's rotate-90 (the `rotate` property), so it turns back by -90deg. */
 @keyframes pw-turn-side {

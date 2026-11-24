@@ -65,3 +65,50 @@ export function revokeErrorMessage(raw: string | null | undefined): string {
   if (message.includes("already revoked")) return "This award was already taken back. Reload the list.";
   return "Could not take the award back. Try again.";
 }
+
+/** A standing award on a game, as the game page shows it. */
+export type GameAward = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  howChosen: string;
+  citation: string;
+  awardedAt: string;
+  medal: AwardMedal;
+};
+
+/** The columns the public pages select from award_grants, with the award kind joined in. */
+export const GAME_AWARD_SELECT = "id, citation, awarded_at, award:award_types(slug, name, description, how_chosen, medal)";
+
+/** One award_grants row (GAME_AWARD_SELECT) to a GameAward; null when the award kind did not come back. */
+export function toGameAward(row: unknown): GameAward | null {
+  if (!row || typeof row !== "object") return null;
+  const r = row as Record<string, unknown>;
+  const kind = Array.isArray(r.award) ? r.award[0] : r.award;
+  if (!kind || typeof kind !== "object") return null;
+  const k = kind as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  if (!str(r.id) || !str(k.slug) || !str(k.name)) return null;
+  return {
+    id: str(r.id),
+    slug: str(k.slug),
+    name: str(k.name),
+    description: str(k.description),
+    howChosen: str(k.how_chosen),
+    citation: str(r.citation),
+    awardedAt: str(r.awarded_at),
+    medal: medalFromJson(k.medal),
+  };
+}
+
+/** Best of PlayInWeb first, then the newest. */
+export function sortAwards(list: GameAward[]): GameAward[] {
+  return [...list].sort((a, b) => {
+    if ((a.slug === BEST_OF_SLUG) !== (b.slug === BEST_OF_SLUG)) return a.slug === BEST_OF_SLUG ? -1 : 1;
+    return Date.parse(b.awardedAt || "0") - Date.parse(a.awardedAt || "0");
+  });
+}
+
+/** The homepage "Best of PlayInWeb" row shows once this many games hold the award. */
+export const BEST_OF_ROW_MIN = 3;

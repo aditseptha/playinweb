@@ -23,6 +23,15 @@ export type DevlogRelease = {
 
 export const DEVLOG: DevlogRelease[] = [
   {
+    version: "0.14",
+    date: "2026-11-24",
+    title: "Best of PlayInWeb",
+    items: [
+      { kind: "new", text: "Best of PlayInWeb: our team's award for the games we love most. A winning game shows its medal on its page; click the medal to see why it won." },
+      { kind: "new", text: "A \"Best of PlayInWeb\" row on the homepage, once a few games have won, with a NEW tag for the latest winners." },
+    ],
+  },
+  {
     version: "0.13",
     date: "2026-11-24",
     title: "Claim your game",

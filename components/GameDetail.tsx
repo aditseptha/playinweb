@@ -30,10 +30,13 @@ import {
   ProjectHeroThumbs,
   useProjectHero,
 } from "@/components/ProjectHero";
+import { AwardsCard } from "@/components/awards/AwardsCard";
+import { MedalIcon } from "@/components/awards/MedalIcon";
 import { ClaimDialog } from "@/components/ClaimDialog";
 import { ReportDialog } from "@/components/ReportDialog";
 import { useSignupDialog } from "@/components/SignupDialog";
 import { useAuth } from "@/lib/auth";
+import { GAME_AWARD_SELECT, sortAwards, toGameAward, type GameAward } from "@/lib/awards";
 import { cn } from "@/lib/cn";
 import { useMoneyFeatures } from "@/lib/features";
 import { licenseLabel, shortUrl, type Curation } from "@/lib/curation";
@@ -187,6 +190,27 @@ export function GameDetail({
       cancelled = true;
     };
   }, [isCurated, persisted, user, projectId]);
+
+  // Awards (#30). Fetched in the browser, and left out quietly if the awards tables are not there yet.
+  const [awardLoad, setAwardLoad] = useState<{ id: string; list: GameAward[] } | null>(null);
+  useEffect(() => {
+    if (!persisted) return;
+    let cancelled = false;
+    void createClient()
+      .from("award_grants")
+      .select(GAME_AWARD_SELECT)
+      .eq("project_id", projectId)
+      .is("revoked_at", null)
+      .then(({ data, error }) => {
+        if (cancelled || error) return;
+        const list = (data ?? []).map(toGameAward).filter((a): a is GameAward => Boolean(a));
+        setAwardLoad({ id: projectId, list: sortAwards(list) });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [persisted, projectId]);
+  const awards = awardLoad?.id === projectId ? awardLoad.list : [];
 
   useEffect(() => {
     if (!persisted) return;
@@ -425,6 +449,8 @@ export function GameDetail({
                 avatar={avatar}
                 counts={counts}
                 tags={tags}
+                award={awards[0]?.name ?? null}
+                awardCount={awards.length}
               />
               <AboutBlock className="max-lg:order-6" text={project.description} />
               <div className="max-lg:order-10 min-w-0 lg:pt-2">
@@ -456,6 +482,7 @@ export function GameDetail({
                   credit={curated}
                   onClaim={() => setClaimOpen(true)}
                   claimSent={claimSent}
+                  awardName={awards[0]?.name ?? null}
                   removeHref={removeHref}
                 />
               ) : null}
@@ -482,6 +509,9 @@ export function GameDetail({
                         : "—"
                 }
               />
+              {awards.length > 0 ? (
+                <AwardsCard className="max-lg:order-8 lg:mt-3" awards={awards} gameTitle={project.title} />
+              ) : null}
               {stores.length > 0 ? <AlsoOn className="max-lg:order-9" stores={stores} /> : null}
             </div>
           </div>
@@ -527,6 +557,8 @@ function TitleBlock({
   avatar,
   counts,
   tags,
+  award,
+  awardCount,
 }: {
   className?: string;
   title: string;
@@ -539,12 +571,32 @@ function TitleBlock({
   avatar?: string;
   counts: { plays: number; likes: number; comments: number };
   tags: string[];
+  /** The game's first award, for the chip above the title (#30). */
+  award?: string | null;
+  awardCount?: number;
 }) {
   const long = title.length > 40;
   return (
     <header className={cn("flex min-w-0 flex-col gap-3", className)}>
-      {eyebrow ? (
-        <p className="font-pw-pixel text-pw-label tracking-[0.06em] text-pw-highlight-ink uppercase">{eyebrow}</p>
+      {eyebrow || award ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {award ? (
+            <a
+              href="#awards"
+              className={cn(
+                "inline-flex h-[26px] items-center gap-[7px] rounded-pw-pill border border-[rgba(255,182,65,0.45)] bg-[rgba(255,182,65,0.12)] pr-2.5 pl-1.5",
+                "font-pw-pixel text-pw-label tracking-[0.06em] text-pw-highlight-ink uppercase transition-colors hover:bg-[rgba(255,182,65,0.2)]",
+                focusRing,
+              )}
+            >
+              <MedalIcon className="h-5 w-4" />
+              {awardCount && awardCount > 1 ? `${awardCount} awards` : award}
+            </a>
+          ) : null}
+          {eyebrow ? (
+            <p className="font-pw-pixel text-pw-label tracking-[0.06em] text-pw-highlight-ink uppercase">{eyebrow}</p>
+          ) : null}
+        </div>
       ) : null}
       <h1
         className={cn(
@@ -756,6 +808,7 @@ function CuratedCreditCard({
   credit,
   onClaim,
   claimSent,
+  awardName,
   removeHref,
 }: {
   className?: string;
@@ -763,6 +816,8 @@ function CuratedCreditCard({
   onClaim: () => void;
   /** The visitor's own claim is waiting for an admin. */
   claimSent: boolean;
+  /** The game holds this award (#30): its creator can claim the game and the award with it. */
+  awardName: string | null;
   removeHref: string;
 }) {
   const links = [
@@ -839,6 +894,9 @@ function CuratedCreditCard({
         ) : (
           <>
             <p className="text-pw-body-sm font-semibold text-pw-text">Is this your game?</p>
+            {awardName ? (
+              <p className="-mt-1 text-pw-body-sm text-pw-text-soft">It won {awardName}. Claim it and the award comes with it.</p>
+            ) : null}
             <div className="grid grid-cols-2 gap-2">
               <Button variant="primary" size="sm" onClick={onClaim}>
                 Claim it

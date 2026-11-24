@@ -7,6 +7,7 @@ import { Chip } from "@/components/ds/badge";
 import { Button } from "@/components/ds/button";
 import { EmptyState } from "@/components/ds/empty-state";
 import { CreatorCTA, GuestBanner } from "@/components/home/Banners";
+import { BestOfRow } from "@/components/home/BestOfRow";
 import { TallCard, WideCard } from "@/components/home/cards";
 import { NewestGamesSection } from "@/components/home/NewestGamesSection";
 import { FilterRail } from "@/components/home/FilterRail";
@@ -339,6 +340,7 @@ function Full({
   return (
     <>
       <FeaturedRow games={featured} />
+      <BestOfRow catalogue={catalogue} />
       {weeklyTop.length > 0 ? (
         <>
           {/* Portrait cards on tablets and computers… */}
@@ -410,6 +412,7 @@ function Sparse({
   return (
     <>
       <FeaturedRow games={featured} />
+      <BestOfRow catalogue={catalogue} />
       <PhoneRow games={phone} />
       {curated.length > 0 ? <CuratedPicks games={curated} /> : null}
       {authReady && !signedIn ? <GuestBanner recent={recent} popular={popular} /> : null}
