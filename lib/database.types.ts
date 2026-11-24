@@ -12,6 +12,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      award_grants: {
+        Row: {
+          award_slug: string
+          awarded_at: string
+          awarded_by: string | null
+          citation: string
+          id: string
+          project_id: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          seen_at: string | null
+        }
+        Insert: {
+          award_slug: string
+          awarded_at?: string
+          awarded_by?: string | null
+          citation: string
+          id?: string
+          project_id: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          seen_at?: string | null
+        }
+        Update: {
+          award_slug?: string
+          awarded_at?: string
+          awarded_by?: string | null
+          citation?: string
+          id?: string
+          project_id?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          seen_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "award_grants_award_slug_fkey"
+            columns: ["award_slug"]
+            isOneToOne: false
+            referencedRelation: "award_types"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "award_grants_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "award_grants_awarded_by_fkey"
+            columns: ["awarded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "award_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      award_types: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string
+          how_chosen: string
+          medal: Json
+          name: string
+          slug: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description: string
+          how_chosen: string
+          medal?: Json
+          name: string
+          slug: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string
+          how_chosen?: string
+          medal?: Json
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_path: string | null
@@ -782,6 +880,8 @@ export type Database = {
       }
       record_play: { Args: { pid: string }; Returns: undefined }
       submit_claim: { Args: { pid: string; p_evidence: string }; Returns: string }
+      admin_grant_award: { Args: { p_project: string; p_award: string; p_citation: string }; Returns: string }
+      admin_revoke_award: { Args: { p_grant: string; p_reason: string }; Returns: undefined }
       admin_decide_claim: {
         Args: { p_claim: string; p_approve: boolean; p_note?: string | null }
         Returns: { owner_handle: string; slug: string }[]

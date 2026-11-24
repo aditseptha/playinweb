@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AwardsPanel } from "@/components/admin/AwardsPanel";
 import { ClaimsTable } from "@/components/admin/ClaimsTable";
 import { CuratedGames } from "@/components/admin/CuratedGames";
 import { HomepagePicks } from "@/components/admin/HomepagePicks";
@@ -52,6 +53,7 @@ export function AdminPanel() {
     rawTab === "wallet" ||
     rawTab === "curated" ||
     rawTab === "claims" ||
+    rawTab === "awards" ||
     rawTab === "homepage"
       ? rawTab
       : "overview";
@@ -314,6 +316,7 @@ export function AdminPanel() {
             { value: "overview", label: "Overview", href: "/admin" },
             { value: "curated", label: "Curated games", href: "/admin?tab=curated" },
             { value: "claims", label: "Claims", href: "/admin?tab=claims" },
+            { value: "awards", label: "Awards", href: "/admin?tab=awards" },
             { value: "homepage", label: "Homepage", href: "/admin?tab=homepage" },
             { value: "wallet", label: "Wallet", href: "/admin?tab=wallet" },
             { value: "reports", label: "Reported issue", href: "/admin?tab=reports" },
@@ -328,6 +331,7 @@ export function AdminPanel() {
 
       {tab === "curated" ? <CuratedGames /> : null}
       {tab === "claims" ? <ClaimsTable /> : null}
+      {tab === "awards" ? <AwardsPanel /> : null}
       {tab === "homepage" ? <HomepagePicks games={games} /> : null}
       {tab === "reports" ? <ReportsTable reports={reports} /> : null}
       {tab === "features" ? <FeatureList features={features} setFlags={setFlags} /> : null}
