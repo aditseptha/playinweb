@@ -1,3 +1,4 @@
+import { awardNoticeText } from "@/lib/awards";
 import { badgeNoticeText } from "@/lib/badge-celebration";
 import { isDummyDonation, isDummyPayout } from "@/lib/dummy-seed";
 import { formatMoney } from "@/lib/format";
@@ -55,7 +56,7 @@ export async function loadNotices(userId: string, admin: boolean, money: MoneyFe
     }),
   );
 
-  const [donations, comments, follows, payouts, tips, reports, badges] = await Promise.all([
+  const [donations, comments, follows, payouts, tips, reports, badges, awards] = await Promise.all([
     gameIds.length && noticeKindOpen("donation", money)
       ? supabase
           .from("donations")
@@ -102,6 +103,16 @@ export async function loadNotices(userId: string, admin: boolean, money: MoneyFe
       .eq("profile_id", userId)
       .order("leveled_at", { ascending: false })
       .limit(10),
+    // Awards (#30) on the account's games. Errors (no awards tables yet) just leave them out.
+    gameIds.length
+      ? supabase
+          .from("award_grants")
+          .select("id, project_id, awarded_at, award:award_types ( name )")
+          .in("project_id", gameIds)
+          .is("revoked_at", null)
+          .order("awarded_at", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] as never[] }),
   ]);
 
   const followerIds = [...new Set((follows.data ?? []).map((row) => row.follower_id as string))];
@@ -119,6 +130,14 @@ export async function loadNotices(userId: string, admin: boolean, money: MoneyFe
     const text = badgeNoticeText(row.badge, row.level);
     if (!text) continue;
     out.push({ id: `badge:${row.badge}:${row.level}`, at: row.leveled_at, href: apexHref("/profile#badges"), ...text });
+  }
+
+  for (const row of awards.data ?? []) {
+    const kind = Array.isArray(row.award) ? row.award[0] : row.award;
+    const game = titleById.get(row.project_id);
+    if (!kind?.name || !game) continue;
+    const href = urlById.get(row.project_id) ?? apexHref(`/game/${row.project_id}`);
+    out.push({ id: `award:${row.id}`, at: row.awarded_at, href: `${href}#awards`, ...awardNoticeText(game, kind.name) });
   }
 
   for (const row of donations.data ?? []) {

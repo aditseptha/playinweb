@@ -29,6 +29,8 @@ export const DEVLOG: DevlogRelease[] = [
     items: [
       { kind: "new", text: "Best of PlayInWeb: our team's award for the games we love most. A winning game shows its medal on its page; click the medal to see why it won." },
       { kind: "new", text: "A \"Best of PlayInWeb\" row on the homepage, once a few games have won, with a NEW tag for the latest winners." },
+      { kind: "new", text: "Won Best of PlayInWeb? You'll get a popup and a notification, and a button to share the news." },
+      { kind: "improved", text: "A winning game's link preview on WhatsApp, X or Discord shows its medal." },
     ],
   },
   {

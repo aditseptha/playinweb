@@ -1,7 +1,7 @@
 import { curationFromRow } from "@/lib/curation";
 import { gameOgImage, OG_SIZE, siteOgImage } from "@/lib/og";
 import { publicMediaUrl } from "@/lib/media";
-import { fetchProjectByHandleSlug } from "@/lib/projects";
+import { fetchBestOfName, fetchProjectByHandleSlug } from "@/lib/projects";
 
 export const alt = "A game on PlayInWeb";
 export const size = OG_SIZE;
@@ -11,6 +11,7 @@ export default async function Image({ params }: { params: Promise<{ handle: stri
   const { handle, slug } = await params;
   const project = await fetchProjectByHandleSlug(handle, slug);
   if (!project) return siteOgImage();
+  const award = await fetchBestOfName(project.id);
   return gameOgImage({
     title: project.title,
     creator:
@@ -20,5 +21,6 @@ export default async function Image({ params }: { params: Promise<{ handle: stri
       handle,
     plays: project.play_count,
     coverUrl: publicMediaUrl(project.cover_path),
+    award,
   });
 }

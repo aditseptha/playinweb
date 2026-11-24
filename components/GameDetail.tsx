@@ -510,7 +510,13 @@ export function GameDetail({
                 }
               />
               {awards.length > 0 ? (
-                <AwardsCard className="max-lg:order-8 lg:mt-3" awards={awards} gameTitle={project.title} />
+                <AwardsCard
+                  className="max-lg:order-8 lg:mt-3"
+                  awards={awards}
+                  gameTitle={project.title}
+                  // Only the game's own creator gets "Share your award"; visitors share from the Play card.
+                  ownerShareUrl={user && !curated && user.id === project.owner_id ? shareUrl : null}
+                />
               ) : null}
               {stores.length > 0 ? <AlsoOn className="max-lg:order-9" stores={stores} /> : null}
             </div>

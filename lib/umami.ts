@@ -18,3 +18,15 @@ export function umamiScriptUrl() {
 export function umamiShareUrl() {
   return SHARE_URL;
 }
+
+type UmamiWindow = Window & { umami?: { track: (event: string, data?: Record<string, string | number>) => void } };
+
+/** Records a custom event in Umami, when the script is on the page. Never throws. */
+export function trackEvent(event: string, data?: Record<string, string | number>) {
+  if (typeof window === "undefined") return;
+  try {
+    (window as UmamiWindow).umami?.track(event, data);
+  } catch {
+    /* analytics must never break the page */
+  }
+}

@@ -882,6 +882,21 @@ export type Database = {
       submit_claim: { Args: { pid: string; p_evidence: string }; Returns: string }
       admin_grant_award: { Args: { p_project: string; p_award: string; p_citation: string }; Returns: string }
       admin_revoke_award: { Args: { p_grant: string; p_reason: string }; Returns: undefined }
+      my_awards: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          award_slug: string
+          award_name: string
+          project_id: string
+          title: string
+          slug: string
+          owner_handle: string
+          citation: string
+          awarded_at: string
+        }[]
+      }
+      mark_awards_seen: { Args: { p_grants: string[] }; Returns: undefined }
       admin_decide_claim: {
         Args: { p_claim: string; p_approve: boolean; p_note?: string | null }
         Returns: { owner_handle: string; slug: string }[]
