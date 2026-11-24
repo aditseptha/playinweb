@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ClaimsTable } from "@/components/admin/ClaimsTable";
 import { CuratedGames } from "@/components/admin/CuratedGames";
 import { HomepagePicks } from "@/components/admin/HomepagePicks";
 import { FeatureList } from "@/components/admin/FeatureList";
@@ -46,7 +47,12 @@ export function AdminPanel() {
   const searchParams = useSearchParams();
   const rawTab = searchParams.get("tab");
   const tab =
-    rawTab === "reports" || rawTab === "features" || rawTab === "wallet" || rawTab === "curated" || rawTab === "homepage"
+    rawTab === "reports" ||
+    rawTab === "features" ||
+    rawTab === "wallet" ||
+    rawTab === "curated" ||
+    rawTab === "claims" ||
+    rawTab === "homepage"
       ? rawTab
       : "overview";
   const { features, setFlags } = useFeatures();
@@ -307,6 +313,7 @@ export function AdminPanel() {
           options={[
             { value: "overview", label: "Overview", href: "/admin" },
             { value: "curated", label: "Curated games", href: "/admin?tab=curated" },
+            { value: "claims", label: "Claims", href: "/admin?tab=claims" },
             { value: "homepage", label: "Homepage", href: "/admin?tab=homepage" },
             { value: "wallet", label: "Wallet", href: "/admin?tab=wallet" },
             { value: "reports", label: "Reported issue", href: "/admin?tab=reports" },
@@ -320,6 +327,7 @@ export function AdminPanel() {
       {error ? <p className="mt-6 text-ui text-danger">{error}</p> : null}
 
       {tab === "curated" ? <CuratedGames /> : null}
+      {tab === "claims" ? <ClaimsTable /> : null}
       {tab === "homepage" ? <HomepagePicks games={games} /> : null}
       {tab === "reports" ? <ReportsTable reports={reports} /> : null}
       {tab === "features" ? <FeatureList features={features} setFlags={setFlags} /> : null}

@@ -172,7 +172,14 @@ export function CuratedGames() {
                       {credit ? licenseLabel(credit.license) : "—"}
                       {credit?.modified ? <span className="block text-caption text-text-subtle">Modified</span> : null}
                     </td>
-                    <td className="px-4 py-3">{game.published ? "Public" : "Draft"}</td>
+                    <td className="px-4 py-3">
+                      {game.published ? "Public" : "Draft"}
+                      {credit?.status === "claim_pending" ? (
+                        <Link href="/admin?tab=claims" className="block text-caption font-medium text-brand-blue hover:underline">
+                          Claim waiting
+                        </Link>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3 tabular-nums">{formatPlays(game.play_count)}</td>
                     <td className="px-4 py-3 text-text-muted">{formatWhen(game.created_at)}</td>
                     <td className="px-4 py-3 text-right">
