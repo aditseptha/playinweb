@@ -11,7 +11,7 @@ test("/devlog shows the live version and its release notes", async ({ page }) =>
   const version = (await live.textContent())?.match(/v0\.\d+/)?.[0];
   // The newest release is first and marked Latest.
   const first = page.locator("ol > li").first();
-  await expect(first.getByText("Latest")).toBeVisible();
+  await expect(first.getByText("Latest", { exact: true })).toBeVisible();
   await expect(first.getByRole("link", { name: version })).toBeVisible();
 });
 
