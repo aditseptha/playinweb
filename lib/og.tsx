@@ -243,13 +243,24 @@ export type GameOgInput = {
   creator: string;
   plays?: number;
   coverUrl?: string | null;
+  /** The game holds this award (#30): a gold bar, the medal on the right, and the award name up top. */
+  award?: string | null;
 };
+
+/**
+ * The Best of PlayInWeb medal for link previews: rendered once from components/awards/medal-engine.ts
+ * (reduced motion, no lamp) to a transparent 380×600 PNG, since link previews cannot run WebGL.
+ */
+async function medalPng() {
+  return dataUri(await readFile(join(process.cwd(), "assets/og/best-of-medal.png")), "image/png");
+}
 
 /** Per-game preview: the cover full-bleed, title in the display face, creator up front. */
 export async function gameOgImage(game: GameOgInput) {
-  const [a, cover] = await Promise.all([assets(), coverFor(game.coverUrl)]);
+  const [a, cover, medal] = await Promise.all([assets(), coverFor(game.coverUrl), game.award ? medalPng() : null]);
   const title = game.title.length > 64 ? `${game.title.slice(0, 62).trimEnd()}…` : game.title;
-  const size = title.length > 34 ? 76 : title.length > 18 ? 96 : 120;
+  // With the medal on the right, the title has less room.
+  const size = medal ? (title.length > 26 ? 68 : title.length > 14 ? 88 : 112) : title.length > 34 ? 76 : title.length > 18 ? 96 : 120;
 
   return new ImageResponse(
     <div
@@ -284,6 +295,13 @@ export async function gameOgImage(game: GameOgInput) {
           background: `linear-gradient(90deg, ${alpha(p["night-950"], 0.92)} 0%, ${alpha(p["night-950"], 0.62)} 48%, ${alpha(p["night-950"], 0.06)} 100%)`,
         }}
       />
+      {medal ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={medal} alt="" width={380} height={600} style={{ position: "absolute", top: 0, left: 780, width: 380, height: 600 }} />
+          <div style={{ position: "absolute", top: 0, left: 0, width: 1200, height: 8, display: "flex", background: p.gold }} />
+        </>
+      ) : null}
       <div
         style={{
           position: "relative",
@@ -296,9 +314,9 @@ export async function gameOgImage(game: GameOgInput) {
         }}
       >
         <Brand mark={a.mark} word={a.word} />
-        <div style={{ display: "flex", flexDirection: "column", maxWidth: 820 }}>
-          <div style={{ fontFamily: "Pixel", fontSize: 22, color: p.gold, letterSpacing: 2 }}>
-            PLAY FREE IN YOUR BROWSER
+        <div style={{ display: "flex", flexDirection: "column", maxWidth: medal ? 700 : 820 }}>
+          <div style={{ fontFamily: "Pixel", fontSize: medal ? 24 : 22, color: p.gold, letterSpacing: 2 }}>
+            {medal && game.award ? game.award.toUpperCase() : "PLAY FREE IN YOUR BROWSER"}
           </div>
           <div
             style={{
@@ -313,10 +331,10 @@ export async function gameOgImage(game: GameOgInput) {
           >
             {title}
           </div>
-          <div style={{ display: "flex", fontSize: 30, color: p["mist-100"], marginTop: 22, gap: 14 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", fontSize: 30, color: p["mist-100"], marginTop: 22, columnGap: 14, rowGap: 4 }}>
             <span>by</span>
             <span style={{ fontWeight: 700, color: p["mist-50"] }}>{game.creator}</span>
-            {game.plays ? <span>· {formatCompact(game.plays)} plays</span> : null}
+            {medal ? <span>· Play free in your browser</span> : game.plays ? <span>· {formatCompact(game.plays)} plays</span> : null}
           </div>
         </div>
       </div>

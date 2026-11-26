@@ -3,23 +3,40 @@
 import { Dialog as RDialog } from "radix-ui";
 import { useState } from "react";
 import { AwardMedal3D } from "@/components/awards/AwardMedal3D";
+import { shareAward } from "@/components/awards/share-award";
 import { Button } from "@/components/ds/button";
 import { PortalScope, usePortalContainer } from "@/components/ds/portal";
 import { floatingSurface, focusRing } from "@/components/ds/styles";
-import { IconClose } from "@/components/icons";
+import { IconClose, IconShare } from "@/components/icons";
 import type { GameAward } from "@/lib/awards";
 import { cn } from "@/lib/cn";
 import { formatDate } from "@/lib/format";
+import { trackEvent } from "@/lib/umami";
 
 // Awards on a game page (#30). The sidebar card holds the medal hanging from a lit rail; a click on the
 // medal (or the hidden button for keyboards and screen readers) opens the popup with what the award is,
 // why this game got it, and how it is chosen.
 
 /** Sidebar card: the medal under its lamp, the award name, and a line on what to do. */
-export function AwardsCard({ awards, gameTitle, className }: { awards: GameAward[]; gameTitle: string; className?: string }) {
-  const [open, setOpen] = useState<GameAward | null>(null);
+export function AwardsCard({
+  awards,
+  gameTitle,
+  ownerShareUrl,
+  className,
+}: {
+  awards: GameAward[];
+  gameTitle: string;
+  /** The game's public address, passed only when the viewer owns the game: they get "Share your award". */
+  ownerShareUrl?: string | null;
+  className?: string;
+}) {
+  const [open, setOpenState] = useState<GameAward | null>(null);
   const award = awards[0];
   if (!award) return null;
+  const setOpen = (a: GameAward | null) => {
+    if (a) trackEvent("award-open", { award: a.slug });
+    setOpenState(a);
+  };
   return (
     <section
       id="awards"
@@ -72,17 +89,33 @@ export function AwardsCard({ awards, gameTitle, className }: { awards: GameAward
             </li>
           ))}
         </ul>
+        {ownerShareUrl ? (
+          <div className="mt-2.5 flex w-full flex-col items-center gap-1.5">
+            <ShareAwardButton gameUrl={ownerShareUrl} gameTitle={gameTitle} awardName={award.name} from="card" variant="secondary" className="w-full" />
+            <span className="text-pw-caption text-pw-muted">Only you see this button.</span>
+          </div>
+        ) : null}
       </div>
       {/* The popup opens inside the card's scope, so it keeps the design system fonts (and the medal lettering matches). */}
       <PortalScope>
-        <AwardDialog award={open} gameTitle={gameTitle} onClose={() => setOpen(null)} />
+        <AwardDialog award={open} gameTitle={gameTitle} ownerShareUrl={ownerShareUrl} onClose={() => setOpen(null)} />
       </PortalScope>
     </section>
   );
 }
 
 /** The award popup: the medal turning slowly under soft rays, then what, why and how. */
-export function AwardDialog({ award, gameTitle, onClose }: { award: GameAward | null; gameTitle: string; onClose: () => void }) {
+export function AwardDialog({
+  award,
+  gameTitle,
+  ownerShareUrl,
+  onClose,
+}: {
+  award: GameAward | null;
+  gameTitle: string;
+  ownerShareUrl?: string | null;
+  onClose: () => void;
+}) {
   const container = usePortalContainer();
   return (
     <RDialog.Root open={Boolean(award)} onOpenChange={(next) => !next && onClose()}>
@@ -137,11 +170,54 @@ export function AwardDialog({ award, gameTitle, onClose }: { award: GameAward | 
               <Detail label="What it is" text={award.description} />
               <Detail label="Why this game" text={award.citation} />
               <Detail label="How it is chosen" text={award.howChosen} />
+              {ownerShareUrl ? (
+                <ShareAwardButton gameUrl={ownerShareUrl} gameTitle={gameTitle} awardName={award.name} from="popup" variant="highlight" size="lg" className="mt-1 w-full" />
+              ) : null}
             </div>
           </RDialog.Content>
         ) : null}
       </RDialog.Portal>
     </RDialog.Root>
+  );
+}
+
+/** "Share your award": the share sheet on phones, copy on computers. Says "Copied" for a moment. */
+export function ShareAwardButton({
+  gameUrl,
+  gameTitle,
+  awardName,
+  from,
+  label = "Share your award",
+  variant,
+  size,
+  className,
+}: {
+  gameUrl: string;
+  gameTitle: string;
+  awardName: string;
+  from: string;
+  label?: string;
+  variant: "secondary" | "highlight";
+  size?: "md" | "lg";
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      variant={variant}
+      size={size}
+      className={className}
+      onClick={() =>
+        void shareAward({ gameUrl, gameTitle, awardName, from }).then((result) => {
+          if (result !== "copied") return;
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1800);
+        })
+      }
+    >
+      <IconShare aria-hidden />
+      <span aria-live="polite">{copied ? "Copied. Paste it anywhere" : label}</span>
+    </Button>
   );
 }
 
@@ -156,7 +232,7 @@ function Detail({ label, text }: { label: string; text: string }) {
 }
 
 /** Slow light rays and a soft glow behind the medal, with four small stars. Still when motion is reduced. */
-function Rays() {
+export function Rays() {
   const stars = [
     { left: "calc(50% - 88px)", top: 78, delay: "0s", size: 11 },
     { left: "calc(50% + 76px)", top: 66, delay: "0.9s", size: 9 },

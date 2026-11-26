@@ -112,3 +112,60 @@ export function sortAwards(list: GameAward[]): GameAward[] {
 
 /** The homepage "Best of PlayInWeb" row shows once this many games hold the award. */
 export const BEST_OF_ROW_MIN = 3;
+
+/**
+ * The link an owner shares for their award: the game page, tagged so Umami can tell award shares
+ * apart. `from` says where the share started ("card", "popup", "winner").
+ */
+export function awardShareUrl(gameUrl: string, from: string) {
+  try {
+    const url = new URL(gameUrl);
+    url.searchParams.set("utm_source", "share");
+    url.searchParams.set("utm_medium", from);
+    url.searchParams.set("utm_campaign", BEST_OF_SLUG);
+    return url.toString();
+  } catch {
+    return gameUrl;
+  }
+}
+
+/** The line that goes with a shared award. */
+export function awardShareText(gameTitle: string, awardName: string) {
+  return `${gameTitle} is ${awardName}! Play it free in your browser on PlayInWeb.`;
+}
+
+/** One row of my_awards(): an award the owner has not seen yet. */
+export type MyAwardRow = {
+  id: string;
+  award_slug: string;
+  award_name: string;
+  project_id: string;
+  title: string;
+  slug: string;
+  owner_handle: string;
+  citation: string;
+  awarded_at: string;
+};
+
+/** The bell entry for an award on one of the account's games. */
+export function awardNoticeText(gameTitle: string, awardName: string) {
+  return { title: `${gameTitle} is now ${awardName}`, detail: "Picked by the PlayInWeb team. Share it from the game page." };
+}
+
+type AwardRpcClient = {
+  rpc(fn: "mark_awards_seen", args: { p_grants: string[] }): PromiseLike<{ error: unknown }>;
+};
+
+/**
+ * Marks awards seen so their popup never shows again. Supabase builders are lazy, so this awaits the
+ * request (a fire-and-forget call would never be sent). Returns false when it failed.
+ */
+export async function markAwardsSeen(client: AwardRpcClient, ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return true;
+  try {
+    const { error } = await client.rpc("mark_awards_seen", { p_grants: ids });
+    return !error;
+  } catch {
+    return false;
+  }
+}

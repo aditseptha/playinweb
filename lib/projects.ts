@@ -249,6 +249,20 @@ export async function fetchProjectByHandleSlug(handle: string, slug: string) {
   return record;
 }
 
+/** The name of Best of PlayInWeb when the game holds it (#30), for its link preview. Null otherwise, or on any error. */
+export async function fetchBestOfName(projectId: string): Promise<string | null> {
+  const { data, error } = await createClient()
+    .from("award_grants")
+    .select("award:award_types ( name )")
+    .eq("project_id", projectId)
+    .eq("award_slug", "best-of-playinweb")
+    .is("revoked_at", null)
+    .maybeSingle();
+  if (error || !data) return null;
+  const kind = Array.isArray(data.award) ? data.award[0] : data.award;
+  return kind?.name ?? null;
+}
+
 export async function fetchProfileByHandle(handle: string) {
   const supabase = createClient();
   const { data } = await supabase.from("profiles").select("*").eq("handle", handle).maybeSingle();

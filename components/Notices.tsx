@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { MedalIcon } from "@/components/awards/MedalIcon";
 import { Illustration } from "@/components/ds/illustration";
 import { Skeleton } from "@/components/ds/skeleton";
 import s from "@/components/home/home.module.css";
@@ -156,7 +157,7 @@ export function Notices() {
                       className={cn(s.noticeItem, fresh.has(row.id) && s.noticeFresh)}
                     >
                       <span className={s.noticeIcon}>
-                        <Icon />
+                        {row.id.startsWith("award:") ? <MedalIcon className="h-full w-auto" /> : <Icon />}
                       </span>
                       <span className={s.noticeCopy}>
                         <span className={s.noticeTitle}>{row.title}</span>
