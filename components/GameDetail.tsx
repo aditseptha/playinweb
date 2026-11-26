@@ -30,6 +30,7 @@ import {
   ProjectHeroThumbs,
   useProjectHero,
 } from "@/components/ProjectHero";
+import { ClaimDialog } from "@/components/ClaimDialog";
 import { ReportDialog } from "@/components/ReportDialog";
 import { useSignupDialog } from "@/components/SignupDialog";
 import { useAuth } from "@/lib/auth";
@@ -151,6 +152,8 @@ export function GameDetail({
   const [copied, setCopied] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
+  // The signed-in visitor already sent a claim for this curated game that is still waiting (#30).
+  const [claimSent, setClaimSent] = useState(false);
   const autoPlayed = useRef(false);
   const viewBump = useRef<Promise<void>>(Promise.resolve());
 
@@ -165,6 +168,25 @@ export function GameDetail({
       .maybeSingle()
       .then(({ data }) => setLiked(!!data));
   }, [persisted, user, projectId]);
+
+  const isCurated = Boolean(game.curated);
+  useEffect(() => {
+    if (!isCurated || !persisted || !user) return;
+    let cancelled = false;
+    void createClient()
+      .from("project_claims")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("claimant_id", user.id)
+      .eq("status", "pending")
+      .limit(1)
+      .then(({ data }) => {
+        if (!cancelled) setClaimSent(Boolean(data?.length));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isCurated, persisted, user, projectId]);
 
   useEffect(() => {
     if (!persisted) return;
@@ -433,6 +455,7 @@ export function GameDetail({
                   className="max-lg:order-4"
                   credit={curated}
                   onClaim={() => setClaimOpen(true)}
+                  claimSent={claimSent}
                   removeHref={removeHref}
                 />
               ) : null}
@@ -479,16 +502,12 @@ export function GameDetail({
         <ReportDialog defaultSubject={`Game: ${project.title} (${shareUrl})`} onClose={() => setReportOpen(false)} />
       ) : null}
       {claimOpen ? (
-        <ReportDialog
-          defaultSubject={`Claim: ${project.title} (${shareUrl})`}
+        <ClaimDialog
+          projectId={projectId}
+          gameTitle={project.title}
+          intro={claimIntro(money)}
           onClose={() => setClaimOpen(false)}
-          copy={{
-            title: "Claim this game",
-            intro: claimIntro(money),
-            detailsPlaceholder: "How can we confirm it is yours? For example a link to your profile or repo, or an email from the address on your game page.",
-            submit: "Send claim",
-            sent: "Thanks. We will check it and reply to your account email.",
-          }}
+          onSent={() => setClaimSent(true)}
         />
       ) : null}
     </ProjectHeroRoot>
@@ -736,11 +755,14 @@ function CuratedCreditCard({
   className,
   credit,
   onClaim,
+  claimSent,
   removeHref,
 }: {
   className?: string;
   credit: Curation;
   onClaim: () => void;
+  /** The visitor's own claim is waiting for an admin. */
+  claimSent: boolean;
   removeHref: string;
 }) {
   const links = [
@@ -810,15 +832,23 @@ function CuratedCreditCard({
         </p>
       ) : null}
       <div className="flex flex-col gap-2 border-t border-pw-line pt-3">
-        <p className="text-pw-body-sm font-semibold text-pw-text">Is this your game?</p>
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant="primary" size="sm" onClick={onClaim}>
-            Claim it
-          </Button>
-          <Button variant="secondary" size="sm" asChild>
-            <a href={removeHref}>Remove it</a>
-          </Button>
-        </div>
+        {claimSent ? (
+          <p role="status" className="text-pw-body-sm text-pw-text-soft">
+            <span className="font-semibold text-pw-text">Your claim is waiting.</span> We will check it and reply by email.
+          </p>
+        ) : (
+          <>
+            <p className="text-pw-body-sm font-semibold text-pw-text">Is this your game?</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="primary" size="sm" onClick={onClaim}>
+                Claim it
+              </Button>
+              <Button variant="secondary" size="sm" asChild>
+                <a href={removeHref}>Remove it</a>
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

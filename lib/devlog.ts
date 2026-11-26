@@ -23,6 +23,15 @@ export type DevlogRelease = {
 
 export const DEVLOG: DevlogRelease[] = [
   {
+    version: "0.13",
+    date: "2026-11-24",
+    title: "Claim your game",
+    items: [
+      { kind: "improved", text: "Made one of the curated games? Claiming it now sends a proper request we review, and the game page shows your claim is waiting." },
+      { kind: "new", text: "Once we approve a claim, the game moves to your account with its plays, likes and comments open, and its old link keeps working." },
+    ],
+  },
+  {
     version: "0.12",
     date: "2026-11-23",
     title: "Only what works today",

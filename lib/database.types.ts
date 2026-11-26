@@ -120,6 +120,67 @@ export type Database = {
         }
         Relationships: []
       }
+      project_claims: {
+        Row: {
+          claimant_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          email: string
+          evidence: string
+          id: string
+          project_id: string
+          status: string
+        }
+        Insert: {
+          claimant_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          email?: string
+          evidence: string
+          id?: string
+          project_id: string
+          status?: string
+        }
+        Update: {
+          claimant_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          email?: string
+          evidence?: string
+          id?: string
+          project_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_claims_claimant_id_fkey"
+            columns: ["claimant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_claims_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_claims_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_comments: {
         Row: {
           author_id: string
@@ -720,6 +781,11 @@ export type Database = {
         }[]
       }
       record_play: { Args: { pid: string }; Returns: undefined }
+      submit_claim: { Args: { pid: string; p_evidence: string }; Returns: string }
+      admin_decide_claim: {
+        Args: { p_claim: string; p_approve: boolean; p_note?: string | null }
+        Returns: { owner_handle: string; slug: string }[]
+      }
     }
     Enums: {
       [_ in never]: never
